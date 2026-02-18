@@ -1,0 +1,43 @@
+# ARCS — Autoregressive Representation for Circuit Synthesis
+
+# Data
+data/
+*.jsonl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# SPICE temp files
+*.raw
+*.cir.bak
+*.log
+
+# Model checkpoints
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+wandb/

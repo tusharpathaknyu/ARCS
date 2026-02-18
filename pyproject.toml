@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arcs"
+version = "0.1.0"
+description = "Autoregressive Representation for Circuit Synthesis"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Tushar Pathak"},
+]
+
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.0",
+    "networkx>=3.0",
+    "pandas>=2.0",
+    "tqdm",
+    "PyYAML",
+    "matplotlib",
+    "pyspice>=1.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "ipython",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
