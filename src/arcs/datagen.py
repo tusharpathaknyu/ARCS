@@ -69,8 +69,9 @@ def compute_derived_metrics(
         derived["efficiency"] = 0.0
 
     # Output voltage regulation error (%)
+    # Compare absolute values to handle inverting topologies (buck-boost: vout < 0)
     if abs(vout_target) > 1e-9:
-        derived["vout_error_pct"] = abs(vout_avg - vout_target) / abs(vout_target) * 100
+        derived["vout_error_pct"] = abs(vout_avg - abs(vout_target)) / abs(vout_target) * 100
     else:
         derived["vout_error_pct"] = 100.0
 

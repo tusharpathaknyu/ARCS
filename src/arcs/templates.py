@@ -106,8 +106,8 @@ def _buck_netlist(params: dict[str, float], conditions: dict[str, float]) -> str
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -166,8 +166,8 @@ def _boost_netlist(params: dict[str, float], conditions: dict[str, float]) -> st
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -178,9 +178,10 @@ Vin input 0 DC {vin}
 
 L1 input sw_node {L:.6e} IC=0
 
-Vpwm pwm_ctrl 0 PULSE(0 1 0 1n 1n {ton:.10e} {period:.10e})
-Bsw sw_node 0 I = V(sw_node) / {R_dson} * V(pwm_ctrl)
-Rsw_damp sw_node 0 1e6
+* Shunt MOSFET switch to ground
+Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
+S1 sw_node 0 pwm_ctrl 0 SMOD
+.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
 Dboost sw_node vout DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
@@ -219,8 +220,8 @@ def _buck_boost_netlist(params: dict[str, float], conditions: dict[str, float]) 
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -235,11 +236,15 @@ Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
 S1 input sw_node pwm_ctrl 0 SMOD
 .model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
+* Inductor stores energy when switch is on
 L1 sw_node 0 {L:.6e} IC=0
 
-Dbb sw_node vout_neg DSCHOTTKY
+* Diode conducts inductor current to negative output when switch is off
+* Current flows: 0 -> vout_neg (charging it negative) -> Dbb -> sw_node
+Dbb vout_neg sw_node DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=60 CJO=100p)
 
+* Output cap and load (output is negative)
 Resr vout_neg cap_node {R_esr}
 C1 cap_node 0 {C:.6e} IC={vout_target}
 
@@ -258,9 +263,14 @@ Vsense load_mid 0 DC 0
 
 
 def _cuk_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
-    """Ćuk converter template. Two inductors + coupling cap."""
+    """Ćuk converter template (inverting). Two inductors + coupling cap.
+    
+    Standard Ćuk: Vout is NEGATIVE.
+    Switch ON: L1 charges from Vin, D off, L2 freewheels through output.
+    Switch OFF: L1 charges Cc, D conducts, energy transfers to output.
+    """
     vin = conditions.get("vin", 12.0)
-    vout_target = conditions.get("vout", 5.0)
+    vout_target = conditions.get("vout", -5.0)
     iout = conditions.get("iout", 1.0)
     fsw = conditions.get("fsw", 100e3)
 
@@ -268,36 +278,42 @@ def _cuk_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
     L2 = params["inductance_2"]
     C_couple = params["cap_coupling"]
     C_out = params["capacitance"]
-    R_load = params.get("r_load", vout_target / iout)
+    R_load = params.get("r_load", abs(vout_target) / iout)
     R_esr = params.get("esr", 0.02)
     R_dson = params.get("r_dson", 0.05)
-    duty = max(0.05, min(0.95, vout_target / (vin + vout_target)))
+    duty = max(0.05, min(0.95, abs(vout_target) / (vin + abs(vout_target))))
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
-* ARCS Cuk Converter
+* ARCS Cuk Converter (Inverting)
 * Vin={vin}V, Vout_target={vout_target}V, fsw={fsw/1e3:.0f}kHz
 
 Vin input 0 DC {vin}
 
+* Input inductor
 L1 input sw_node {L1:.6e} IC=0
 
-Vpwm pwm_ctrl 0 PULSE(0 1 0 1n 1n {ton:.10e} {period:.10e})
-Bsw sw_node 0 I = V(sw_node) / {R_dson} * V(pwm_ctrl)
-Rsw_damp sw_node 0 1e6
+* Shunt MOSFET switch to ground
+Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
+S1 sw_node 0 pwm_ctrl 0 SMOD
+.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
-Cc sw_node mid {C_couple:.6e} IC={vin}
+* Coupling capacitor
+Cc sw_node cb {C_couple:.6e} IC={vin}
 
-Dcuk mid vout_node DSCHOTTKY
+* Diode from cb to GND: conducts when cb > 0 (switch OFF, L1 charges Cc)
+Dcuk cb 0 DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=60 CJO=100p)
 
-L2 vout_node vout {L2:.6e} IC=0
+* Output inductor from cb to negative output
+L2 cb vout {L2:.6e} IC=0
 
+* Output cap and load (output voltage is negative)
 Resr vout cap_node {R_esr}
 C1 cap_node 0 {C_out:.6e} IC={vout_target}
 
@@ -316,7 +332,11 @@ Vsense load_mid 0 DC 0
 
 
 def _sepic_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
-    """SEPIC converter template. Non-inverting, can step up or down."""
+    """SEPIC converter template. Non-inverting, can step up or down.
+    
+    Switch ON: L1 charges from Vin, L2 charges from Cc, D off.
+    Switch OFF: L1+L2 energy transfers to output through D.
+    """
     vin = conditions.get("vin", 12.0)
     vout_target = conditions.get("vout", 5.0)
     iout = conditions.get("iout", 1.0)
@@ -333,8 +353,8 @@ def _sepic_netlist(params: dict[str, float], conditions: dict[str, float]) -> st
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -343,19 +363,25 @@ def _sepic_netlist(params: dict[str, float], conditions: dict[str, float]) -> st
 
 Vin input 0 DC {vin}
 
+* Input inductor
 L1 input sw_node {L1:.6e} IC=0
 
-Vpwm pwm_ctrl 0 PULSE(0 1 0 1n 1n {ton:.10e} {period:.10e})
-Bsw sw_node 0 I = V(sw_node) / {R_dson} * V(pwm_ctrl)
-Rsw_damp sw_node 0 1e6
+* Shunt MOSFET switch to ground
+Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
+S1 sw_node 0 pwm_ctrl 0 SMOD
+.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
-Cc sw_node l2_in {C_couple:.6e} IC={vin}
+* Coupling capacitor
+Cc sw_node cb {C_couple:.6e} IC={vin}
 
-L2 l2_in diode_a {L2:.6e} IC=0
+* Second inductor from cb to ground
+L2 cb 0 {L2:.6e} IC=0
 
-Dsepic diode_a vout DSCHOTTKY
+* Output diode from cb junction to output (non-inverting)
+Dsepic cb vout DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=60 CJO=100p)
 
+* Output cap and load
 Resr vout cap_node {R_esr}
 C1 cap_node 0 {C_out:.6e} IC={vout_target}
 
@@ -393,8 +419,8 @@ def _flyback_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -403,14 +429,18 @@ def _flyback_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
 Vin input 0 DC {vin}
 
+* Primary winding
 L_pri input sw_drain {Lp:.6e} IC=0
+* Secondary winding (dot convention: when sw_drain goes low, sec_dot goes positive)
 L_sec sec_dot 0 {Ls:.6e} IC=0
 K1 L_pri L_sec {k}
 
-Vpwm pwm_ctrl 0 PULSE(0 1 0 1n 1n {ton:.10e} {period:.10e})
-Bsw sw_drain 0 I = V(sw_drain) / {R_dson} * V(pwm_ctrl)
-Rsw_damp sw_drain 0 1e6
+* Primary-side MOSFET switch
+Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
+S1 sw_drain 0 pwm_ctrl 0 SMOD
+.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
+* Secondary-side diode (conducts when switch is off)
 Dfb sec_dot vout DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
 
@@ -452,8 +482,8 @@ def _forward_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 200 * period
-    meas_start = 150 * period
+    sim_time = 500 * period
+    meas_start = 400 * period
     tstep = period / 100
 
     return f"""\
@@ -462,14 +492,18 @@ def _forward_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
 Vin input 0 DC {vin}
 
+* Primary winding
 L_pri input sw_drain {Lp:.6e} IC=0
+* Secondary winding
 L_sec 0 sec_out {Ls:.6e} IC=0
 K1 L_pri L_sec {k}
 
-Vpwm pwm_ctrl 0 PULSE(0 1 0 1n 1n {ton:.10e} {period:.10e})
-Bsw sw_drain 0 I = V(sw_drain) / {R_dson} * V(pwm_ctrl)
-Rsw_damp sw_drain 0 1e6
+* Primary-side MOSFET switch
+Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
+S1 sw_drain 0 pwm_ctrl 0 SMOD
+.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
+* Secondary-side rectifier + freewheeling diode
 Dfwd sec_out rect_out DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
 
@@ -555,7 +589,7 @@ OPERATING_CONDITIONS = {
     "buck": {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100e3},
     "boost": {"vin": 5.0, "vout": 12.0, "iout": 0.5, "fsw": 100e3},
     "buck_boost": {"vin": 12.0, "vout": -9.0, "iout": 0.5, "fsw": 100e3},
-    "cuk": {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100e3},
+    "cuk": {"vin": 12.0, "vout": -5.0, "iout": 1.0, "fsw": 100e3},
     "sepic": {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100e3},
     "flyback": {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100e3},
     "forward": {"vin": 48.0, "vout": 12.0, "iout": 2.0, "fsw": 100e3},
