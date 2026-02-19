@@ -170,18 +170,18 @@ Special tokens:       START (VSS), END, PAD
 ## Roadmap
 
 ### Phase 1: Data Generation & Proof of Concept (Weeks 1-3)
-- [ ] Build parameterized SPICE templates for 7 power converter topologies
-- [ ] Write data generation pipeline (random sweep + simulate + extract metrics)
-- [ ] Generate ~14K circuit samples with performance labels
-- [ ] Design tokenizer vocabulary (components + values + pins + specs)
-- [ ] Implement Eulerian circuit representation + augmentation
+- [x] Build parameterized SPICE templates for 7 power converter topologies
+- [x] Write data generation pipeline (random sweep + simulate + extract metrics)
+- [ ] Generate ~14K circuit samples with performance labels *(in progress — 20K generated, 11.8K valid, 3 topologies remaining)*
+- [x] Design tokenizer vocabulary (components + values + pins + specs) *(676 tokens)*
+- [x] Implement Eulerian circuit representation + augmentation *(euler.py + component shuffle aug)*
 
 ### Phase 2: Model Training (Weeks 3-5)
-- [ ] Implement GPT-style decoder model with circuit tokenizer
-- [ ] Pre-train on unconditional next-token prediction
-- [ ] Add spec-conditioning (spec prefix tokens)
-- [ ] Fine-tune for spec → circuit generation
-- [ ] Evaluate: validity rate, spec compliance, diversity
+- [x] Implement GPT-style decoder model with circuit tokenizer *(6.5M param SwiGLU/RMSNorm GPT)*
+- [ ] Pre-train on unconditional next-token prediction *(code ready, awaiting data)*
+- [x] Add spec-conditioning (spec prefix tokens) *(built into model architecture)*
+- [ ] Fine-tune for spec → circuit generation *(same training loop)*
+- [ ] Evaluate: validity rate, spec compliance, diversity *(evaluate.py ready)*
 
 ### Phase 3: SPICE-in-the-Loop RL (Weeks 5-7)
 - [ ] Implement reward function from SPICE simulation metrics
