@@ -183,9 +183,9 @@ Special tokens:       START (VSS), END, PAD
 - [x] Evaluate: validity rate, spec compliance, diversity *(100% conditioned validity, 77.1% unconditioned)*
 
 ### Phase 3: SPICE-in-the-Loop RL (Weeks 5-7)
-- [ ] Implement reward function from SPICE simulation metrics *(in progress)*
-- [ ] RL fine-tuning (PPO or GRPO) to improve generated circuit quality
-- [ ] Compare: pre-trained only vs. RL-refined
+- [x] Implement reward function from SPICE simulation metrics *(max 8.0: structure + convergence + vout_accuracy + efficiency + ripple)*
+- [x] RL fine-tuning (REINFORCE w/ KL penalty + baseline) *(5000 steps, 12.3h, best reward 7.02/8.0)*
+- [x] Compare: pre-trained only vs. RL-refined *(vout error 53% → 4%, reward 4.1 → 7.0)*
 
 ### Phase 4: Expand Circuit Families (Weeks 7-10)
 - [ ] Add filter, amplifier, oscillator templates

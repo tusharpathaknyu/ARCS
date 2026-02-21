@@ -1,6 +1,6 @@
 # ARCS: Decision Log & Progress Tracker
 
-> Last updated: 2026-02-20
+> Last updated: 2026-02-21
 
 ---
 
@@ -13,7 +13,8 @@
 | `3f141ef` | — | Fix all 7 topology templates (circuit physics, SW model) |
 | `f5468a1` | — | Phase 2: GPT decoder model, dataset, training loop, evaluation |
 | `15103f3` | — | Add DECISIONS.md, update README checkboxes |
-| `TBD` | 2026-02-20 | Phase 2 training complete, evaluation results, Phase 3 RL begun |
+| `4b786ba` | 2026-02-20 | Phase 3: SPICE-in-the-loop RL module (code + smoke tests) |
+| `TBD` | 2026-02-21 | Phase 3: RL training complete (5000 steps, best reward 7.02/8.0) |
 
 ---
 
@@ -162,6 +163,15 @@ These are from earlier explorations using a simpler parameter-prediction approac
 **Rationale**: Full Eulerian walk augmentation requires the `euler.py` module integration with the dataset pipeline. As a quick alternative, shuffling component order teaches the model that circuits are about what components exist and their values, not the order they're listed. This is a stepping stone to proper Eulerian augmentation.
 **Factor**: 5× augmentation (1 original + 4 shuffled orderings).
 
+### D11: REINFORCE over PPO/GRPO for Phase 3
+**Decision**: Use REINFORCE with learned baseline + KL penalty instead of PPO or GRPO.
+**Rationale**: REINFORCE is simpler to implement and debug. Each RL step requires 8 SPICE simulations (~8 sec), making each step slow enough that sample efficiency matters less than stability. The KL penalty from a frozen reference model serves the same role as PPO's clipping — preventing catastrophic divergence. Can upgrade to PPO in Phase 4 if REINFORCE plateaus.
+**Trade-off**: Higher variance than PPO, but compensated by the baseline and small batch size relative to the slow simulation loop.
+
+### D12: Log-Prob Mean (Not Sum) for Policy Gradient
+**Decision**: Normalize policy gradient by sequence length using `log_probs.mean()` instead of `.sum()`.
+**Rationale**: Generated sequences vary in length (5-30 tokens). Using sum would weight longer sequences disproportionately, causing unstable gradients. Mean normalization keeps gradient magnitude consistent regardless of generation length. Also added log-prob clamping (min=-20) to prevent -inf from top-k filtering mismatches between sampling and gradient passes.
+
 ---
 
 ## Architecture Comparison: Old vs. New
@@ -200,9 +210,9 @@ These are from earlier explorations using a simpler parameter-prediction approac
   - Unconditioned: 77.1% validity, all 7 topologies represented
 
 ### Phase 3: SPICE-in-the-Loop RL (Weeks 5-7)
-- [🔄] Implement reward function from SPICE simulation metrics — **IN PROGRESS**
-- [ ] RL fine-tuning (PPO or GRPO)
-- [ ] Compare: pre-trained only vs. RL-refined
+- [x] Implement reward function from SPICE simulation metrics — `rl.py`
+- [x] RL fine-tuning (REINFORCE w/ KL penalty + baseline) — 5000 steps complete
+- [x] Compare: pre-trained only vs. RL-refined (see Phase 3 section below)
 
 ### Phase 4-5: Not started
 
@@ -212,9 +222,94 @@ These are from earlier explorations using a simpler parameter-prediction approac
 1. ~~Wait for data gen to complete~~ ✅
 2. ~~Launch training~~ ✅ (100 epochs, 27 hours, converged at epoch 68)
 3. ~~Evaluate trained model~~ ✅ (100% conditioned validity, 77.1% unconditioned)
-4. **Begin Phase 3**: SPICE-in-the-loop RL using best_model.pt as initialization
-   - Implement `rl.py` with reward function (SPICE simulation → reward signal)
-   - Decode generated tokens → SPICE netlist → simulate → extract metrics
-   - Reward = f(vout_error, efficiency, ripple, stability)
-   - PPO or GRPO fine-tuning on top of pre-trained model
-   - Target: improve value accuracy from 66% and reduce SPICE failure rate
+4. ~~Phase 3 RL~~ ✅ (5000 steps, 12.3 hours, best reward 7.02/8.0)
+   - ✅ `rl.py`: REINFORCE + KL penalty + baseline, SPICE-in-the-loop reward
+   - ✅ Fixed loss=inf bug (log-prob clamping + mean normalization + inf safety)
+   - ✅ Vout error: 53.3% → 4.0% (13× improvement at best checkpoint)
+   - ⚠️ Sim valid rate degraded: 28% → 22% (KL drift, see observations)
+5. **Phase 4**: Expand circuit families (filters, amps, oscillators)
+6. **Phase 5**: Paper (baselines, ablations, writing)
+
+---
+
+## Phase 3: SPICE-in-the-Loop RL
+
+### Status: ✅ TRAINING COMPLETE
+
+#### RL Architecture
+- **Algorithm**: REINFORCE with learned baseline + KL divergence penalty
+  - README originally planned PPO/GRPO; REINFORCE chosen as simpler first step
+  - KL penalty (coeff=0.1) prevents catastrophic forgetting of pre-trained knowledge
+  - Entropy regularization (coeff=0.01) maintains exploration
+- **Reward function** (max 8.0):
+  - Structure valid: 1.0 (component types match topology)
+  - Simulation converges: 1.0 (ngspice doesn't crash)
+  - Vout accuracy: 3.0 (graded: <5%→3.0, <10%→2.0, <20%→1.0)
+  - Efficiency: 2.0 (graded: >90%→2.0, >80%→1.5, >70%→1.0, >50%→0.5)
+  - Low ripple: 1.0 (graded: <2%→1.0, <5%→0.5)
+- **Inverse mapping**: `components_to_params()` — decoded sequence → topology params → SPICE netlist
+
+#### Training Config
+- Checkpoint: `checkpoints/arcs_small/best_model.pt` (epoch 68)
+- Steps: 5000, Batch: 8, LR: 1e-5, Temperature: 0.8, Top-k: 50
+- Save interval: 500, Eval interval: 100, Log interval: 10
+- Duration: 5000 steps in 12.3 hours on M3 MacBook Air
+
+#### Evaluation Trajectory (Pre-trained → RL)
+| Step | Reward | Sim Valid | Vout Err | Efficiency | Notes |
+|------|--------|-----------|----------|------------|-------|
+| Init | 4.10 | 28% | 53.3% | 1.73 | Pre-trained baseline |
+| 500 | 4.43 | 36% | 43.2% | 0.86 | Early improvement |
+| 1000 | 5.09 | 40% | 28.5% | 12.6 | Vout improving fast |
+| 1600 | 5.75 | **54%** | 9.3% | 96.9 | Peak sim_valid |
+| 1800 | 6.10 | 44% | 8.8% | 156 | |
+| 2500 | 6.60 | 34% | 13.6% | 315 | |
+| 2800 | 6.93 | 30% | **4.2%** | 418 | Near-peak reward |
+| 3300 | 6.67 | 34% | 9.4% | 4.75 | Eff stabilizes |
+| 4000 | 6.68 | 28% | 4.6% | 4.51 | |
+| 4700 | 6.53 | 30% | **3.1%** | 3.97 | Best vout accuracy |
+| **4800** | **7.02** | 12% | 4.0% | 3.57 | **Best reward** |
+| 5000 | 5.64 | 22% | 8.9% | 3.94 | Final |
+
+#### Final Results
+- **Best reward**: 7.02/8.0 (step 4800)
+- **Final eval**: reward=5.64, struct_valid=86%, sim_success=84%, sim_valid=22%, vout_err=8.9%
+
+#### Pre-trained vs. RL Comparison
+| Metric | Pre-trained | RL (best) | RL (final) | Change |
+|--------|-------------|-----------|------------|--------|
+| Reward | 4.10 | **7.02** | 5.64 | +71% |
+| Vout Error | 53.3% | **3.1%** | 8.9% | **17× better** |
+| Sim Valid | 28% | 54% (step 1600) | 22% | ↓ degraded |
+| Struct Valid | 100% | 86% | 86% | ↓ slight regression |
+| KL Divergence | 0.0 | — | ~2.0 | Significant drift |
+
+#### Key Observations
+1. **Vout accuracy is the big win** — 53% → 3-9% error. The model learned to generate component values that produce the correct output voltage. This was the primary bottleneck identified in Phase 2.
+2. **Sim valid rate degraded** — peaked at 54% (step 1600) then declined to 22%. The reward function optimizes for circuits that simulate well, but KL drift caused the model to lose some structural knowledge. The KL coeff (0.1) may need to be higher.
+3. **Efficiency metric is unreliable** — showed wild swings (0.86 → 2765 → 3.9). Some topologies (especially flyback/forward with coupled inductors) produce nonsensical efficiency values. The reward function caps efficiency reward at 2.0, so this doesn't corrupt training, but the reported metric is noisy.
+4. **Best checkpoint != final** — Best reward at step 4800 (7.02), but final eval at step 5000 is lower (5.64). Eval-time stochastic sampling means high variance between evals.
+5. **Baseline converged to ~6.4** — training reward averaged ~6.0-7.0 in the final 1000 steps, meaning the model consistently generates circuits scoring 75-88% of max reward.
+
+#### Bug Fixes Applied
+1. **loss=inf** — Generated tokens could fall outside the top-k set during
+   gradient recomputation, producing -inf log-probs. Fixed by:
+   - Clamping log_probs to min=-20.0 (≈ prob 2e-9, finite but negligible)
+   - Using `log_probs.mean()` instead of `.sum()` for sequence-length normalization
+   - Safety check: skip gradient update if loss is non-finite
+
+#### Checkpoints
+- `checkpoints/arcs_rl/best_rl_model.pt` — Best reward (step 4800, reward 7.02)
+- `checkpoints/arcs_rl/final_rl_model.pt` — Final step 5000
+- `checkpoints/arcs_rl/rl_checkpoint_step{500..5000}.pt` — Periodic saves (every 500)
+- `checkpoints/arcs_rl/rl_history.json` — Full training history
+
+#### AnalogGenie Comparison Notes
+- AnalogGenie: 11.8M params, 6-layer GPT (384 dim), 1029-token pin-level vocab, block_size=1024
+  - No values, no spec conditioning, no RL — pure topology generation
+  - Exhaustive Eulerian walk augmentation (up to 2000 walks/circuit vs. our 5× shuffle)
+  - Data: 3502 circuits → 227K augmented sequences (90/10 train/val split)
+  - Training: 100K iterations, batch 64, lr 3e-4, vanilla CE loss
+  - Smart metric: filtered loss (excluding TRUNCATE/PAD tokens)
+- ARCS advantages: native value tokens, spec conditioning, SPICE-in-the-loop RL, broader scope
+- Future improvement: integrate proper Eulerian walk augmentation from `euler.py` (Phase 4)

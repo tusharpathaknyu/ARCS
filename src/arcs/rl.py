@@ -622,8 +622,13 @@ class ARCSRLTrainer:
             # Advantage
             advantage = reward - self.baseline
 
-            # Policy loss: -advantage * sum(log_probs)
-            pg_loss = -(advantage * log_probs.sum())
+            # Policy loss: -advantage * mean(log_probs)
+            # Use mean (not sum) over tokens to normalize by sequence length,
+            # keeping gradients at a consistent scale regardless of gen length.
+            if log_probs.numel() > 0:
+                pg_loss = -(advantage * log_probs.mean())
+            else:
+                pg_loss = torch.tensor(0.0, device=self.device)
 
             # Total episode loss
             episode_loss = pg_loss + self.config.kl_coeff * kl - self.config.entropy_coeff * entropy.mean()
@@ -650,11 +655,19 @@ class ARCSRLTrainer:
         # Average loss and backprop
         total_policy_loss = total_policy_loss / self.config.batch_size
 
-        total_policy_loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            self.model.parameters(), self.config.max_grad_norm
-        )
-        self.optimizer.step()
+        # Safety clamp: prevent inf/nan from corrupting model weights
+        if not torch.isfinite(total_policy_loss):
+            logging.warning(
+                f"Non-finite loss detected ({total_policy_loss.item():.4f}), "
+                "skipping gradient update"
+            )
+            self.optimizer.zero_grad()
+        else:
+            total_policy_loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), self.config.max_grad_norm
+            )
+            self.optimizer.step()
 
         # Update baseline
         mean_reward = np.mean(batch_rewards)
@@ -769,6 +782,11 @@ class ARCSRLTrainer:
         log_probs = log_probs_all[
             torch.arange(n_gen, device=device), gen_tensor
         ]  # (n_gen,)
+
+        # Clamp to avoid -inf when a generated token falls outside the
+        # top-k set during the second (gradient) pass. -20 ≈ prob 2e-9,
+        # effectively zero but still finite for stable gradient computation.
+        log_probs = log_probs.clamp(min=-20.0)
 
         return gen_tensor, log_probs, torch.tensor(entropies, device=device)
 
