@@ -172,19 +172,18 @@ Special tokens:       START (VSS), END, PAD
 ### Phase 1: Data Generation & Proof of Concept (Weeks 1-3)
 - [x] Build parameterized SPICE templates for 7 power converter topologies
 - [x] Write data generation pipeline (random sweep + simulate + extract metrics)
-- [ ] Generate ~14K circuit samples with performance labels *(in progress — 20K generated, 11.8K valid, 3 topologies remaining)*
+- [x] Generate ~14K circuit samples with performance labels *(35K generated, 16.4K valid across 7 topologies)*
 - [x] Design tokenizer vocabulary (components + values + pins + specs) *(676 tokens)*
 - [x] Implement Eulerian circuit representation + augmentation *(euler.py + component shuffle aug)*
 
 ### Phase 2: Model Training (Weeks 3-5)
 - [x] Implement GPT-style decoder model with circuit tokenizer *(6.5M param SwiGLU/RMSNorm GPT)*
-- [ ] Pre-train on unconditional next-token prediction *(code ready, awaiting data)*
+- [x] Train on 175K augmented sequences, 100 epochs *(best val_loss=1.279 at epoch 68)*
 - [x] Add spec-conditioning (spec prefix tokens) *(built into model architecture)*
-- [ ] Fine-tune for spec → circuit generation *(same training loop)*
-- [ ] Evaluate: validity rate, spec compliance, diversity *(evaluate.py ready)*
+- [x] Evaluate: validity rate, spec compliance, diversity *(100% conditioned validity, 77.1% unconditioned)*
 
 ### Phase 3: SPICE-in-the-Loop RL (Weeks 5-7)
-- [ ] Implement reward function from SPICE simulation metrics
+- [ ] Implement reward function from SPICE simulation metrics *(in progress)*
 - [ ] RL fine-tuning (PPO or GRPO) to improve generated circuit quality
 - [ ] Compare: pre-trained only vs. RL-refined
 

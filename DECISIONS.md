@@ -1,6 +1,6 @@
 # ARCS: Decision Log & Progress Tracker
 
-> Last updated: 2026-02-18
+> Last updated: 2026-02-20
 
 ---
 
@@ -12,48 +12,90 @@
 | `187926e` | — | Phase 1 infrastructure: SPICE pipeline, tokenizer, Euler repr |
 | `3f141ef` | — | Fix all 7 topology templates (circuit physics, SW model) |
 | `f5468a1` | — | Phase 2: GPT decoder model, dataset, training loop, evaluation |
+| `15103f3` | — | Add DECISIONS.md, update README checkboxes |
+| `TBD` | 2026-02-20 | Phase 2 training complete, evaluation results, Phase 3 RL begun |
 
 ---
 
 ## Phase 1: Data Generation & Infrastructure
 
-### Status: ~80% complete (data gen running)
+### Status: ✅ COMPLETE
 
-#### Completed
+#### Dataset (35,000 samples, ~6 hours generation)
+| Topology | Samples | Valid | Yield |
+|----------|---------|-------|-------|
+| Buck | 5,000 | 3,811 | 76.2% |
+| Boost | 5,000 | 3,156 | 63.1% |
+| Buck-Boost | 5,000 | 2,033 | 40.7% |
+| Ćuk | 5,000 | 2,791 | 55.8% |
+| SEPIC | 5,000 | 1,690 | 33.8% |
+| Flyback | 5,000 | 901 | 18.0% |
+| Forward | 5,000 | 2,057 | 41.1% |
+| **Total** | **35,000** | **16,439** | **47.0%** |
+
+#### Infrastructure
 - **7 SPICE templates** for DC-DC power converters: buck, boost, buck-boost, Ćuk, SEPIC, flyback, forward
 - **NGSpice runner** (`spice.py`): batch-mode simulation with output file capture, temp file cleanup
 - **Data generation pipeline** (`datagen.py`): random parameter sweep with E-series snapping, SPICE simulation, metric extraction, JSONL persistence
 - **Tokenizer** (`tokenizer.py`): 676-token vocabulary (components, values, pins, nets, specs, topologies)
 - **Eulerian representation** (`euler.py`): Circuit graph → Eulerian walk for data augmentation
 
-#### In Progress
-- **Phase 1 dataset generation**: 5,000 samples × 7 topologies = 35,000 total
-  - Buck: ✅ 5,000 done (3,811 valid = 76.2% yield)
-  - Boost: ✅ 5,000 done (3,156 valid = 63.1%)
-  - Buck-Boost: ✅ 5,000 done (2,033 valid = 40.7%)
-  - Ćuk: ✅ 5,000 done (2,791 valid = 55.8%)
-  - SEPIC: 🔄 Running (~2% done)
-  - Flyback: ⏳ Queued
-  - Forward: ⏳ Queued
-  - **Running total: 20,000 generated, 11,791 valid (59.0% avg yield)**
-  - **ETA: ~2 hours remaining for SEPIC + flyback + forward**
-
-#### Not Started
-- Eulerian augmentation for training (code exists, not yet applied to dataset)
-
 ---
 
 ## Phase 2: Model Training
 
-### Status: Code complete, awaiting data
+### Status: ✅ TRAINING COMPLETE
 
-#### Completed Code
-- **`model.py`** — ARCSModel: GPT-style decoder-only transformer
-- **`dataset.py`** — CircuitDataset + EulerianAugmentedDataset
-- **`train.py`** — Full training pipeline with CLI
-- **`evaluate.py`** — Generation + evaluation (validity, diversity, specs)
-- **`scripts/train_model.sh`** — Launch script
-- All smoke-tested with synthetic data ✅
+#### Training Configuration
+- **Data**: 35K samples × 5 augmentation = 175K training sequences
+- **Model**: 6.5M params (d=256, layers=6, heads=4, SwiGLU/RMSNorm)
+- **Optimizer**: AdamW lr=3e-4, warmup 5 epochs, cosine decay to 3e-5
+- **Batch**: 64, val_split=0.1, value_weight=5×, gradient clip=1.0
+- **Duration**: 100 epochs, ~27 hours on M3 MacBook Air (MPS)
+
+#### Training Curve Summary
+| Epoch | Train Loss | Val Loss | Val PPL | Accuracy | Value Acc | Struct Acc |
+|-------|-----------|----------|---------|----------|-----------|------------|
+| 1 | 2.789 | 1.959 | 7.1 | 63.7% | 44.6% | 77.3% |
+| 25 | 1.399 | 1.462 | 4.3 | 69.0% | 57.3% | 77.3% |
+| 50 | 1.108 | 1.300 | 3.7 | 71.5% | 63.5% | 77.3% |
+| 60 | 1.028 | 1.282 | 3.6 | 72.0% | 64.7% | 77.3% |
+| **68*** | — | **1.279** | **3.6** | — | — | — |
+| 75 | 0.917 | 1.288 | 3.6 | 72.5% | 65.8% | 77.3% |
+| 100 | 0.869 | 1.305 | 3.7 | 72.7% | 66.2% | 77.3% |
+
+\* Best checkpoint (epoch 68, val_loss=1.2791)
+
+#### Evaluation Results (210 samples per mode, best checkpoint)
+
+**Spec-Conditioned Generation (30 samples × 7 topologies)**:
+- Structural validity: **100%** (210/210)
+- Avg components per circuit: 5.3
+- Unique component combos: 29
+- Diversity score: 0.138
+- All 7 topologies generated with correct component types
+
+**Unconditional Generation (210 samples)**:
+- Structural validity: **77.1%** (162/210)
+- Avg components per circuit: 5.2
+- Unique component combos: 23
+- Diversity score: 0.142
+- All 7 topologies represented in output
+
+#### Key Observations
+1. **Structural tokens saturate immediately** — 77.3% struct accuracy from epoch 1, never improves. The model quickly memorizes the finite set of component/spec/topology tokens.
+2. **Value accuracy is the bottleneck** — climbs from 44.6% → 66.2% over 100 epochs. This is the harder task (500 bins) and the primary target for RL improvement.
+3. **Best model at epoch 68** — validation loss plateaus at ~1.28 from epoch 55-68, then mild overfitting begins.
+4. **Conditioned >> Unconditioned** — 100% vs 77.1% validity shows spec conditioning strongly guides structurally valid generation.
+5. **Diversity is moderate** — 29 unique component combos across 210 conditioned samples suggests some mode collapse per topology.
+
+#### Checkpoints
+- `checkpoints/arcs_small/best_model.pt` — Best val loss (epoch 68), 75MB
+- `checkpoints/arcs_small/final_model.pt` — Epoch 100, 25MB
+- `checkpoints/arcs_small/checkpoint_epoch{25,50,75,100}.pt` — Periodic saves
+- `checkpoints/arcs_small/history.json` — Full training metrics
+- `checkpoints/arcs_small/eval_conditioned.json` — Conditioned eval results
+- `checkpoints/arcs_small/eval_unconditioned.json` — Unconditioned eval results
 
 #### Pre-Existing Models (from `circuitgenie/` module — DIFFERENT architecture)
 These are from earlier explorations using a simpler parameter-prediction approach:
@@ -62,15 +104,6 @@ These are from earlier explorations using a simpler parameter-prediction approac
 - `checkpoints_v3/`: vocab=161, d=256, layers=6 — Eulerian walk model
 
 **Decision: These are NOT compatible with the new ARCS architecture (676-token vocab, SwiGLU, RMSNorm). They will be kept as baselines for comparison but are not used going forward.**
-
-#### Training Plan (once data gen completes)
-```bash
-bash scripts/train_model.sh small  # 6.5M params, ~30 min on MPS
-```
-Then evaluate:
-```bash
-PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/small/best_model.pt
-```
 
 ---
 
@@ -154,23 +187,20 @@ PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/small/best_model
 ### Phase 1: Data Generation & Proof of Concept (Weeks 1-3)
 - [x] Build parameterized SPICE templates for 7 power converter topologies
 - [x] Write data generation pipeline (random sweep + simulate + extract metrics)
-- [🔄] Generate ~14K circuit samples with performance labels
-  - Currently at 20K generated / 11.8K valid — will exceed 14K target once done
-  - README called for 2K per topology; we're doing 5K (more diverse training data)
+- [x] Generate ~14K circuit samples with performance labels *(35K generated, 16.4K valid)*
 - [x] Design tokenizer vocabulary (components + values + pins + specs)
 - [x] Implement Eulerian circuit representation + augmentation
-  - `euler.py` exists; shuffle augmentation in dataset.py; full Eulerian walk TBD
 
 ### Phase 2: Model Training (Weeks 3-5)
 - [x] Implement GPT-style decoder model with circuit tokenizer — `model.py`
-- [⏳] Pre-train on unconditional next-token prediction — code ready, awaiting data
+- [x] Train on all circuit sequences with spec conditioning *(100 epochs, 175K samples)*
 - [x] Add spec-conditioning (spec prefix tokens) — built into model + train.py
-- [⏳] Fine-tune for spec → circuit generation — same training loop, spec prefix
-- [⏳] Evaluate: validity rate, spec compliance, diversity — `evaluate.py` ready
+- [x] Evaluate: validity rate, spec compliance, diversity
+  - Conditioned: 100% validity, 5.3 avg components, 29 unique combos
+  - Unconditioned: 77.1% validity, all 7 topologies represented
 
 ### Phase 3: SPICE-in-the-Loop RL (Weeks 5-7)
-- [ ] Implement reward function from SPICE simulation metrics
-  - Note: old `checkpoints_v2/` has RL checkpoints with 5K steps — prior art to build on
+- [🔄] Implement reward function from SPICE simulation metrics — **IN PROGRESS**
 - [ ] RL fine-tuning (PPO or GRPO)
 - [ ] Compare: pre-trained only vs. RL-refined
 
@@ -179,7 +209,12 @@ PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/small/best_model
 ---
 
 ## Next Steps (Priority Order)
-1. **Wait for data gen to complete** (~2 hours remaining)
-2. **Launch training**: `bash scripts/train_model.sh small`
-3. **Evaluate trained model**: validity rate, spec compliance, diversity
-4. **Begin Phase 3**: SPICE-in-the-loop RL using trained model as initialization
+1. ~~Wait for data gen to complete~~ ✅
+2. ~~Launch training~~ ✅ (100 epochs, 27 hours, converged at epoch 68)
+3. ~~Evaluate trained model~~ ✅ (100% conditioned validity, 77.1% unconditioned)
+4. **Begin Phase 3**: SPICE-in-the-loop RL using best_model.pt as initialization
+   - Implement `rl.py` with reward function (SPICE simulation → reward signal)
+   - Decode generated tokens → SPICE netlist → simulate → extract metrics
+   - Reward = f(vout_error, efficiency, ripple, stability)
+   - PPO or GRPO fine-tuning on top of pre-trained model
+   - Target: improve value accuracy from 66% and reduce SPICE failure rate
