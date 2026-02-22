@@ -16,7 +16,10 @@ import numpy as np
 from tqdm import tqdm
 
 from arcs.spice import NGSpiceRunner, SimulationResult
-from arcs.templates import TopologyTemplate, get_topology, get_all_topologies
+from arcs.templates import (
+    TopologyTemplate, get_topology, get_all_topologies,
+    _TIER1_NAMES, _TIER2_NAMES,
+)
 
 
 @dataclass
@@ -46,11 +49,22 @@ def compute_derived_metrics(
 ) -> dict[str, float]:
     """Compute derived performance metrics from raw simulation outputs.
 
-    Returns enriched metrics dict with efficiency, regulation error, etc.
+    Dispatches to power-converter or signal-processing logic based on
+    topology tier.
     """
-    derived = dict(raw_metrics)  # Copy raw
+    if topology_name in _TIER1_NAMES:
+        return _compute_power_metrics(raw_metrics, operating_conditions)
+    else:
+        return _compute_signal_metrics(raw_metrics, operating_conditions, topology_name)
 
-    # Compute power from measured currents and voltages
+
+def _compute_power_metrics(
+    raw_metrics: dict[str, float],
+    operating_conditions: dict[str, float],
+) -> dict[str, float]:
+    """Tier 1: power converter derived metrics."""
+    derived = dict(raw_metrics)
+
     vout_avg = abs(raw_metrics.get("vout_avg", 0))
     iout_avg = abs(raw_metrics.get("iout_avg", 0))
     vin_val = abs(operating_conditions.get("vin", 0))
@@ -62,20 +76,16 @@ def compute_derived_metrics(
     derived["pout"] = pout
     derived["pin"] = pin
 
-    # Efficiency
     if pin > 1e-9:
         derived["efficiency"] = pout / pin
     else:
         derived["efficiency"] = 0.0
 
-    # Output voltage regulation error (%)
-    # Compare absolute values to handle inverting topologies (buck-boost: vout < 0)
     if abs(vout_target) > 1e-9:
         derived["vout_error_pct"] = abs(vout_avg - abs(vout_target)) / abs(vout_target) * 100
     else:
         derived["vout_error_pct"] = 100.0
 
-    # Ripple ratio (ripple / vout)
     ripple = abs(raw_metrics.get("vout_ripple", 0))
     if abs(vout_avg) > 1e-9:
         derived["ripple_ratio"] = ripple / abs(vout_avg)
@@ -85,28 +95,101 @@ def compute_derived_metrics(
     return derived
 
 
+def _compute_signal_metrics(
+    raw_metrics: dict[str, float],
+    operating_conditions: dict[str, float],
+    topology_name: str,
+) -> dict[str, float]:
+    """Tier 2: signal-processing derived metrics (amplifiers, filters, oscillators)."""
+    derived = dict(raw_metrics)
+
+    # Amplifiers / filters: gain in dB is reported directly
+    gain_db = raw_metrics.get("gain_db", raw_metrics.get("gain_dc", None))
+    if gain_db is not None:
+        derived["gain_linear"] = 10 ** (gain_db / 20)
+
+    # Band-pass: compute Q from bandwidth
+    f_peak = raw_metrics.get("f_peak")
+    bw_lo = raw_metrics.get("bw_lo")
+    bw_hi = raw_metrics.get("bw_hi")
+    if f_peak and bw_lo and bw_hi and (bw_hi - bw_lo) > 0:
+        derived["q_factor"] = f_peak / (bw_hi - bw_lo)
+
+    return derived
+
+
 def is_valid_result(
     metrics: dict[str, float],
     operating_conditions: dict[str, float],
+    topology_name: str = "",
 ) -> bool:
     """Check if simulation result is physically plausible.
 
     We keep ALL results (valid & invalid) in the dataset,
     but this flag helps label them for the model.
     """
+    if topology_name in _TIER1_NAMES or not topology_name:
+        return _is_valid_power(metrics, operating_conditions)
+    else:
+        return _is_valid_signal(metrics, operating_conditions, topology_name)
+
+
+def _is_valid_power(metrics: dict[str, float], operating_conditions: dict[str, float]) -> bool:
+    """Power converter validity checks."""
     efficiency = metrics.get("efficiency", 0)
     vout_error = metrics.get("vout_error_pct", 100)
     ripple_ratio = metrics.get("ripple_ratio", 1.0)
 
-    # Basic sanity checks
     if efficiency <= 0 or efficiency > 1.0:
         return False
-    if vout_error > 50:  # More than 50% off target
+    if vout_error > 50:
         return False
-    if ripple_ratio > 0.5:  # More than 50% ripple
+    if ripple_ratio > 0.5:
         return False
-
     return True
+
+
+def _is_valid_signal(
+    metrics: dict[str, float],
+    operating_conditions: dict[str, float],
+    topology_name: str,
+) -> bool:
+    """Signal-processing validity checks."""
+    # Amplifiers: gain must be finite and in reasonable range
+    amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp"}
+    filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass"}
+    osc_types = {"wien_bridge", "colpitts"}
+
+    if topology_name in amp_types:
+        gain_db = metrics.get("gain_db", metrics.get("gain_dc"))
+        if gain_db is None:
+            return False
+        if abs(gain_db) > 120:  # >120 dB is unrealistic for single/3-opamp
+            return False
+        bw = metrics.get("bw_3db")
+        if bw is not None and bw <= 0:
+            return False
+        return True
+
+    if topology_name in filter_types:
+        fc = metrics.get("fc_3db")
+        if fc is None or fc <= 0:
+            return False
+        # For bandpass, also check peak gain exists
+        if topology_name == "sallen_key_bandpass":
+            gain_peak = metrics.get("gain_peak")
+            if gain_peak is None:
+                return False
+        return True
+
+    if topology_name in osc_types:
+        vosc_pp = metrics.get("vosc_pp", 0)
+        if vosc_pp < 0.01:  # Must have measurable oscillation amplitude
+            return False
+        return True
+
+    # Unknown tier-2 topology — accept if any metrics exist
+    return len(metrics) > 0
 
 
 class DataGenerator:
@@ -173,7 +256,7 @@ class DataGenerator:
                     metrics = compute_derived_metrics(
                         result.metrics, template.operating_conditions, topology_name
                     )
-                    valid = is_valid_result(metrics, template.operating_conditions)
+                    valid = is_valid_result(metrics, template.operating_conditions, topology_name)
                     if valid:
                         valid_count += 1
 
@@ -227,7 +310,7 @@ class DataGenerator:
             Dict mapping topology name to list of samples.
         """
         if topologies is None:
-            topologies = ["buck", "boost", "buck_boost", "cuk", "sepic", "flyback", "forward"]
+            topologies = _TIER1_NAMES + _TIER2_NAMES
 
         all_samples = {}
         total_start = time.time()
@@ -285,8 +368,8 @@ def main():
     parser = argparse.ArgumentParser(description="ARCS Data Generation Pipeline")
     parser.add_argument(
         "--topologies", nargs="+",
-        default=["buck", "boost", "buck_boost", "cuk", "sepic", "flyback", "forward"],
-        help="Topologies to generate data for",
+        default=None,  # Will use all tiers if None
+        help="Topologies to generate data for (default: all tiers)",
     )
     parser.add_argument("--samples", type=int, default=2000, help="Samples per topology")
     parser.add_argument("--output", type=str, default="data/raw", help="Output directory")

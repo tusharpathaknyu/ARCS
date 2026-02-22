@@ -108,14 +108,20 @@ class CircuitTokenizer:
 
         # --- Topology tokens ---
         topologies = [
+            # Tier 1 — power converters
             "BUCK", "BOOST", "BUCK_BOOST", "CUK", "SEPIC", "FLYBACK", "FORWARD",
             "LLC", "PFC", "INVERTER",
+            # Tier 2 — signal processing
+            "INVERTING_AMP", "NONINVERTING_AMP", "INSTRUMENTATION_AMP",
+            "DIFFERENTIAL_AMP",
+            "SALLEN_KEY_LP", "SALLEN_KEY_HP", "SALLEN_KEY_BP",
+            "WIEN_BRIDGE", "COLPITTS",
         ]
         for name in topologies:
             self._add_token(idx, f"TOPO_{name}", TokenType.TOPOLOGY)
             idx += 1
 
-        while idx < 35:
+        while idx < 45:
             self._add_token(idx, f"TOPO_RESERVED_{idx}", TokenType.TOPOLOGY)
             idx += 1
 
@@ -128,12 +134,16 @@ class CircuitTokenizer:
             "SPEC_CMRR", "SPEC_THD", "SPEC_SNR",
             "SPEC_NOISE_FIGURE", "SPEC_POWER",
             "SPEC_FSW",  # Switching frequency
+            "SPEC_CUTOFF_FREQ",  # Filter -3dB frequency
+            "SPEC_CENTER_FREQ",  # Band-pass center frequency
+            "SPEC_Q_FACTOR",     # Filter quality factor
+            "SPEC_OSC_FREQ",     # Oscillator frequency
         ]
         for name in specs:
             self._add_token(idx, name, TokenType.SPEC)
             idx += 1
 
-        while idx < 55:
+        while idx < 65:
             self._add_token(idx, f"SPEC_RESERVED_{idx}", TokenType.SPEC)
             idx += 1
 
@@ -158,7 +168,7 @@ class CircuitTokenizer:
             self._add_token(idx, name, TokenType.PIN)
             idx += 1
 
-        while idx < 75:
+        while idx < 85:
             self._add_token(idx, f"PIN_RESERVED_{idx}", TokenType.PIN)
             idx += 1
 
@@ -252,11 +262,11 @@ class CircuitTokenizer:
 
         Format:
             START, TOPO_X, SEP,
-            SPEC_VIN, val, SPEC_VOUT, val, ..., SEP,
+            SPEC_<key>, val, ..., SEP,
             COMP_X, VAL, COMP_Y, VAL, ...,
             END
 
-        This is the core representation that the autoregressive model learns.
+        Supports both Tier 1 (power converter) and Tier 2 (signal) topologies.
         """
         from arcs.datagen import CircuitSample  # Avoid circular import
 
@@ -268,25 +278,44 @@ class CircuitTokenizer:
             tokens.append(self.name_to_id[topo_key])
         tokens.append(self.sep_id)
 
-        # Spec tokens (operating conditions + key metrics)
+        # Spec tokens — build map from operating conditions + key metrics
         oc = sample.operating_conditions
-        spec_map = {
-            "vin": oc.get("vin"),
-            "vout": oc.get("vout"),
-            "iout": oc.get("iout"),
-            "fsw": oc.get("fsw"),
-        }
-        # Add target metrics if valid
-        if sample.valid:
-            spec_map["efficiency"] = sample.metrics.get("efficiency")
-            spec_map["ripple"] = sample.metrics.get("vout_ripple")
 
-        for spec_name, spec_val in spec_map.items():
-            if spec_val is not None:
-                spec_key = f"SPEC_{spec_name.upper()}"
-                if spec_key in self.name_to_id:
-                    tokens.append(self.name_to_id[spec_key])
-                    tokens.append(self.encode_value(abs(spec_val)))
+        # Common OC → spec-token mapping
+        _OC_SPEC = {
+            "vin": "SPEC_VIN", "vout": "SPEC_VOUT", "iout": "SPEC_IOUT",
+            "fsw": "SPEC_FSW",
+            "vin_amp": "SPEC_VIN", "freq_test": "SPEC_CUTOFF_FREQ",
+            "vcc": "SPEC_VIN",
+        }
+        spec_map: dict[str, float | None] = {}
+        for oc_key, oc_val in oc.items():
+            spec_tok = _OC_SPEC.get(oc_key)
+            if spec_tok and spec_tok not in spec_map:
+                spec_map[spec_tok] = oc_val
+
+        # Key metrics (add if valid)
+        if sample.valid:
+            m = sample.metrics
+            _METRIC_SPEC = {
+                "efficiency": "SPEC_EFFICIENCY",
+                "vout_ripple": "SPEC_RIPPLE",
+                "gain_db": "SPEC_GAIN",
+                "bw_3db": "SPEC_BANDWIDTH",
+                "fc_3db": "SPEC_CUTOFF_FREQ",
+                "phase_deg": "SPEC_PHASE_MARGIN",
+                "f_peak": "SPEC_CENTER_FREQ",
+                "vosc_pp": "SPEC_VIN",   # oscillator amplitude → reuse VIN slot
+            }
+            for mk, sk in _METRIC_SPEC.items():
+                val = m.get(mk)
+                if val is not None and sk not in spec_map:
+                    spec_map[sk] = val
+
+        for spec_key, spec_val in spec_map.items():
+            if spec_val is not None and spec_key in self.name_to_id:
+                tokens.append(self.name_to_id[spec_key])
+                tokens.append(self.encode_value(abs(spec_val)))
         tokens.append(self.sep_id)
 
         # Component tokens: each component as (TYPE, VALUE) pair
@@ -307,6 +336,7 @@ class CircuitTokenizer:
         components = []
 
         param_to_comp = {
+            # Tier 1 — power converter components
             "inductance": ("INDUCTOR", None),
             "inductance_1": ("INDUCTOR", None),
             "inductance_2": ("INDUCTOR", None),
@@ -318,6 +348,23 @@ class CircuitTokenizer:
             "r_dson": ("MOSFET_N", None),
             "r_load": ("RESISTOR", None),
             "turns_ratio": ("TRANSFORMER", None),
+            # Tier 2 — resistors
+            "r_input": ("RESISTOR", None),
+            "r_feedback": ("RESISTOR", None),
+            "r_ground": ("RESISTOR", None),
+            "r_gain": ("RESISTOR", None),
+            "r1": ("RESISTOR", None),
+            "r2": ("RESISTOR", None),
+            "r3": ("RESISTOR", None),
+            "r_freq": ("RESISTOR", None),
+            "r_bias_1": ("RESISTOR", None),
+            "r_bias_2": ("RESISTOR", None),
+            "r_emitter": ("RESISTOR", None),
+            "r_collector": ("RESISTOR", None),
+            # Tier 2 — capacitors
+            "c1": ("CAPACITOR", None),
+            "c2": ("CAPACITOR", None),
+            "c_freq": ("CAPACITOR", None),
         }
 
         for param_name, param_value in params.items():

@@ -289,11 +289,12 @@ def compute_reward(
     decoded: DecodedCircuit,
     outcome: SimulationOutcome,
     target_specs: dict[str, float] | None = None,
+    struct_bonus: float = 1.0,
 ) -> float:
     """Compute scalar reward from simulation outcome.
 
-    Reward components (max ≈ 8.0):
-        +1.0  — valid circuit structure (has topo, components, END)
+    Reward components (max ≈ 7.0 + struct_bonus):
+        +struct_bonus — valid circuit structure (has topo, components, END)
         +1.0  — SPICE simulation converges
         +3.0  — Vout accuracy:  3.0 × max(0, 1 - vout_error/10)
                 (full credit at <1% error, zero at >10% error)
@@ -302,21 +303,21 @@ def compute_reward(
         +1.0  — Low ripple:     1.0 × max(0, 1 - ripple_ratio×10)
                 (full credit at <1% ripple, zero at >10%)
 
-    Without simulation (structure-only): max 1.0
-    With failed simulation: max 2.0
-    With successful simulation: max 8.0
+    Without simulation (structure-only): max struct_bonus
+    With failed simulation: max struct_bonus + 1.0
+    With successful simulation: max 7.0 + struct_bonus
     """
     reward = 0.0
 
     # Structure reward
     if decoded.valid_structure:
-        reward += 1.0
+        reward += struct_bonus
     else:
         return 0.0  # No further reward for broken structure
 
     # Simulation convergence reward
     if not outcome.success:
-        return reward  # 1.0 for structure only
+        return reward  # struct_bonus for structure only
 
     reward += 1.0  # Sim converged
 
@@ -521,6 +522,11 @@ class RLConfig:
     save_interval: int = 500
     eval_interval: int = 100
     n_eval_samples: int = 50
+    # v2 additions
+    struct_bonus: float = 1.0         # structure validity reward weight
+    kl_target: float = 0.5           # target KL divergence (adaptive coeff)
+    adaptive_kl: bool = False        # enable adaptive KL coefficient
+    validity_early_stop: float = 0.0 # stop if struct_valid drops below this (0 = disabled)
 
 
 class ARCSRLTrainer:
@@ -602,7 +608,7 @@ class ARCSRLTrainer:
             all_ids = prefix[0].tolist() + gen_tokens.tolist()
             decoded = decode_generated_sequence(all_ids, self.tokenizer)
             outcome = simulate_decoded_circuit(decoded, self.runner)
-            reward = compute_reward(decoded, outcome, specs)
+            reward = compute_reward(decoded, outcome, specs, self.config.struct_bonus)
 
             # KL from ref model
             full_seq = torch.cat([prefix, gen_tokens.unsqueeze(0)], dim=1)
@@ -826,7 +832,7 @@ class ARCSRLTrainer:
             if decoded.valid_structure:
                 struct_valids += 1
                 outcome = simulate_decoded_circuit(decoded, self.runner)
-                reward = compute_reward(decoded, outcome, specs)
+                reward = compute_reward(decoded, outcome, specs, self.config.struct_bonus)
 
                 if outcome.success:
                     sim_successes += 1
@@ -887,11 +893,12 @@ class ARCSRLTrainer:
         return path
 
     def train(self) -> dict:
-        """Full RL training loop."""
+        """Full RL training loop with adaptive KL & validity early stopping."""
         logger.info(
             f"Starting RL training: {self.config.n_steps} steps, "
             f"batch={self.config.batch_size}, lr={self.config.lr}, "
-            f"kl={self.config.kl_coeff}, temp={self.config.temperature}"
+            f"kl={self.config.kl_coeff}, struct_bonus={self.config.struct_bonus}, "
+            f"adaptive_kl={self.config.adaptive_kl}, temp={self.config.temperature}"
         )
 
         # Initial evaluation
@@ -910,6 +917,17 @@ class ARCSRLTrainer:
             for k, v in stats.items():
                 self.history[k].append(v)
 
+            # Adaptive KL coefficient: if KL > 1.5× target, increase coeff;
+            # if KL < 0.5× target, decrease slightly.
+            if self.config.adaptive_kl and step % self.config.log_interval == 0:
+                kl_now = stats["kl_mean"]
+                if kl_now > 1.5 * self.config.kl_target:
+                    self.config.kl_coeff = min(self.config.kl_coeff * 1.5, 10.0)
+                    logger.info(f"  Adaptive KL: raised coeff → {self.config.kl_coeff:.4f}")
+                elif kl_now < 0.5 * self.config.kl_target:
+                    self.config.kl_coeff = max(self.config.kl_coeff * 0.8, 0.01)
+                    logger.info(f"  Adaptive KL: lowered coeff → {self.config.kl_coeff:.4f}")
+
             # Log
             if step % self.config.log_interval == 0:
                 dt = time.time() - t0
@@ -919,8 +937,10 @@ class ARCSRLTrainer:
                     f"reward={stats['reward_mean']:.3f}±{stats['reward_std']:.2f} | "
                     f"loss={stats['loss']:.4f} | "
                     f"kl={stats['kl_mean']:.4f} | "
+                    f"kl_coeff={self.config.kl_coeff:.3f} | "
                     f"sim_ok={stats['sim_success_rate']:.0%} | "
                     f"valid={stats['sim_valid_rate']:.0%} | "
+                    f"struct={stats['valid_structure_rate']:.0%} | "
                     f"base={stats['baseline']:.3f} | "
                     f"{steps_per_sec:.2f} steps/s"
                 )
@@ -932,6 +952,7 @@ class ARCSRLTrainer:
                 logger.info(
                     f"  EVAL step {step}: "
                     f"reward={eval_results['eval_reward_mean']:.3f} | "
+                    f"struct_valid={eval_results['eval_struct_valid_rate']:.0%} | "
                     f"sim_valid={eval_results['eval_sim_valid_rate']:.0%} | "
                     f"eff={eval_results['eval_mean_efficiency']:.3f} | "
                     f"vout_err={eval_results['eval_mean_vout_error']:.1f}%"
@@ -943,6 +964,16 @@ class ARCSRLTrainer:
                     logger.info(
                         f"  New best reward: {best_reward:.3f}"
                     )
+
+                # Validity early stopping
+                if (self.config.validity_early_stop > 0
+                        and eval_results["eval_struct_valid_rate"] < self.config.validity_early_stop):
+                    logger.warning(
+                        f"  EARLY STOP: struct_valid "
+                        f"{eval_results['eval_struct_valid_rate']:.0%} < "
+                        f"{self.config.validity_early_stop:.0%} threshold"
+                    )
+                    break
 
             # Save periodic checkpoint
             if step % self.config.save_interval == 0:
@@ -996,6 +1027,14 @@ def main():
     parser.add_argument("--save-interval", type=int, default=500)
     parser.add_argument("--eval-interval", type=int, default=100)
     parser.add_argument("--n-eval-samples", type=int, default=50)
+    parser.add_argument("--struct-bonus", type=float, default=1.0,
+                        help="Structure validity reward weight (v2: use 2.0)")
+    parser.add_argument("--kl-target", type=float, default=0.5,
+                        help="Target KL for adaptive coefficient")
+    parser.add_argument("--adaptive-kl", action="store_true",
+                        help="Enable adaptive KL coefficient")
+    parser.add_argument("--validity-early-stop", type=float, default=0.0,
+                        help="Stop if struct_valid drops below this (0=disabled)")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -1057,6 +1096,10 @@ def main():
         save_interval=args.save_interval,
         eval_interval=args.eval_interval,
         n_eval_samples=args.n_eval_samples,
+        struct_bonus=args.struct_bonus,
+        kl_target=args.kl_target,
+        adaptive_kl=args.adaptive_kl,
+        validity_early_stop=args.validity_early_stop,
     )
 
     # Train
