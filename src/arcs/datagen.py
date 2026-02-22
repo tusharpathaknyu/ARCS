@@ -100,20 +100,63 @@ def _compute_signal_metrics(
     operating_conditions: dict[str, float],
     topology_name: str,
 ) -> dict[str, float]:
-    """Tier 2: signal-processing derived metrics (amplifiers, filters, oscillators)."""
+    """Tier 2: signal-processing derived metrics (amplifiers, filters, oscillators).
+
+    Computes bandwidth / cutoff frequency from the multi-frequency VDB probes
+    (vdb_0..vdb_7) measured at [10, 100, 1k, 10k, 100k, 1M, 10M, 50M] Hz.
+    """
     derived = dict(raw_metrics)
 
-    # Amplifiers / filters: gain in dB is reported directly
+    # Gain in dB
     gain_db = raw_metrics.get("gain_db", raw_metrics.get("gain_dc", None))
     if gain_db is not None:
         derived["gain_linear"] = 10 ** (gain_db / 20)
 
-    # Band-pass: compute Q from bandwidth
-    f_peak = raw_metrics.get("f_peak")
-    bw_lo = raw_metrics.get("bw_lo")
-    bw_hi = raw_metrics.get("bw_hi")
-    if f_peak and bw_lo and bw_hi and (bw_hi - bw_lo) > 0:
-        derived["q_factor"] = f_peak / (bw_hi - bw_lo)
+    # --- Estimate -3 dB bandwidth / cutoff from probe frequencies ---
+    probe_freqs = [10, 100, 1e3, 10e3, 100e3, 1e6, 10e6, 50e6]
+    probe_gains = []
+    for i, f in enumerate(probe_freqs):
+        v = raw_metrics.get(f"vdb_{i}")
+        if v is not None:
+            probe_gains.append((f, v))
+
+    if len(probe_gains) >= 2:
+        # Find passband gain (maximum gain among probes)
+        peak_freq, peak_gain = max(probe_gains, key=lambda x: x[1])
+        derived["peak_gain_db"] = peak_gain
+        derived["peak_freq"] = peak_freq
+        threshold = peak_gain - 3.0
+
+        # Find -3 dB crossing by linear interpolation on dB scale
+        # For LP / amps: look for gain dropping below threshold going up in freq
+        for j in range(len(probe_gains) - 1):
+            f1, g1 = probe_gains[j]
+            f2, g2 = probe_gains[j + 1]
+            if g1 >= threshold and g2 < threshold:
+                # Interpolate (log-frequency, linear dB)
+                if abs(g1 - g2) > 0.01:
+                    ratio = (threshold - g1) / (g2 - g1)
+                    import math
+                    fc = 10 ** (math.log10(f1) + ratio * (math.log10(f2) - math.log10(f1)))
+                else:
+                    fc = (f1 + f2) / 2
+                derived["bw_3db"] = fc
+                break
+
+        # For HP filters: look for gain rising above threshold going up in freq
+        if "bw_3db" not in derived:
+            for j in range(len(probe_gains) - 1):
+                f1, g1 = probe_gains[j]
+                f2, g2 = probe_gains[j + 1]
+                if g1 < threshold and g2 >= threshold:
+                    if abs(g2 - g1) > 0.01:
+                        ratio = (threshold - g1) / (g2 - g1)
+                        import math
+                        fc = 10 ** (math.log10(f1) + ratio * (math.log10(f2) - math.log10(f1)))
+                    else:
+                        fc = (f1 + f2) / 2
+                    derived["bw_3db"] = fc
+                    break
 
     return derived
 
@@ -155,7 +198,6 @@ def _is_valid_signal(
     topology_name: str,
 ) -> bool:
     """Signal-processing validity checks."""
-    # Amplifiers: gain must be finite and in reasonable range
     amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp"}
     filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass"}
     osc_types = {"wien_bridge", "colpitts"}
@@ -164,31 +206,26 @@ def _is_valid_signal(
         gain_db = metrics.get("gain_db", metrics.get("gain_dc"))
         if gain_db is None:
             return False
-        if abs(gain_db) > 120:  # >120 dB is unrealistic for single/3-opamp
+        if abs(gain_db) > 120:  # >120 dB unrealistic
+            return False
+        return True
+
+    if topology_name in filter_types:
+        # Must have gain_dc (passband or reference) and bw_3db from post-processing
+        gain_dc = metrics.get("gain_dc")
+        if gain_dc is None:
             return False
         bw = metrics.get("bw_3db")
         if bw is not None and bw <= 0:
             return False
         return True
 
-    if topology_name in filter_types:
-        fc = metrics.get("fc_3db")
-        if fc is None or fc <= 0:
-            return False
-        # For bandpass, also check peak gain exists
-        if topology_name == "sallen_key_bandpass":
-            gain_peak = metrics.get("gain_peak")
-            if gain_peak is None:
-                return False
-        return True
-
     if topology_name in osc_types:
         vosc_pp = metrics.get("vosc_pp", 0)
-        if vosc_pp < 0.01:  # Must have measurable oscillation amplitude
+        if vosc_pp < 0.01:
             return False
         return True
 
-    # Unknown tier-2 topology — accept if any metrics exist
     return len(metrics) > 0
 
 

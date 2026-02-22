@@ -303,7 +303,7 @@ class CircuitTokenizer:
                 "gain_db": "SPEC_GAIN",
                 "bw_3db": "SPEC_BANDWIDTH",
                 "fc_3db": "SPEC_CUTOFF_FREQ",
-                "phase_deg": "SPEC_PHASE_MARGIN",
+                "phase_rad": "SPEC_PHASE_MARGIN",  # VP() returns radians
                 "f_peak": "SPEC_CENTER_FREQ",
                 "vosc_pp": "SPEC_VIN",   # oscillator amplitude → reuse VIN slot
             }

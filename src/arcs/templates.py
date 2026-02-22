@@ -555,6 +555,33 @@ Rout out 0 1
 """
 
 
+def _ac_measure_block(freq_test: float) -> str:
+    """Common .measure block for AC analysis.
+
+    Probes gain (VDB) at the test frequency, at DC (1 Hz), and at logarithmically
+    spaced frequencies for bandwidth estimation.  No self-referencing measures —
+    bandwidth / fc is computed in Python post-processing.
+
+    NOTE: `.save v(vout)` is required so ngspice actually runs the AC analysis
+    when subcircuits are present (without it, ngspice skips AC analysis with
+    "no data saved" error).  VP() returns phase in **radians**.
+    """
+    # Probe frequencies for bandwidth estimation
+    probes = [10, 100, 1e3, 10e3, 100e3, 1e6, 10e6, 50e6]
+    lines = [
+        "* Force ngspice to save AC data (required for subcircuit nodes)",
+        ".save v(vout)",
+        "",
+        f".measure AC gain_db FIND VDB(vout) AT={freq_test:.6e}",
+        f".measure AC gain_mag FIND VM(vout) AT={freq_test:.6e}",
+        f".measure AC phase_rad FIND VP(vout) AT={freq_test:.6e}",
+        ".measure AC gain_dc FIND VDB(vout) AT=1",
+    ]
+    for i, f in enumerate(probes):
+        lines.append(f".measure AC vdb_{i} FIND VDB(vout) AT={f:.6e}")
+    return "\n".join(lines)
+
+
 def _inverting_amp_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
     """Inverting amplifier: Vout = -(Rf/Rin)*Vin."""
     vin_amp = conditions.get("vin_amp", 0.1)   # AC signal amplitude (V)
@@ -588,11 +615,7 @@ Rload vout 0 1e6
 .ac dec 100 1 100e6
 
 * === Measurements ===
-.measure AC gain_db FIND VDB(vout) AT={freq_test:.6e}
-.measure AC gain_mag FIND VM(vout) AT={freq_test:.6e}
-.measure AC phase_deg FIND VP(vout) AT={freq_test:.6e}
-.measure AC bw_3db WHEN VDB(vout)=(gain_db-3) FALL=1
-.measure AC gain_dc FIND VDB(vout) AT=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -625,11 +648,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_db FIND VDB(vout) AT={freq_test:.6e}
-.measure AC gain_mag FIND VM(vout) AT={freq_test:.6e}
-.measure AC phase_deg FIND VP(vout) AT={freq_test:.6e}
-.measure AC bw_3db WHEN VDB(vout)=(gain_db-3) FALL=1
-.measure AC gain_dc FIND VDB(vout) AT=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -677,11 +696,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_db FIND VDB(vout) AT={freq_test:.6e}
-.measure AC gain_mag FIND VM(vout) AT={freq_test:.6e}
-.measure AC phase_deg FIND VP(vout) AT={freq_test:.6e}
-.measure AC bw_3db WHEN VDB(vout)=(gain_db-3) FALL=1
-.measure AC gain_dc FIND VDB(vout) AT=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -716,11 +731,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_db FIND VDB(vout) AT={freq_test:.6e}
-.measure AC gain_mag FIND VM(vout) AT={freq_test:.6e}
-.measure AC phase_deg FIND VP(vout) AT={freq_test:.6e}
-.measure AC bw_3db WHEN VDB(vout)=(gain_db-3) FALL=1
-.measure AC gain_dc FIND VDB(vout) AT=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -763,10 +774,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_dc FIND VDB(vout) AT=1
-.measure AC gain_at_test FIND VDB(vout) AT={freq_test:.6e}
-.measure AC phase_at_test FIND VP(vout) AT={freq_test:.6e}
-.measure AC fc_3db WHEN VDB(vout)=(gain_dc-3) FALL=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -806,10 +814,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_passband FIND VDB(vout) AT=100e6
-.measure AC gain_at_test FIND VDB(vout) AT={freq_test:.6e}
-.measure AC phase_at_test FIND VP(vout) AT={freq_test:.6e}
-.measure AC fc_3db WHEN VDB(vout)=(gain_passband-3) RISE=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -849,12 +854,7 @@ Rload vout 0 1e6
 
 .ac dec 100 1 100e6
 
-.measure AC gain_peak MAX VDB(vout)
-.measure AC f_peak WHEN VDB(vout)=gain_peak RISE=1
-.measure AC gain_at_test FIND VDB(vout) AT={freq_test:.6e}
-.measure AC phase_at_test FIND VP(vout) AT={freq_test:.6e}
-.measure AC bw_lo WHEN VDB(vout)=(gain_peak-3) RISE=1
-.measure AC bw_hi WHEN VDB(vout)=(gain_peak-3) FALL=1
+{_ac_measure_block(freq_test)}
 
 .end
 """
@@ -1166,20 +1166,22 @@ _ALL_DESCRIPTIONS = {
 
 # Metric names per domain
 _POWER_METRIC_NAMES = ["vout_avg", "vout_ripple", "iout_avg", "iin_avg", "il_ripple", "pout", "pin"]
-_AMP_METRIC_NAMES = ["gain_db", "gain_mag", "phase_deg", "bw_3db", "gain_dc"]
-_FILTER_METRIC_NAMES = ["gain_dc", "gain_at_test", "phase_at_test", "fc_3db"]
-_BANDPASS_METRIC_NAMES = ["gain_peak", "f_peak", "gain_at_test", "phase_at_test", "bw_lo", "bw_hi"]
+# All AC circuits now share the same raw measurement names: gain_db, gain_mag,
+# phase_rad, gain_dc, vdb_0..vdb_7 (probed at 10,100,1k,10k,100k,1M,10M,50M Hz).
+# VP() returns phase in radians.  Derived metrics computed in datagen post-processing.
+_AC_METRIC_NAMES = ["gain_db", "gain_mag", "phase_rad", "gain_dc",
+                    "vdb_0", "vdb_1", "vdb_2", "vdb_3", "vdb_4", "vdb_5", "vdb_6", "vdb_7"]
 _OSC_METRIC_NAMES = ["vosc_pp", "vosc_avg"]
 
 _METRIC_MAP = {
     **{n: _POWER_METRIC_NAMES for n in _TIER1_NAMES},
-    "inverting_amp": _AMP_METRIC_NAMES,
-    "noninverting_amp": _AMP_METRIC_NAMES,
-    "instrumentation_amp": _AMP_METRIC_NAMES,
-    "differential_amp": _AMP_METRIC_NAMES,
-    "sallen_key_lowpass": _FILTER_METRIC_NAMES,
-    "sallen_key_highpass": ["gain_passband", "gain_at_test", "phase_at_test", "fc_3db"],
-    "sallen_key_bandpass": _BANDPASS_METRIC_NAMES,
+    "inverting_amp": _AC_METRIC_NAMES,
+    "noninverting_amp": _AC_METRIC_NAMES,
+    "instrumentation_amp": _AC_METRIC_NAMES,
+    "differential_amp": _AC_METRIC_NAMES,
+    "sallen_key_lowpass": _AC_METRIC_NAMES,
+    "sallen_key_highpass": _AC_METRIC_NAMES,
+    "sallen_key_bandpass": _AC_METRIC_NAMES,
     "wien_bridge": _OSC_METRIC_NAMES,
     "colpitts": _OSC_METRIC_NAMES,
 }
