@@ -13,8 +13,8 @@
 
 set -e
 
-CHECKPOINT=${1:-"checkpoints/arcs_rl/best_rl_model.pt"}
-STEPS=${2:-3000}
+CHECKPOINT=${1:-"checkpoints/arcs_combined/best_model.pt"}
+STEPS=${2:-5000}
 OUTPUT="checkpoints/arcs_rl_v2"
 
 echo "================================================="

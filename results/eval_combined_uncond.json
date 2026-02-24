@@ -1,0 +1,30 @@
+{
+  "n_generated": 200,
+  "n_valid_structure": 118,
+  "validity_rate": 0.59,
+  "topology_distribution": {
+    "buck": 22,
+    "colpitts": 11,
+    "flyback": 1,
+    "cuk": 16,
+    "sepic": 5,
+    "buck_boost": 11,
+    "instrumentation_amp": 11,
+    "inverting_amp": 11,
+    "boost": 8,
+    "wien_bridge": 1,
+    "forward": 6,
+    "noninverting_amp": 5,
+    "differential_amp": 10
+  },
+  "avg_n_components": 4.016949152542373,
+  "component_type_distribution": {
+    "mosfet_n": 87,
+    "inductor": 125,
+    "capacitor": 105,
+    "resistor": 147,
+    "transformer": 10
+  },
+  "unique_component_combos": 33,
+  "diversity_score": 0.2796610169491525
+}

@@ -1,0 +1,24 @@
+{
+  "n_generated": 200,
+  "n_valid_structure": 200,
+  "validity_rate": 1.0,
+  "topology_distribution": {
+    "buck": 29,
+    "boost": 29,
+    "buck_boost": 29,
+    "cuk": 29,
+    "sepic": 28,
+    "flyback": 28,
+    "forward": 28
+  },
+  "avg_n_components": 5.31,
+  "component_type_distribution": {
+    "mosfet_n": 212,
+    "inductor": 322,
+    "capacitor": 242,
+    "resistor": 191,
+    "transformer": 95
+  },
+  "unique_component_combos": 60,
+  "diversity_score": 0.3
+}
