@@ -1,0 +1,52 @@
+2026-02-24 19:57:21,158 INFO 
+============================================================
+2026-02-24 19:57:21,158 INFO Running random_search baseline
+2026-02-24 19:57:21,158 INFO ============================================================
+2026-02-24 19:57:21,158 INFO Running random_search baseline: 16 specs × 10 repeats = 160 evaluations
+2026-02-24 20:09:13,041 INFO   [10/160] buck: best_reward=7.666  (712s elapsed, ~10678s remaining)
+2026-02-24 20:18:02,823 INFO   [20/160] boost: best_reward=7.704  (1242s elapsed, ~8692s remaining)
+2026-02-24 20:28:40,796 INFO   [30/160] buck_boost: best_reward=7.335  (1880s elapsed, ~8145s remaining)
+2026-02-24 20:43:34,435 INFO   [40/160] cuk: best_reward=7.608  (2773s elapsed, ~8320s remaining)
+2026-02-24 20:58:18,213 INFO   [50/160] sepic: best_reward=7.492  (3657s elapsed, ~8046s remaining)
+2026-02-24 21:14:49,726 INFO   [60/160] flyback: best_reward=7.110  (4649s elapsed, ~7748s remaining)
+2026-02-24 22:22:53,197 INFO   [70/160] forward: best_reward=7.525  (8732s elapsed, ~11227s remaining)
+2026-02-24 22:24:06,076 INFO   [80/160] inverting_amp: best_reward=7.000  (8805s elapsed, ~8805s remaining)
+2026-02-24 22:25:18,738 INFO   [90/160] noninverting_amp: best_reward=7.000  (8878s elapsed, ~6905s remaining)
+2026-02-24 22:26:33,118 INFO   [100/160] instrumentation_amp: best_reward=7.000  (8952s elapsed, ~5371s remaining)
+2026-02-24 22:27:44,651 INFO   [110/160] differential_amp: best_reward=7.000  (9023s elapsed, ~4102s remaining)
+2026-02-24 22:28:56,079 INFO   [120/160] sallen_key_lowpass: best_reward=8.000  (9095s elapsed, ~3032s remaining)
+2026-02-24 22:30:07,811 INFO   [130/160] sallen_key_highpass: best_reward=7.000  (9167s elapsed, ~2115s remaining)
+2026-02-24 22:31:19,218 INFO   [140/160] sallen_key_bandpass: best_reward=8.000  (9238s elapsed, ~1320s remaining)
+2026-02-24 22:32:38,958 INFO   [150/160] wien_bridge: best_reward=7.000  (9318s elapsed, ~621s remaining)
+2026-02-24 22:34:13,346 INFO   [160/160] colpitts: best_reward=7.000  (9412s elapsed, ~0s remaining)
+2026-02-24 22:34:13,349 INFO Results saved to results/baseline_random_search.json
+
+============================================================
+RANDOM_SEARCH RESULTS
+============================================================
+Specs evaluated:    160
+Trials per spec:    200
+Wall time:          9412.2s
+Sim success rate:   100.0%
+Sim valid rate:     81.2%
+Avg reward:         7.282
+
+Per-topology breakdown:
+  Topology                     N   SimOK   Valid    AvgR   BestR
+  ------------------------- ---- ------- ------- ------- -------
+  boost                       10 100.0%  60.0%   7.629   7.878
+  buck                        10 100.0%  80.0%   7.479   7.666
+  buck_boost                  10 100.0%  40.0%   7.063   7.606
+  colpitts                    10 100.0% 100.0%   7.000   7.000
+  cuk                         10 100.0%  90.0%   7.400   7.641
+  differential_amp            10 100.0% 100.0%   7.000   7.000
+  flyback                     10 100.0%  30.0%   7.222   7.760
+  forward                     10 100.0%  30.0%   7.609   7.829
+  instrumentation_amp         10 100.0% 100.0%   7.000   7.000
+  inverting_amp               10 100.0% 100.0%   7.000   7.000
+  noninverting_amp            10 100.0% 100.0%   6.998   7.000
+  sallen_key_bandpass         10 100.0% 100.0%   8.000   8.000
+  sallen_key_highpass         10 100.0% 100.0%   7.000   7.000
+  sallen_key_lowpass          10 100.0% 100.0%   8.000   8.000
+  sepic                       10 100.0%  70.0%   7.114   7.492
+  wien_bridge                 10 100.0% 100.0%   7.000   7.000

@@ -218,9 +218,26 @@ Special tokens:       START (VSS), END, PAD
 | Wien Bridge | 0% | 0% | model needs more data |
 
 ### Phase 5: Paper (Weeks 10-12)
-- [ ] Baselines: random search, genetic algorithm, AnalogGenie + GA sizing
+- [x] Baselines: random search (200 trials/spec) and genetic algorithm (pop=30, 20 generations)
 - [ ] Ablation: with/without spec conditioning, with/without RL, with/without invalid examples
 - [ ] Write paper targeting ICLR / NeurIPS / DAC
+
+#### Phase 5 Results: ARCS vs Baselines (160 conditioned specs, 10 per topology)
+
+| Method | Sims/Design | Sim Success | Sim Valid | Avg Reward | Cost/Design |
+|--------|-------------|-------------|-----------|------------|-------------|
+| Random Search (N=200) | 200 | 100.0% | 81.2% | 7.28/8.0 | 58.8s |
+| Genetic Algorithm | 630 | 100.0% | 80.0% | 7.48/8.0 | 271.2s |
+| **ARCS (supervised)** | **1** | 66.2% | 39.4% | 3.32/8.0 | **~0.02s** |
+| **ARCS + RL (best)** | **1** | 73.8% | 53.1% | 3.76/8.0 | **~0.02s** |
+
+**Key insight:** Baselines achieve higher absolute reward by running 200-630 SPICE
+simulations per design (~1-5 min each). ARCS generates a single design in ~20ms with
+zero simulation loop — **2,941x faster than random search, 13,560x faster than GA**.
+
+Baselines operate with an unfair advantage: they sample directly in parameter space
+with the *correct* topology and component count given. ARCS must predict both from
+scratch using only the target specification as input.
 
 ---
 
