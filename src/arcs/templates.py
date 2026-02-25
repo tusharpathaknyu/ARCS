@@ -153,8 +153,8 @@ Vsense load_mid 0 DC 0
 * === Measurements ===
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN il_ripple PP I(L1) FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
@@ -207,8 +207,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN il_ripple PP I(L1) FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
@@ -266,8 +266,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout_neg) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout_neg) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
 """
@@ -335,8 +335,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
 """
@@ -403,8 +403,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
 """
@@ -465,8 +465,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
 """
@@ -532,8 +532,8 @@ Vsense load_mid 0 DC 0
 
 .measure TRAN vout_avg AVG V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vout_ripple PP V(vout) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iout_avg AVG I(Vsense) FROM={meas_start:.10e} TO={sim_time:.10e}
-.measure TRAN iin_avg AVG I(Vin) FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iout_avg AVG par('-I(Vsense)') FROM={meas_start:.10e} TO={sim_time:.10e}
+.measure TRAN iin_avg AVG par('-I(Vin)') FROM={meas_start:.10e} TO={sim_time:.10e}
 
 .end
 """

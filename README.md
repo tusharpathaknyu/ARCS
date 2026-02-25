@@ -199,11 +199,12 @@ Special tokens:       START (VSS), END, PAD
 
 #### Phase 4 Results: Simulation-Based Evaluation (160 conditioned samples each)
 
-| Model | Struct Valid | Sim Success | Sim Valid | Avg Reward |
-|-------|------------|-------------|-----------|------------|
-| Combined (epoch 80) | 90.6% | 66.2% | 39.4% | 3.32/8.0 |
-| RL v2 Best (step 600) | 97.5% | 73.8% | **53.1%** | **3.76/8.0** |
-| RL v2 Final (step 5000) | 92.5% | 72.5% | 45.0% | 3.74/8.0 |
+| Model | Struct Valid | Sim Success | Sim Valid | Avg Reward | Avg Eff |
+|-------|------------|-------------|-----------|------------|--------|
+| Combined (epoch 80) | 90.6% | 66.9% | 43.8% | 3.42/8.0 | 61.7% |
+| RL v2 Best (step 600) | 97.5% | 71.2% | **55.0%** | **3.64/8.0** | 61.8% |
+
+*Efficiency values corrected via `par('-I(Vin)')` sign fix (Feb 2026).*
 
 **Per-topology highlights (RL v2 Best):**
 | Topology | Sim Success | Sim Valid | Key Metric |
@@ -219,6 +220,7 @@ Special tokens:       START (VSS), END, PAD
 
 ### Phase 5: Paper (Weeks 10-12)
 - [x] Baselines: random search (200 trials/spec) and genetic algorithm (pop=30, 20 generations)
+- [x] Fix efficiency metric: `par('-I(Vin)')` in all 7 power converter templates + `min(eff, 1.0)` clamp
 - [ ] Ablation: with/without spec conditioning, with/without RL, with/without invalid examples
 - [ ] Write paper targeting ICLR / NeurIPS / DAC
 
@@ -228,8 +230,8 @@ Special tokens:       START (VSS), END, PAD
 |--------|-------------|-------------|-----------|------------|-------------|
 | Random Search (N=200) | 200 | 100.0% | 81.2% | 7.28/8.0 | 58.8s |
 | Genetic Algorithm | 630 | 100.0% | 80.0% | 7.48/8.0 | 271.2s |
-| **ARCS (supervised)** | **1** | 66.2% | 39.4% | 3.32/8.0 | **~0.02s** |
-| **ARCS + RL (best)** | **1** | 73.8% | 53.1% | 3.76/8.0 | **~0.02s** |
+| **ARCS (supervised)** | **1** | 66.9% | 43.8% | 3.42/8.0 | **~0.02s** |
+| **ARCS + RL (best)** | **1** | 71.2% | 55.0% | 3.64/8.0 | **~0.02s** |
 
 **Key insight:** Baselines achieve higher absolute reward by running 200-630 SPICE
 simulations per design (~1-5 min each). ARCS generates a single design in ~20ms with

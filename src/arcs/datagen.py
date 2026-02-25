@@ -65,6 +65,9 @@ def _compute_power_metrics(
     """Tier 1: power converter derived metrics."""
     derived = dict(raw_metrics)
 
+    # Current measurements now use par('-I(...)') in templates, so they are
+    # positive when flowing in the expected direction. Use abs() only as a
+    # safety net — the sign should already be correct.
     vout_avg = abs(raw_metrics.get("vout_avg", 0))
     iout_avg = abs(raw_metrics.get("iout_avg", 0))
     vin_val = abs(operating_conditions.get("vin", 0))
@@ -77,7 +80,9 @@ def _compute_power_metrics(
     derived["pin"] = pin
 
     if pin > 1e-9:
-        derived["efficiency"] = pout / pin
+        eff = pout / pin
+        # Physical upper bound: efficiency cannot exceed 1.0 for passive circuits
+        derived["efficiency"] = min(eff, 1.0)
     else:
         derived["efficiency"] = 0.0
 
