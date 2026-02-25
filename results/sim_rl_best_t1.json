@@ -1,0 +1,102 @@
+{
+  "n_generated": 70,
+  "n_valid_structure": 70,
+  "validity_rate": 1.0,
+  "topology_distribution": {
+    "buck": 10,
+    "boost": 10,
+    "buck_boost": 10,
+    "cuk": 10,
+    "sepic": 10,
+    "flyback": 10,
+    "forward": 10
+  },
+  "avg_n_components": 5.414285714285715,
+  "component_type_distribution": {
+    "inductor": 118,
+    "capacitor": 85,
+    "resistor": 70,
+    "mosfet_n": 78,
+    "transformer": 28
+  },
+  "unique_component_combos": 21,
+  "diversity_score": 0.3,
+  "n_sim_attempted": 70,
+  "n_sim_success": 70,
+  "n_sim_valid": 30,
+  "sim_success_rate": 1.0,
+  "sim_valid_rate": 0.42857142857142855,
+  "avg_reward": 4.232,
+  "avg_sim_time": 0.385,
+  "avg_vout_error": 36.86,
+  "avg_efficiency": 105.7155,
+  "avg_ripple": 2.8059,
+  "n_power_simulated": 70,
+  "avg_gain_db": 0.0,
+  "n_signal_simulated": 0,
+  "per_topology_sim": {
+    "buck": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 7,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.7,
+      "avg_vout_error": 14.04,
+      "avg_efficiency": 9.5392
+    },
+    "boost": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 7,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.7,
+      "avg_vout_error": 16.75,
+      "avg_efficiency": 1.2582
+    },
+    "buck_boost": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 6,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.6,
+      "avg_vout_error": 39.41,
+      "avg_efficiency": 14.7225
+    },
+    "cuk": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 2,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.2,
+      "avg_vout_error": 90.66,
+      "avg_efficiency": 1.4455
+    },
+    "sepic": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 2,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.2,
+      "avg_vout_error": 34.52,
+      "avg_efficiency": 0.5101
+    },
+    "flyback": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 1,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.1,
+      "avg_vout_error": 48.96,
+      "avg_efficiency": 701.7446
+    },
+    "forward": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 5,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.5,
+      "avg_vout_error": 13.68,
+      "avg_efficiency": 10.7886
+    }
+  }
+}

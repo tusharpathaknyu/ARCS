@@ -186,11 +186,36 @@ Special tokens:       START (VSS), END, PAD
 - [x] Implement reward function from SPICE simulation metrics *(max 8.0: structure + convergence + vout_accuracy + efficiency + ripple)*
 - [x] RL fine-tuning (REINFORCE w/ KL penalty + baseline) *(5000 steps, 12.3h, best reward 7.02/8.0)*
 - [x] Compare: pre-trained only vs. RL-refined *(vout error 53% → 4%, reward 4.1 → 7.0)*
+- [x] RL v2: adaptive KL + struct_bonus fixes validity regression (v1: 100%→22%, v2: stable 96-100%)
 
 ### Phase 4: Expand Circuit Families (Weeks 7-10)
-- [ ] Add filter, amplifier, oscillator templates
-- [ ] Retrain with broader dataset
-- [ ] Evaluate cross-domain generation
+- [x] Add 9 Tier 2 templates: amplifiers (inverting, non-inverting, instrumentation, differential), filters (Sallen-Key LP/HP/BP), oscillators (Wien bridge, Colpitts)
+- [x] Fix ngspice AC analysis: `.save v(vout)` required for subcircuit nodes, `VP()` returns radians
+- [x] Generate 18K Tier 2 samples (15,842 valid, 88% yield) — amps/filters 100%, Wien bridge 19%, Colpitts 73%
+- [x] Retrain on combined Tier 1+2 data: 53K samples → 161K augmented, vocab 676→686 tokens
+- [x] Combined model: best val_loss=1.237 (epoch 80), accuracy=75.9%, value_acc=64.7%
+- [x] RL v2 with adaptive KL + struct_bonus: 5000 steps, struct validity 96-100% (vs 22% crash in v1)
+- [x] Simulation-based evaluation: shared `simulate.py` module for both RL and eval, supports all 16 topologies
+
+#### Phase 4 Results: Simulation-Based Evaluation (160 conditioned samples each)
+
+| Model | Struct Valid | Sim Success | Sim Valid | Avg Reward |
+|-------|------------|-------------|-----------|------------|
+| Combined (epoch 80) | 90.6% | 66.2% | 39.4% | 3.32/8.0 |
+| RL v2 Best (step 600) | 97.5% | 73.8% | **53.1%** | **3.76/8.0** |
+| RL v2 Final (step 5000) | 92.5% | 72.5% | 45.0% | 3.74/8.0 |
+
+**Per-topology highlights (RL v2 Best):**
+| Topology | Sim Success | Sim Valid | Key Metric |
+|----------|------------|-----------|------------|
+| Buck | 100% | 60% | verr=14.0% |
+| Boost | 100% | 60% | verr=25.8% |
+| Instrumentation Amp | 100% | 100% | gain=4.0dB |
+| Differential Amp | 100% | 100% | gain=-25.4dB |
+| Inverting Amp | 80% | 80% | gain=-15.5dB |
+| Colpitts | 70% | 70% | oscillating |
+| Sallen-Key LP | 20% | 20% | model needs more data |
+| Wien Bridge | 0% | 0% | model needs more data |
 
 ### Phase 5: Paper (Weeks 10-12)
 - [ ] Baselines: random search, genetic algorithm, AnalogGenie + GA sizing

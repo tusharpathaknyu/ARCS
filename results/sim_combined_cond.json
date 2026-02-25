@@ -1,0 +1,181 @@
+{
+  "n_generated": 160,
+  "n_valid_structure": 145,
+  "validity_rate": 0.90625,
+  "topology_distribution": {
+    "buck": 10,
+    "boost": 10,
+    "buck_boost": 10,
+    "cuk": 10,
+    "sepic": 10,
+    "flyback": 10,
+    "forward": 10,
+    "inverting_amp": 7,
+    "instrumentation_amp": 10,
+    "differential_amp": 7,
+    "sallen_key_lp": 8,
+    "sallen_key_hp": 9,
+    "sallen_key_bp": 8,
+    "wien_bridge": 10,
+    "colpitts": 10,
+    "noninverting_amp": 6
+  },
+  "avg_n_components": 4.068965517241379,
+  "component_type_distribution": {
+    "inductor": 120,
+    "capacitor": 172,
+    "resistor": 188,
+    "mosfet_n": 80,
+    "transformer": 30
+  },
+  "unique_component_combos": 40,
+  "diversity_score": 0.27586206896551724,
+  "n_sim_attempted": 160,
+  "n_sim_success": 106,
+  "n_sim_valid": 63,
+  "sim_success_rate": 0.6625,
+  "sim_valid_rate": 0.39375,
+  "avg_reward": 3.315,
+  "avg_sim_time": 0.574,
+  "avg_vout_error": 55.16,
+  "avg_efficiency": 66285.5211,
+  "avg_ripple": 2256.3944,
+  "n_power_simulated": 70,
+  "avg_gain_db": -23.74,
+  "n_signal_simulated": 35,
+  "per_topology_sim": {
+    "buck": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 8,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.8,
+      "avg_vout_error": 9.34,
+      "avg_efficiency": 0.9265
+    },
+    "boost": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 5,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.5,
+      "avg_vout_error": 23.18,
+      "avg_efficiency": 0.844
+    },
+    "buck_boost": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 5,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.5,
+      "avg_vout_error": 40.62,
+      "avg_efficiency": 0.5223
+    },
+    "cuk": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 2,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.2,
+      "avg_vout_error": 130.92,
+      "avg_efficiency": 1.1635
+    },
+    "sepic": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 2,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.2,
+      "avg_vout_error": 72.58,
+      "avg_efficiency": 463991.8904
+    },
+    "flyback": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 3,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.3,
+      "avg_vout_error": 54.86,
+      "avg_efficiency": 3.0242
+    },
+    "forward": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 3,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 0.3,
+      "avg_vout_error": 54.6,
+      "avg_efficiency": 0.2768
+    },
+    "inverting_amp": {
+      "n": 10,
+      "sim_success": 7,
+      "sim_valid": 7,
+      "sim_success_rate": 0.7,
+      "sim_valid_rate": 0.7,
+      "avg_gain_db": -21.79
+    },
+    "noninverting_amp": {
+      "n": 10,
+      "sim_success": 6,
+      "sim_valid": 6,
+      "sim_success_rate": 0.6,
+      "sim_valid_rate": 0.6,
+      "avg_gain_db": -5.33
+    },
+    "instrumentation_amp": {
+      "n": 10,
+      "sim_success": 10,
+      "sim_valid": 10,
+      "sim_success_rate": 1.0,
+      "sim_valid_rate": 1.0,
+      "avg_gain_db": -18.55
+    },
+    "differential_amp": {
+      "n": 10,
+      "sim_success": 7,
+      "sim_valid": 6,
+      "sim_success_rate": 0.7,
+      "sim_valid_rate": 0.6,
+      "avg_gain_db": -36.34
+    },
+    "sallen_key_lowpass": {
+      "n": 10,
+      "sim_success": 1,
+      "sim_valid": 1,
+      "sim_success_rate": 0.1,
+      "sim_valid_rate": 0.1,
+      "avg_gain_db": -28.35
+    },
+    "sallen_key_highpass": {
+      "n": 10,
+      "sim_success": 2,
+      "sim_valid": 2,
+      "sim_success_rate": 0.2,
+      "sim_valid_rate": 0.2,
+      "avg_gain_db": -76.38
+    },
+    "sallen_key_bandpass": {
+      "n": 10,
+      "sim_success": 2,
+      "sim_valid": 2,
+      "sim_success_rate": 0.2,
+      "sim_valid_rate": 0.2,
+      "avg_gain_db": -12.62
+    },
+    "wien_bridge": {
+      "n": 10,
+      "sim_success": 0,
+      "sim_valid": 0,
+      "sim_success_rate": 0.0,
+      "sim_valid_rate": 0.0
+    },
+    "colpitts": {
+      "n": 10,
+      "sim_success": 1,
+      "sim_valid": 1,
+      "sim_success_rate": 0.1,
+      "sim_valid_rate": 0.1
+    }
+  }
+}
