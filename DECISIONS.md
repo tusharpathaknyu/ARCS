@@ -24,6 +24,8 @@
 | `4cc5170` | 2026-02-22 | Phase 5: ablations, demo CLI, paper scaffold, README rewrite |
 | `0d5ebb2` | 2026-02-23 | Phase 5 polish: figures, warm-start, pytest suite (58 tests), paper |
 | `50af8ea` | 2026-02-26 | Phase 5b: Two-head & graph transformer with topology-aware attention |
+| `c6c3f2e` | 2026-02-26 | Phase 6 prep: training scripts, tokenizer pass-through in train.py |
+| `73974b5` | 2026-02-26 | Phase 6 fixes: tokenizer pass-through, MPS pin_memory, unbuffered logs |
 
 ---
 
@@ -495,6 +497,54 @@ This is actually an advantage — explicit inductive bias from known topology gr
 
 ---
 
+## Phase 6: Enhanced Model Training & Evaluation
+
+### Status: 🔄 IN PROGRESS — Two-Head Training
+
+#### Training Configuration
+| Parameter | Value |
+|-----------|-------|
+| Data | `data/combined/` — 16 JSONL files, 32,281 valid samples |
+| Augmentation | 5× (Eulerian + shuffle) → 161,405 sequences |
+| Batch size | 64 |
+| Train batches/epoch | 2,269 |
+| Epochs | 100 |
+| LR | 3e-4 with linear warmup (5 epochs) → cosine decay |
+| Value weight | 5× |
+| Device | MPS (M3 MacBook Air) |
+
+#### Two-Head Model Training (PID 2984, started Feb 26 ~16:49)
+| Epoch | Train Loss | Val Loss | Val PPL | Acc | Value Acc | Struct Acc | Time |
+|-------|-----------|----------|---------|-----|-----------|------------|------|
+| 1 | 2.992 | 2.103 | 8.2 | 0.690 | 0.399 | 0.894 | 823s |
+| ... | *training* | — | — | — | — | — | ~14 min/ep |
+
+**Estimated completion**: ~Feb 27 at 16:00 EST (23 hours total)
+
+#### Key Bug Fixes Before Training
+1. **MPS pin_memory**: Disabled `pin_memory=True` in DataLoader on MPS — was causing `UserWarning` and potential deadlocks
+2. **Unbuffered output**: Added `PYTHONUNBUFFERED=1` to training scripts — previous run's log wasn't flushing through `tee` pipe
+3. **Tokenizer pass-through for graph transformer**:
+   - `evaluate.py`: `model.generate()` now receives `tokenizer=` for graph feature computation during inference
+   - `rl.py`: Added `_model_forward()` helper — gates `tokenizer=` to `forward()` only for `GraphTransformerARCSModel` (detected via `hasattr(model, 'compute_graph_features')`)
+   - `model.py`: Baseline `generate()` now accepts `**kwargs` for forward-compatibility
+4. **First training attempt**: Ran for 3 epochs then hung (~45 min) — root cause was stdout buffering + possible MPS pin_memory interaction. Fixed and restarted.
+
+#### Design Decision D19: Forward-Compatible Model Dispatch
+- All `model.generate()` call sites now pass `tokenizer=tokenizer`
+- Baseline model accepts `**kwargs` (ignores tokenizer)
+- TwoHead model accepts explicit `tokenizer=` parameter (uses it for value-head routing during generation)
+- GraphTransformer model accepts `tokenizer=` (computes graph features during generation)
+- RL trainer uses `_model_forward()` to pass tokenizer only to graph-aware models (checked via `hasattr(model, 'compute_graph_features')`)
+- This means all 3 model types work through the same code paths without conditional branching at call sites
+
+#### Evaluation Infrastructure
+- `scripts/compare_architectures.py`: Loads all 3 checkpoints, runs 160-spec SPICE evaluation, prints markdown comparison table
+- `scripts/train_all_enhanced.sh`: Sequential two_head → graph_transformer → comparison
+- `scripts/train_two_head.sh` / `scripts/train_graph_transformer.sh`: Individual training scripts
+
+---
+
 ## Next Steps (Priority Order)
 1. ~~Phase 1: Data generation~~ ✅
 2. ~~Phase 2: Model training~~ ✅ (100 epochs, best val_loss=1.279)
@@ -502,8 +552,8 @@ This is actually an advantage — explicit inductive bias from known topology gr
 4. ~~Phase 4: Tier 2 expansion~~ ✅ (9 new topologies, combined val_loss=1.237)
 5. ~~Phase 5: Baselines, ablations, demo~~ ✅
 6. ~~Phase 5b: Enhanced architectures~~ ✅ (code + 96 tests)
-7. **Phase 6: Train & evaluate enhanced models**
-   - Train two_head on combined data (100 epochs)
+7. **Phase 6: Train & evaluate enhanced models** ← CURRENT
+   - ✅ Train two_head on combined data (100 epochs) — IN PROGRESS
    - Train graph_transformer on combined data (100 epochs)
    - Compare all 3 architectures on 160-spec evaluation
    - RL fine-tune the best enhanced model
