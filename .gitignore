@@ -35,6 +35,9 @@ env/
 *.cir.bak
 *.log
 
+# Reference repos (cloned for inspection only)
+reference/
+
 # Model checkpoints
 checkpoints/
 *.pt

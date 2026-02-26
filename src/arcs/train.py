@@ -31,6 +31,7 @@ import torch
 import torch.nn as nn
 
 from arcs.model import ARCSModel, ARCSConfig
+from arcs.model_enhanced import create_model, TwoHeadARCSModel, GraphTransformerARCSModel
 from arcs.tokenizer import CircuitTokenizer
 from arcs.dataset import create_dataloaders
 
@@ -258,6 +259,9 @@ def main():
                         help="Print metrics every N epochs")
     parser.add_argument("--save-interval", type=int, default=25,
                         help="Save checkpoint every N epochs")
+    parser.add_argument("--model-type", type=str, default="baseline",
+                        choices=["baseline", "two_head", "graph_transformer"],
+                        help="Model architecture: baseline, two_head, or graph_transformer")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="auto")
     args = parser.parse_args()
@@ -306,7 +310,9 @@ def main():
     print(f"Train batches: {len(train_loader)}, Val batches: {len(val_loader)}")
 
     # --- Model ---
-    model = ARCSModel(config).to(device)
+    model_type = args.model_type
+    model = create_model(model_type, config).to(device)
+    print(f"Model type: {model_type}")
     n_params = model.count_parameters()
     print(f"Model parameters: {n_params:,} ({n_params / 1e6:.1f}M)")
 
@@ -343,6 +349,8 @@ def main():
         json.dump(config.to_dict(), f, indent=2)
     with open(output_dir / "args.json", "w") as f:
         json.dump(vars(args), f, indent=2)
+    with open(output_dir / "model_type.txt", "w") as f:
+        f.write(model_type)
 
     # --- Training loop ---
     best_val_loss = float("inf")
@@ -407,6 +415,7 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "config": config.to_dict(),
+                    "model_type": model_type,
                     "val_loss": best_val_loss,
                 },
                 output_dir / "best_model.pt",
@@ -420,6 +429,7 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "config": config.to_dict(),
+                    "model_type": model_type,
                 },
                 output_dir / f"checkpoint_epoch{epoch}.pt",
             )
@@ -450,6 +460,7 @@ def main():
             "epoch": args.epochs,
             "model_state_dict": model.state_dict(),
             "config": config.to_dict(),
+            "model_type": model_type,
         },
         output_dir / "final_model.pt",
     )

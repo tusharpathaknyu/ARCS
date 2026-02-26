@@ -104,11 +104,26 @@ Spec tokens:       SPEC_VIN, SPEC_VOUT, SPEC_IOUT, SPEC_FSW, SPEC_GAIN, ...
 Special tokens:    START, END, PAD, SEP, INVALID
 ```
 
-### Model: GPT-style Decoder (6.5M params)
+### Model: GPT-style Decoder (6.5M params) — `baseline`
 - d_model=256, n_layers=6, n_heads=4, d_ff=1024
 - SwiGLU activation, RMSNorm (more modern than AnalogGenie's ReLU + LayerNorm)
 - Token-type embeddings (spec vs. component vs. value)
 - Weight-tied LM head
+
+### Model: Two-Head Architecture — `two_head`
+- Shared transformer backbone, separate **structure head** (weight-tied) and **value head** (independent MLP with SiLU + residual)
+- Value mask routes loss: structure tokens train the structure head, value tokens train the value head
+- During generation, component-type tokens are sampled from the structure head; value tokens from the value head
+- Motivation: structure prediction and value regression have different loss landscapes — decoupling them allows independent capacity
+
+### Model: Graph Transformer — `graph_transformer`
+- Topology-aware causal attention: learned `adj_bias` (per-head scalar for circuit-adjacent pairs) + `edge_type_bias` (component-pair type embeddings)
+- Hardcoded `TOPOLOGY_ADJACENCY` tables for all 16 topologies define which components share circuit nets, derived from actual SPICE schematics
+- Walk position embeddings (32 positions) encode component order within the circuit body
+- Two-head output (structure + value) inherited from `TwoHeadARCSModel`
+- Motivation: AnalogGenie encodes adjacency implicitly via pin-level Eulerian walks; ARCS uses component-level tokens, so adjacency must be **injected as structural attention bias**
+
+Select model type via `--model-type {baseline,two_head,graph_transformer}` in training, RL, evaluation, and demo scripts.
 
 ### Training Pipeline
 1. **Supervised pre-training**: Next-token prediction on all circuit sequences, 5x value-token loss weight
@@ -238,6 +253,13 @@ Example output:
 - [x] Ablation studies: RL effect, spec conditioning effect, data expansion effect
 - [x] Demo CLI: interactive circuit design tool
 - [ ] Write paper targeting DAC / ICCAD / NeurIPS workshop
+
+### Phase 5b: Enhanced Architectures (complete)
+- [x] Two-head model: separate structure head (weight-tied) + value head (SiLU MLP)
+- [x] Graph transformer: topology-aware causal attention with adjacency bias for all 16 topologies
+- [x] Model factory: `create_model` / `load_model` with automatic type detection from checkpoints
+- [x] Unified `--model-type` flag across train, RL, evaluate, and demo scripts
+- [x] 30 new tests for enhanced architectures (96 total)
 
 ---
 

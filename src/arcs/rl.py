@@ -38,6 +38,7 @@ import torch.nn.functional as F
 from arcs.datagen import compute_derived_metrics, is_valid_result
 from arcs.evaluate import DecodedCircuit, decode_generated_sequence
 from arcs.model import ARCSConfig, ARCSModel
+from arcs.model_enhanced import create_model, load_model
 from arcs.spice import NGSpiceRunner
 from arcs.templates import (
     OPERATING_CONDITIONS,
@@ -1062,21 +1063,17 @@ def main():
         device = torch.device(args.device)
     logger.info(f"Using device: {device}")
 
-    # Load pre-trained model
+    # Load pre-trained model (auto-detects model type from checkpoint)
     logger.info(f"Loading checkpoint: {args.checkpoint}")
-    ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
-    config = ARCSConfig.from_dict(ckpt["config"])
-
-    model = ARCSModel(config).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    model, config, model_type = load_model(args.checkpoint, device=device)
+    model.train()  # load_model sets eval mode; switch back to train
     logger.info(
-        f"Loaded model (epoch {ckpt.get('epoch', '?')}, "
-        f"{model.count_parameters():,} params)"
+        f"Loaded {model_type} model "
+        f"({model.count_parameters():,} params)"
     )
 
-    # Create frozen reference model (deep copy)
-    ref_model = ARCSModel(config).to(device)
-    ref_model.load_state_dict(ckpt["model_state_dict"])
+    # Create frozen reference model (same architecture, frozen weights)
+    ref_model, _, _ = load_model(args.checkpoint, device=device)
     ref_model.eval()
     for p in ref_model.parameters():
         p.requires_grad = False

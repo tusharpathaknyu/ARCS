@@ -29,6 +29,7 @@ import numpy as np
 import torch
 
 from arcs.model import ARCSModel, ARCSConfig
+from arcs.model_enhanced import load_model
 from arcs.tokenizer import CircuitTokenizer, TokenType
 from arcs.train import generate_from_specs
 from arcs.simulate import (
@@ -514,12 +515,10 @@ def main():
     else:
         device = torch.device(args.device)
 
-    # Load model
+    # Load model (auto-detects model type from checkpoint)
+    model, config, model_type = load_model(args.checkpoint, device=device)
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
-    config = ARCSConfig.from_dict(checkpoint["config"])
-    model = ARCSModel(config).to(device)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    print(f"Loaded model from {args.checkpoint} (epoch {checkpoint.get('epoch', '?')})")
+    print(f"Loaded {model_type} model from {args.checkpoint} (epoch {checkpoint.get('epoch', '?')})")
 
     tokenizer = CircuitTokenizer()
 

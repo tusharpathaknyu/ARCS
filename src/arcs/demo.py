@@ -32,6 +32,7 @@ from typing import Optional
 import torch
 
 from arcs.model import ARCSModel, ARCSConfig
+from arcs.model_enhanced import load_model as _load_model_from_ckpt
 from arcs.tokenizer import CircuitTokenizer
 from arcs.evaluate import decode_generated_sequence, DecodedCircuit
 from arcs.simulate import (
@@ -77,12 +78,8 @@ def load_model(
     checkpoint_path: str,
     device: torch.device,
 ) -> tuple[ARCSModel, CircuitTokenizer]:
-    """Load the ARCS model from checkpoint."""
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    config = ARCSConfig.from_dict(checkpoint["config"])
-    model = ARCSModel(config).to(device)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
+    """Load the ARCS model from checkpoint (auto-detects model type)."""
+    model, config, model_type = _load_model_from_ckpt(checkpoint_path, device=device)
     return model, CircuitTokenizer()
 
 
