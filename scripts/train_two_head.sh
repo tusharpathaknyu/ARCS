@@ -32,7 +32,7 @@ echo "Combined data files: $(ls "$COMBINED"/*.jsonl | wc -l)"
 source .venv/bin/activate
 mkdir -p logs
 
-PYTHONPATH=src python -m arcs.train \
+PYTHONUNBUFFERED=1 PYTHONPATH=src python -m arcs.train \
     --data "$COMBINED" \
     --config small \
     --model-type two_head \

@@ -295,6 +295,7 @@ class ARCSModel(nn.Module):
         top_k: Optional[int] = None,
         top_p: Optional[float] = None,
         token_types_prefix: Optional[torch.Tensor] = None,
+        **kwargs,
     ) -> torch.Tensor:
         """Autoregressive generation from a prefix (e.g. spec tokens).
 

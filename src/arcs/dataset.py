@@ -440,12 +440,16 @@ def create_dataloaders(
         dataset, [n_train, n_val], generator=rng
     )
 
+    # pin_memory is not supported on MPS — detect and disable
+    import torch as _torch
+    _pin = not _torch.backends.mps.is_available()
+
     train_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=_pin,
         drop_last=True,
     )
     val_loader = DataLoader(
@@ -453,7 +457,7 @@ def create_dataloaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=_pin,
     )
 
     return train_loader, val_loader

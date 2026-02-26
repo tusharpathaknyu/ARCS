@@ -445,6 +445,7 @@ def generate_and_evaluate(
             max_new_tokens=80,
             temperature=temperature,
             top_k=top_k,
+            tokenizer=tokenizer,
         )
         decoded = decode_generated_sequence(output[0].tolist(), tokenizer)
         circuits.append(decoded)

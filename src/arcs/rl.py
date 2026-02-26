@@ -381,7 +381,11 @@ def sample_with_logprobs(
 
     for _ in range(max_new_tokens):
         # Forward pass (no grad by decorator)
-        logits, _ = model(sequence)  # (1, T, vocab)
+        # For GraphTransformerARCSModel, pass tokenizer for graph features
+        if hasattr(model, 'compute_graph_features'):
+            logits, _ = model(sequence, tokenizer=tokenizer)
+        else:
+            logits, _ = model(sequence)  # (1, T, vocab)
         next_logits = logits[0, -1, :] / temperature  # (vocab,)
 
         # Top-k filtering
@@ -577,6 +581,15 @@ class ARCSRLTrainer:
         self.history: dict[str, list] = defaultdict(list)
         self.global_step = 0
 
+        # Whether model needs tokenizer for forward (graph transformer)
+        self._is_graph_model = hasattr(self.model, 'compute_graph_features')
+
+    def _model_forward(self, model, seq):
+        """Forward pass, passing tokenizer if model is graph-aware."""
+        if self._is_graph_model:
+            return model(seq, tokenizer=self.tokenizer)
+        return model(seq)
+
     def train_step(self) -> dict[str, float]:
         """REINFORCE step with proper gradient computation.
 
@@ -614,8 +627,8 @@ class ARCSRLTrainer:
             # KL from ref model
             full_seq = torch.cat([prefix, gen_tokens.unsqueeze(0)], dim=1)
             with torch.no_grad():
-                ref_logits, _ = self.ref_model(full_seq)
-            pol_logits, _ = self.model(full_seq)
+                ref_logits, _ = self._model_forward(self.ref_model, full_seq)
+            pol_logits, _ = self._model_forward(self.model, full_seq)
 
             ref_lp = F.log_softmax(
                 ref_logits[0, prefix_len - 1 : -1, :], dim=-1
@@ -729,7 +742,7 @@ class ARCSRLTrainer:
         # First: sample tokens without grad (fast)
         with torch.no_grad():
             for _ in range(self.config.max_gen_tokens):
-                logits, _ = self.model(sequence)
+                logits, _ = self._model_forward(self.model, sequence)
                 next_logits = logits[0, -1, :] / self.config.temperature
 
                 if self.config.top_k > 0:
@@ -766,7 +779,7 @@ class ARCSRLTrainer:
         full_seq = torch.cat([prefix, gen_tensor.unsqueeze(0)], dim=1)
 
         # Full model forward with grad
-        logits, _ = self.model(full_seq)  # (1, T, vocab)
+        logits, _ = self._model_forward(self.model, full_seq)  # (1, T, vocab)
 
         # Extract log-probs for the generated tokens
         # logits[:, prefix_len-1 : prefix_len-1+n_gen, :] → predicted distributions
