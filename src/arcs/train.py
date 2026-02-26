@@ -48,12 +48,22 @@ def train_epoch(
     device: torch.device,
     grad_clip: float = 1.0,
     value_weight: float = 5.0,
+    tokenizer: Optional[CircuitTokenizer] = None,
 ) -> dict[str, float]:
-    """Train for one epoch, return metrics."""
+    """Train for one epoch, return metrics.
+
+    Args:
+        tokenizer: Required for GraphTransformerARCSModel (graph feature computation).
+    """
     model.train()
     total_loss = 0.0
     total_tokens = 0
     n_batches = 0
+
+    # Extra kwargs for graph transformer
+    extra_kwargs: dict = {}
+    if tokenizer is not None and isinstance(model, GraphTransformerARCSModel):
+        extra_kwargs["tokenizer"] = tokenizer
 
     for batch in loader:
         input_ids = batch["input_ids"].to(device)
@@ -67,6 +77,7 @@ def train_epoch(
             targets=targets,
             value_mask=value_mask,
             value_weight=value_weight,
+            **extra_kwargs,
         )
 
         optimizer.zero_grad(set_to_none=True)
@@ -96,6 +107,7 @@ def evaluate(
     loader: torch.utils.data.DataLoader,
     device: torch.device,
     value_weight: float = 5.0,
+    tokenizer: Optional[CircuitTokenizer] = None,
 ) -> dict[str, float]:
     """Evaluate on validation set, return metrics."""
     model.eval()
@@ -106,6 +118,10 @@ def evaluate(
     value_total = 0
     struct_correct = 0
     struct_total = 0
+
+    extra_kwargs: dict = {}
+    if tokenizer is not None and isinstance(model, GraphTransformerARCSModel):
+        extra_kwargs["tokenizer"] = tokenizer
 
     for batch in loader:
         input_ids = batch["input_ids"].to(device)
@@ -119,6 +135,7 @@ def evaluate(
             targets=targets,
             value_mask=value_mask,
             value_weight=value_weight,
+            **extra_kwargs,
         )
 
         n_tok = (targets != model.config.pad_id).sum().item()
@@ -370,11 +387,13 @@ def main():
             model, train_loader, optimizer, scheduler, device,
             grad_clip=args.grad_clip,
             value_weight=args.value_weight,
+            tokenizer=tokenizer,
         )
 
         val_metrics = evaluate(
             model, val_loader, device,
             value_weight=args.value_weight,
+            tokenizer=tokenizer,
         )
 
         dt = time.time() - t0
