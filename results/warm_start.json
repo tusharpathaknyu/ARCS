@@ -1,0 +1,314 @@
+{
+  "arcs_only": [
+    {
+      "topology": "buck",
+      "reward": 6.119897701962421,
+      "time": 1.45033597946167,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "boost",
+      "reward": 6.802700946602152,
+      "time": 1.1675682067871094,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "buck_boost",
+      "reward": 6.7435160579706475,
+      "time": 0.9755029678344727,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "cuk",
+      "reward": 4.986846223271094,
+      "time": 1.212906837463379,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "sepic",
+      "reward": 5.687721999999999,
+      "time": 1.2635350227355957,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "flyback",
+      "reward": 5.332159791156224,
+      "time": 1.3192040920257568,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "forward",
+      "reward": 4.393007033735074,
+      "time": 2.4130942821502686,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "inverting_amp",
+      "reward": 6.866667,
+      "time": 0.3517031669616699,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "noninverting_amp",
+      "reward": 6.010123666666667,
+      "time": 0.2737710475921631,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "instrumentation_amp",
+      "reward": 6.1024563333333335,
+      "time": 0.3282628059387207,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "differential_amp",
+      "reward": 6.141980333333334,
+      "time": 0.2430870532989502,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "sallen_key_lowpass",
+      "reward": 7.0,
+      "time": 0.32004880905151367,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "sallen_key_highpass",
+      "reward": 7.0,
+      "time": 0.27217698097229004,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "sallen_key_bandpass",
+      "reward": 8.0,
+      "time": 0.28301215171813965,
+      "sims": 3,
+      "has_params": true
+    },
+    {
+      "topology": "wien_bridge",
+      "reward": 0.0,
+      "time": 0.24785113334655762,
+      "sims": 3,
+      "has_params": false
+    },
+    {
+      "topology": "colpitts",
+      "reward": 0.0,
+      "time": 0.25719499588012695,
+      "sims": 3,
+      "has_params": false
+    }
+  ],
+  "ga_cold": [
+    {
+      "topology": "buck",
+      "reward": 7.900770441934506,
+      "time": 49.44683480262756,
+      "sims": 220
+    },
+    {
+      "topology": "boost",
+      "reward": 7.843091563812461,
+      "time": 43.583271980285645,
+      "sims": 220
+    },
+    {
+      "topology": "buck_boost",
+      "reward": 7.068806659397989,
+      "time": 47.5571608543396,
+      "sims": 220
+    },
+    {
+      "topology": "cuk",
+      "reward": 7.6069229451000036,
+      "time": 78.88488411903381,
+      "sims": 220
+    },
+    {
+      "topology": "sepic",
+      "reward": 7.633679494851624,
+      "time": 93.19673991203308,
+      "sims": 220
+    },
+    {
+      "topology": "flyback",
+      "reward": 7.88045342272719,
+      "time": 149.83913779258728,
+      "sims": 220
+    },
+    {
+      "topology": "forward",
+      "reward": 7.907989201823602,
+      "time": 228.27052807807922,
+      "sims": 220
+    },
+    {
+      "topology": "inverting_amp",
+      "reward": 7.0,
+      "time": 6.633901834487915,
+      "sims": 220
+    },
+    {
+      "topology": "noninverting_amp",
+      "reward": 7.0,
+      "time": 6.756070852279663,
+      "sims": 220
+    },
+    {
+      "topology": "instrumentation_amp",
+      "reward": 7.0,
+      "time": 7.022538185119629,
+      "sims": 220
+    },
+    {
+      "topology": "differential_amp",
+      "reward": 7.0,
+      "time": 6.665373086929321,
+      "sims": 220
+    },
+    {
+      "topology": "sallen_key_lowpass",
+      "reward": 8.0,
+      "time": 6.839338779449463,
+      "sims": 220
+    },
+    {
+      "topology": "sallen_key_highpass",
+      "reward": 7.0,
+      "time": 6.953943967819214,
+      "sims": 220
+    },
+    {
+      "topology": "sallen_key_bandpass",
+      "reward": 8.0,
+      "time": 6.863084077835083,
+      "sims": 220
+    },
+    {
+      "topology": "wien_bridge",
+      "reward": 7.0,
+      "time": 8.077200174331665,
+      "sims": 220
+    },
+    {
+      "topology": "colpitts",
+      "reward": 7.0,
+      "time": 9.711123943328857,
+      "sims": 220
+    }
+  ],
+  "ga_warm": [
+    {
+      "topology": "buck",
+      "reward": 7.807545485994597,
+      "time": 24.430219888687134,
+      "sims": 113
+    },
+    {
+      "topology": "boost",
+      "reward": 7.945392505327179,
+      "time": 26.678262948989868,
+      "sims": 113
+    },
+    {
+      "topology": "buck_boost",
+      "reward": 6.238963333333334,
+      "time": 22.511630058288574,
+      "sims": 113
+    },
+    {
+      "topology": "cuk",
+      "reward": 7.119679002597786,
+      "time": 24.33751392364502,
+      "sims": 113
+    },
+    {
+      "topology": "sepic",
+      "reward": 7.525024205762655,
+      "time": 28.20580005645752,
+      "sims": 113
+    },
+    {
+      "topology": "flyback",
+      "reward": 5.472907936887826,
+      "time": 34.45551300048828,
+      "sims": 113
+    },
+    {
+      "topology": "forward",
+      "reward": 7.744307928121411,
+      "time": 109.17312741279602,
+      "sims": 113
+    },
+    {
+      "topology": "inverting_amp",
+      "reward": 7.0,
+      "time": 3.9698102474212646,
+      "sims": 113
+    },
+    {
+      "topology": "noninverting_amp",
+      "reward": 7.0,
+      "time": 3.9464292526245117,
+      "sims": 113
+    },
+    {
+      "topology": "instrumentation_amp",
+      "reward": 7.0,
+      "time": 4.185403823852539,
+      "sims": 113
+    },
+    {
+      "topology": "differential_amp",
+      "reward": 7.0,
+      "time": 3.875174045562744,
+      "sims": 113
+    },
+    {
+      "topology": "sallen_key_lowpass",
+      "reward": 8.0,
+      "time": 4.017000913619995,
+      "sims": 113
+    },
+    {
+      "topology": "sallen_key_highpass",
+      "reward": 7.0,
+      "time": 4.141585826873779,
+      "sims": 113
+    },
+    {
+      "topology": "sallen_key_bandpass",
+      "reward": 8.0,
+      "time": 3.960070848464966,
+      "sims": 113
+    },
+    {
+      "topology": "wien_bridge",
+      "reward": 7.0,
+      "time": 8.077200174331665,
+      "sims": 220,
+      "fallback": true
+    },
+    {
+      "topology": "colpitts",
+      "reward": 7.0,
+      "time": 9.711123943328857,
+      "sims": 220,
+      "fallback": true
+    }
+  ]
+}

@@ -150,6 +150,19 @@ netlists, closing the gap between generation and verification.
 \section{Method}
 \label{sec:method}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/architecture.png}
+\caption{ARCS pipeline overview. \textbf{Top}: Inference --- target specs
+are tokenized into a prefix; the GPT decoder autoregressively generates
+component tokens; the output is decoded into a SPICE-simulatable netlist.
+\textbf{Bottom}: Training --- parameterized SPICE templates generate
+training data automatically; the model is pre-trained with supervised
+next-token prediction, then fine-tuned with REINFORCE using SPICE
+simulation rewards.}
+\label{fig:arch}
+\end{figure*}
+
 \subsection{Problem Formulation}
 
 Given a target specification $\mathbf{s} = (s_1, \ldots, s_K)$ (e.g.,
@@ -236,6 +249,26 @@ simulation convergence (1.0), output accuracy (3.0), efficiency (2.0),
 and ripple quality (1.0) for power converters, with analogous
 domain-specific components for amplifiers, filters, and oscillators.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/supervised_training.png}
+\caption{Supervised pre-training curves on the combined 32K-circuit dataset.
+(a) Train/val cross-entropy loss converges at epoch $\sim$80.
+(b) Token accuracy reaches 75.9\% overall, 64.7\% on value tokens.}
+\label{fig:supervised}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/rl_training.png}
+\caption{REINFORCE fine-tuning with SPICE-in-the-loop rewards.
+(a) Batch reward with moving average.
+(b) KL divergence from reference policy.
+(c) Structural validity maintained near 100\%.
+(d) Simulation validity across training.}
+\label{fig:rl}
+\end{figure}
+
 % ==========================================================================
 \section{Experimental Setup}
 \label{sec:experiments}
@@ -315,6 +348,15 @@ parameter space. ARCS must predict both topology structure and component
 values from a short spec prefix, making the tasks fundamentally different
 in difficulty.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/comparison.png}
+\caption{ARCS vs.\ search baselines. (a) Per-design reward: search methods
+achieve higher optimality via hundreds of SPICE sims. (b) Inference
+speed: ARCS generates in 20\,ms, $>$2,900$\times$ faster than RS.}
+\label{fig:comparison}
+\end{figure}
+
 \subsection{Ablation Studies}
 
 \begin{table}[t]
@@ -351,7 +393,16 @@ achieves 100\% structural validity and the highest single reward
 (3.77) but covers only 7 power converter topologies. Adding 9~signal
 processing topologies (Tier~2) lowers the average to 3.49 because
 filters and oscillators are inherently harder to simulate, but the
-system gains coverage of 16 diverse topologies.
+systems gains coverage of 16 diverse topologies.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/ablation.png}
+\caption{Ablation study showing the contribution of RL fine-tuning,
+spec conditioning, and topology expansion. Spec conditioning has the
+largest effect ($\Delta$reward=+0.89).}
+\label{fig:ablation}
+\end{figure}
 
 \subsection{Per-Topology Analysis}
 
@@ -396,6 +447,14 @@ Complex topologies (SEPIC, Cuk) and filter/oscillator circuits
 validity, likely due to tighter component value constraints and
 more sensitive SPICE convergence.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/topology_validity.png}
+\caption{Per-topology simulation validity. Amplifiers achieve
+80--100\%, power converters 60--80\%, and filters/oscillators 0--30\%.}
+\label{fig:topo}
+\end{figure}
+
 \subsection{Qualitative Examples}
 
 We highlight two generated designs from the demo CLI:
@@ -411,6 +470,44 @@ Generated R$_f$=10\,k$\Omega$, R$_1$=1\,k$\Omega$ in 227\,ms.
 SPICE measured gain=$-$10.8\,dB with reward=5.36/8.0. The component
 ratio $R_f/R_1=10$ matches the expected gain of 20\,dB (voltage gain
 of 10), confirming the model has learned fundamental circuit principles.
+
+\subsection{Warm-Start Experiment}
+\label{sec:warm-start}
+
+A natural question is whether ARCS's fast inference can complement
+search-based optimization. We evaluate a \emph{warm-start} strategy:
+ARCS generates 3 candidate designs, and the best seeds a genetic
+algorithm (GA) population of 20 individuals for 5 generations (113
+SPICE simulations). We compare against cold-start GA (20 individuals,
+10 generations, 220 simulations) and ARCS-only inference (3 simulations).
+
+\begin{table}[h]
+\centering
+\caption{Warm-start comparison across 16 topologies. GA-Warm uses
+ARCS-seeded initialization with 49\% fewer simulations.}
+\label{tab:warmstart}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Avg.\ Reward} & \textbf{Avg.\ Sims} & \textbf{Avg.\ Time (s)} \\
+\midrule
+ARCS only       & 5.45 & 3   & 0.8  \\
+GA cold-start   & 7.43 & 220 & 47.3 \\
+GA warm-start   & 7.18 & 126 & 19.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the 14 topologies where ARCS produces valid initial designs
+(excluding Wien bridge and Colpitts oscillator, which fall back to
+cold-start), GA-Warm achieves 96.2\% of cold-start quality
+(7.20 vs.\ 7.49 avg.\ reward) while using only 113 simulations---a
+49\% reduction. For signal-processing topologies (op-amp variants,
+Sallen-Key filters), warm-start matches cold-start exactly (reward
+parity at 100\%). On boost converter, warm-start \emph{outperforms}
+cold-start (7.95 vs.\ 7.84), suggesting that ARCS's learned
+initialization lands in a better basin of attraction. The 58\%
+wall-clock speedup (19.7\,s vs.\ 47.3\,s) demonstrates practical
+value for interactive design workflows.
 
 % ==========================================================================
 \section{Discussion}
@@ -448,10 +545,12 @@ circuits from IEEE publications.
 (1) Scale model to 50--100M parameters with more diverse training data.
 (2) Incorporate graph-based circuit representations alongside sequential
 tokens.
-(3) Use ARCS designs to initialize search-based methods (``warm-start''
-approach) for the best of both worlds.
+(3) Our warm-start experiment (Section~\ref{sec:warm-start}) validates
+that ARCS can seed search-based methods, achieving 96\% of cold-start
+GA quality with 49\% fewer simulations. Scaling this with larger models
+and more sophisticated search is a promising direction.
 (4) Extend to IC-level transistor circuits (AnalogGenie's domain) with
-values.
+process-aware component values.
 
 % ==========================================================================
 \section{Conclusion}
@@ -479,13 +578,20 @@ Z.~Gao, Y.~Zhang, J.~Li, \emph{et~al.},
 synthesis,'' in \emph{Proc.\ ICLR}, 2025.
 
 \bibitem{circuitsynth}
-\todo{Full CircuitSynth citation}
+P.~Vijayaraghavan, L.~Shi, E.~Degan, \emph{et~al.},
+``{CircuitSynth}: Leveraging large language models for circuit topology
+synthesis,'' in \emph{Proc.\ IEEE LLM Aided Design of Microprocessors
+(LAD)}, 2024.
 
 \bibitem{autocircuitrl}
-\todo{Full AutoCircuit-RL citation}
+P.~Vijayaraghavan, L.~Shi, E.~Degan, V.~Mukherjee, \emph{et~al.},
+``{AutoCircuit-RL}: Reinforcement learning-driven {LLM} for automated
+circuit topology generation,'' 2025. arXiv:2506.03122.
 
 \bibitem{falcon}
-\todo{Full FALCON NeurIPS 2025 citation}
+A.~Mehradfar, X.~Zhao, Y.~Huang, E.~Ceyani, \emph{et~al.},
+``{FALCON}: An {ML} framework for fully automated layout-constrained
+analog circuit design,'' 2025. arXiv:2505.21923.
 
 \bibitem{cktgnn}
 Y.~Dong, W.~Li, and O.~Teman,
