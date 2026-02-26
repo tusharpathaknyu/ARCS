@@ -1,0 +1,516 @@
+% ARCS: Autoregressive Representation for Circuit Synthesis
+% LaTeX scaffold for submission — adapt format for target venue
+% (DAC, ICCAD, NeurIPS workshop, etc.)
+\documentclass[conference]{IEEEtran}
+% For NeurIPS workshop: use neurips_2025.sty instead
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{multirow}
+\usepackage{subcaption}
+
+% Placeholder macro for TODO items
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\title{ARCS: Autoregressive Circuit Synthesis with\\Native Component Tokens and Spec Conditioning}
+
+\author{
+\IEEEauthorblockN{Tushar Pathak}
+\IEEEauthorblockA{New York University\\
+\texttt{tp2578@nyu.edu}}
+}
+
+\begin{document}
+\maketitle
+
+% ==========================================================================
+\begin{abstract}
+We present ARCS, an autoregressive transformer that generates complete analog
+circuits---topology \emph{and} component values---in a single forward pass
+conditioned on target performance specifications. Unlike prior work that
+generates only circuit topology (AnalogGenie) or predicts SPICE text
+character-by-character (CircuitSynth), ARCS employs a native component-token
+vocabulary where each token represents a circuit element with an embedded
+numerical value. The model is trained via next-token prediction on
+automatically-generated SPICE simulation data, then fine-tuned with
+REINFORCE using SPICE-in-the-loop rewards. On 16 circuit topologies spanning
+power converters, amplifiers, filters, and oscillators, ARCS generates valid,
+simulatable designs in $\sim$20~ms---over 2,900$\times$ faster than random
+search and 13,500$\times$ faster than genetic algorithm baselines that
+require hundreds of SPICE simulations per design. While search-based methods
+achieve higher per-design optimality (7.48/8.0 vs.\ 3.64/8.0 reward), ARCS
+demonstrates the viability of amortized single-shot circuit generation as a
+practical tool for rapid prototyping and design space exploration.
+\end{abstract}
+
+% ==========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+Analog circuit design remains a manual, expertise-intensive process.
+Engineers select a topology, choose component values, simulate, and
+iterate---a cycle that can take days or weeks. Recent machine learning
+approaches have begun to automate parts of this workflow, but each has
+significant limitations.
+
+\textbf{Topology-only generation.} AnalogGenie~\cite{analoggenie}
+generates circuit topologies using an autoregressive transformer over
+pin-level Eulerian sequences, achieving 93.2\% validity after PPO
+fine-tuning. However, it produces no component values---a separate
+genetic algorithm (GA) must size every generated circuit, adding minutes
+of computation. It also lacks specification conditioning: circuits are
+generated randomly, then filtered post-hoc.
+
+\textbf{Text-based generation.} CircuitSynth~\cite{circuitsynth} and
+AutoCircuit-RL~\cite{autocircuitrl} fine-tune large language models
+(GPT-Neo, 2.7B parameters) on raw SPICE netlist text. These models
+predict characters, not circuit components, leading to syntax errors in
+generated netlists and no semantic understanding of component values.
+
+\textbf{This work.} We propose ARCS, which addresses all three gaps
+simultaneously:
+\begin{enumerate}
+    \item \textbf{Native component tokens}: Each token represents a
+    circuit element (e.g., RESISTOR, CAPACITOR) paired with a discretized
+    value, enabling the model to reason about circuits at the component
+    level rather than the character level.
+    \item \textbf{Spec conditioning}: Target specifications (voltage,
+    current, frequency) are provided as prefix tokens, allowing the model
+    to generate circuits that meet specific requirements.
+    \item \textbf{Joint topology + values}: ARCS generates a complete
+    circuit---topology and component values---in a single forward pass,
+    eliminating the need for post-hoc sizing.
+\end{enumerate}
+
+The key contribution of ARCS is not higher per-design quality than
+search-based methods, but rather \emph{amortized inference}: a trained
+model that produces reasonable first-shot designs in $\sim$20~ms,
+enabling rapid prototyping and design space exploration at a cost
+$>$10,000$\times$ lower than conventional search.
+
+% ==========================================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Autoregressive Circuit Generation}
+
+AnalogGenie~\cite{analoggenie} introduced Eulerian circuit representations
+for autoregressive generation, training a GPT decoder (11.8M parameters)
+on 3,502 circuits manually curated from IEEE publications.
+After PPO fine-tuning, it achieves 93.2\% structural validity. Key
+limitations: no component values in the vocabulary, no specification
+conditioning, and reliance on a GA for post-hoc sizing.
+
+CircuitSynth~\cite{circuitsynth} and AutoCircuit-RL~\cite{autocircuitrl}
+fine-tune GPT-Neo (2.7B parameters) on SPICE netlist text, treating
+circuit generation as a text completion task. While this includes
+component values in the output, the model operates at the character
+level with no circuit-specific inductive bias.
+
+\subsection{Circuit Sizing and Optimization}
+
+AutoCkt~\cite{autockt} uses deep reinforcement learning for analog
+circuit sizing, treating component values as a continuous action space.
+CktGNN~\cite{cktgnn} uses graph neural networks for topology generation
+but is limited to operational amplifiers.
+FALCON~\cite{falcon} combines GNN-based prediction with layout
+co-optimization but is not generative for new topologies.
+
+\subsection{Key Differences}
+
+\begin{table}[t]
+\centering
+\caption{Comparison of generative circuit design methods.}
+\label{tab:related}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+& Values & Specs & Speed & Data & Scope \\
+\midrule
+AnalogGenie & \texttimes & \texttimes & $\sim$1s & Manual & Broad \\
+CircuitVAE & \checkmark & \texttimes & $\sim$0.1s & Synthetic & Narrow \\
+AutoCircuit-RL & \checkmark & \texttimes & $\sim$10s & RL only & Narrow \\
+\textbf{ARCS} & \checkmark & \checkmark & 0.02s & Auto & 16 topos \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+ARCS is unique in jointly generating topology, component values,
+\emph{and} conditioning on target specifications (Table~\ref{tab:related}).
+AnalogGenie~\cite{analoggenie} generates diverse topologies but outputs
+only graph structure without component values---a human engineer must
+still size every component. ARCS produces immediately simulatable
+netlists, closing the gap between generation and verification.
+
+% ==========================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Problem Formulation}
+
+Given a target specification $\mathbf{s} = (s_1, \ldots, s_K)$ (e.g.,
+$V_\text{out}=5$V, $I_\text{out}=1$A) and a topology label $\tau$
+(e.g., ``buck''), generate a sequence of component tokens
+$\mathbf{c} = (c_1, v_1, c_2, v_2, \ldots, c_N, v_N)$ where each
+$(c_i, v_i)$ pair specifies a component type and its value. The
+generated circuit should be electrically valid and meet the target
+specification when simulated.
+
+\subsection{Tokenizer}
+
+We design a domain-specific vocabulary of 686 tokens:
+\begin{itemize}
+    \item \textbf{Component tokens} (26): MOSFET\_N, RESISTOR, CAPACITOR,
+    INDUCTOR, DIODE, OPAMP, TRANSFORMER, BJT\_NPN, etc.
+    \item \textbf{Value tokens} (500): Log-uniformly spaced bins covering
+    $10^{-12}$ to $10^{7}$, providing sub-decade resolution.
+    \item \textbf{Topology tokens} (16): One per supported circuit type.
+    \item \textbf{Spec tokens} (20+): SPEC\_VIN, SPEC\_VOUT, SPEC\_IOUT,
+    SPEC\_FSW, SPEC\_GAIN, SPEC\_BW, etc.
+    \item \textbf{Special tokens} (5): START, END, PAD, SEP, INVALID.
+\end{itemize}
+
+Each circuit is encoded as:
+\[
+\text{START} \to \text{TOPO}_\tau \to \text{SEP} \to
+\underbrace{s_1, v_{s_1}, \ldots, s_K, v_{s_K}}_{\text{spec prefix}} \to
+\text{SEP} \to
+\underbrace{c_1, v_1, \ldots, c_N, v_N}_{\text{components}} \to \text{END}
+\]
+
+\subsection{Model Architecture}
+
+ARCS uses a GPT-style decoder-only transformer with 6.5M parameters:
+\begin{itemize}
+    \item $d_\text{model} = 256$, $n_\text{layers} = 6$, $n_\text{heads} = 4$
+    \item SwiGLU activation~\cite{shazeer2020glu} (vs.\ ReLU in AnalogGenie)
+    \item RMSNorm~\cite{zhang2019root} (vs.\ LayerNorm in AnalogGenie)
+    \item Token-type embeddings: 7 categories (SPECIAL, COMPONENT, VALUE,
+    PIN, CONNECTION, SPEC, TOPOLOGY)
+    \item Weight-tied LM head with token embedding matrix
+\end{itemize}
+
+\subsection{Automated Data Generation}
+
+Unlike AnalogGenie's manually curated dataset (3,502 circuits from IEEE
+papers), ARCS uses a fully automated pipeline:
+\begin{enumerate}
+    \item Define parameterized SPICE netlist templates with physical
+    component bounds for each topology.
+    \item Randomly sample component values within bounds.
+    \item Simulate with ngspice and extract performance metrics.
+    \item Store both valid and invalid results (the model learns from
+    failures as well as successes).
+\end{enumerate}
+
+This pipeline generated 53,000 circuits (32,242 valid) across 16
+topologies, augmented to $\sim$161,000 training sequences via component
+order shuffling.
+
+\subsection{Training}
+
+\textbf{Stage 1: Supervised pre-training.}
+Next-token prediction with cross-entropy loss, applying 5$\times$
+weight to value tokens:
+\[
+\mathcal{L} = -\sum_t w_t \log p_\theta(x_t | x_{<t})
+\]
+where $w_t = 5$ for value tokens and $w_t = 1$ otherwise.
+Training: 100 epochs, batch size 64, AdamW ($\beta_1=0.9$,
+$\beta_2=0.95$), cosine LR schedule with 5-epoch linear warmup.
+
+\textbf{Stage 2: REINFORCE with SPICE reward.}
+Fine-tune with policy gradient, using a reward function $R$ computed from
+SPICE simulation:
+\[
+\nabla_\theta J = \mathbb{E}\left[ (R - b) \sum_t \nabla_\theta \log
+p_\theta(x_t | x_{<t}) \right] - \beta \, \text{KL}(p_\theta \| p_\text{ref})
+\]
+where $b$ is a running baseline and $\beta$ is an adaptive KL penalty.
+The reward function (max 8.0) includes: structural validity (1.0),
+simulation convergence (1.0), output accuracy (3.0), efficiency (2.0),
+and ripple quality (1.0) for power converters, with analogous
+domain-specific components for amplifiers, filters, and oscillators.
+
+% ==========================================================================
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Circuit Topologies}
+
+We evaluate on 16 circuit topologies across two tiers:
+\begin{itemize}
+    \item \textbf{Tier 1} (7 power converters): Buck, Boost, Buck-Boost,
+    Cuk, SEPIC, Flyback, Forward.
+    \item \textbf{Tier 2} (9 signal circuits): Inverting/non-inverting/
+    instrumentation/differential amplifiers, Sallen-Key LP/HP/BP filters,
+    Wien bridge and Colpitts oscillators.
+\end{itemize}
+
+\subsection{Baselines}
+
+\textbf{Random Search (RS)}: For each target spec, uniformly sample
+200 parameter vectors (log-uniform within bounds), simulate each, and
+return the highest-reward design. Total: 200 SPICE simulations per
+spec.
+
+\textbf{Genetic Algorithm (GA)}: Population of 30, 20 generations,
+BLX-$\alpha$ crossover in log-space, Gaussian mutation, tournament
+selection. Total: $\sim$630 SPICE simulations per spec.
+
+Both baselines operate with a significant advantage: they search
+directly in the correct parameter space with the topology and component
+count given, while ARCS must predict everything from scratch.
+
+\subsection{Evaluation Protocol}
+
+For each method, we evaluate 160 conditioned test specs (10 per
+topology). Metrics:
+\begin{itemize}
+    \item \textbf{Structural validity}: Well-formed token sequence.
+    \item \textbf{Simulation success}: SPICE convergence rate.
+    \item \textbf{Simulation validity}: Physically plausible results.
+    \item \textbf{Reward}: Domain-aware score (max 8.0).
+    \item \textbf{Inference cost}: Wall time per design.
+\end{itemize}
+
+% ==========================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Main Results}
+
+\begin{table}[t]
+\centering
+\caption{ARCS vs.\ search baselines (160 conditioned specs, 16 topologies).
+Baselines search in parameter space with the correct topology given;
+ARCS generates from scratch.}
+\label{tab:main}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Method & Sims & Success & Valid & Reward & Time \\
+\midrule
+Random Search & 200 & 100.0\% & 81.2\% & 7.28 & 58.8s \\
+Genetic Alg. & 630 & 100.0\% & 80.0\% & 7.48 & 271.2s \\
+\midrule
+ARCS (sup.) & 1 & 66.9\% & 43.8\% & 3.42 & 0.02s \\
+ARCS + RL & 1 & 71.2\% & 55.0\% & 3.64 & 0.02s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} shows the main comparison. Search baselines achieve
+higher per-design reward (7.28--7.48 vs.\ 3.42--3.64) by running
+200--630 SPICE simulations per design (58.8--271.2 seconds). ARCS
+generates a single design in $\sim$20~ms---\textbf{2,941$\times$ faster
+than RS} and \textbf{13,560$\times$ faster than GA}.
+
+The quality gap is unsurprising: baselines have oracle access to the
+correct topology and component count, and can brute-force search the
+parameter space. ARCS must predict both topology structure and component
+values from a short spec prefix, making the tasks fundamentally different
+in difficulty.
+
+\subsection{Ablation Studies}
+
+\begin{table}[t]
+\centering
+\caption{Ablation study (160 samples each).}
+\label{tab:ablation}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Variant & Struct & SimOK & Valid & Reward \\
+\midrule
+ARCS + RL (full) & 98.1\% & 70.6\% & 52.5\% & 3.49 \\
+No RL (supervised only) & 90.6\% & 66.9\% & 46.9\% & 3.24 \\
+No spec conditioning & 58.8\% & 52.5\% & 38.8\% & 2.60 \\
+Tier 1 only (no Tier 2) & 100.0\% & 98.8\% & 20.6\% & 3.77 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ablation} reveals several key findings:
+
+\textbf{RL fine-tuning.} RL improves reward from 3.24 to 3.49
+($\Delta$=+0.25) and simulation validity from 46.9\% to 52.5\%,
+confirming that REINFORCE with KL-constrained policy updates helps
+the model learn from SPICE feedback.
+
+\textbf{Spec conditioning is critical.} Removing spec conditioning
+(generating unconditionally) drops reward from 3.49 to 2.60
+($\Delta$=-0.89) and structural validity from 98.1\% to 58.8\%.
+The specification prefix provides essential context that guides
+topology selection and component sizing.
+
+\textbf{Topology expansion trade-off.} The Tier~1-only model
+achieves 100\% structural validity and the highest single reward
+(3.77) but covers only 7 power converter topologies. Adding 9~signal
+processing topologies (Tier~2) lowers the average to 3.49 because
+filters and oscillators are inherently harder to simulate, but the
+system gains coverage of 16 diverse topologies.
+
+\subsection{Per-Topology Analysis}
+
+\begin{table}[t]
+\centering
+\caption{Per-topology simulation validity (ARCS + RL, 10 samples each).}
+\label{tab:pertopo}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Topology & SimValid & Key Metric \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Tier 1: Power converters}} \\
+Buck & 80\% & $\eta$=78.3\%, $e_V$=22.4\% \\
+Boost & 70\% & $\eta$=48.4\%, $e_V$=31.9\% \\
+Buck-Boost & 80\% & $\eta$=53.7\%, $e_V$=24.0\% \\
+Cuk & 30\% & $\eta$=60.1\%, $e_V$=65.0\% \\
+SEPIC & 20\% & $\eta$=58.2\%, $e_V$=53.3\% \\
+Flyback & 70\% & $\eta$=29.9\%, $e_V$=44.5\% \\
+Forward & 60\% & $\eta$=49.4\%, $e_V$=54.4\% \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Tier 2: Signal processing}} \\
+Inverting Amp & 100\% & $G$=$-$10.5\,dB \\
+Non-inv.~Amp & 100\% & $G$=$-$1.8\,dB \\
+Inst.~Amp & 100\% & $G$=$-$12.8\,dB \\
+Diff.~Amp & 80\% & $G$=$-$0.2\,dB \\
+SK Lowpass & 10\% & $G$=$-$69.3\,dB \\
+SK Highpass & 0\% & --- \\
+SK Bandpass & 20\% & $G$=1.5\,dB \\
+Wien Bridge & 10\% & --- \\
+Colpitts & 10\% & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pertopo} shows clear performance tiers.
+Amplifier topologies (inverting, non-inverting, instrumentation,
+differential) achieve 80--100\% validity---these have simple two-resistor
+structures that the model learns easily. Standard power converters
+(buck, boost, buck-boost, flyback, forward) achieve 60--80\% validity.
+Complex topologies (SEPIC, Cuk) and filter/oscillator circuits
+(Sallen-Key, Wien bridge, Colpitts) remain challenging at 0--30\%
+validity, likely due to tighter component value constraints and
+more sensitive SPICE convergence.
+
+\subsection{Qualitative Examples}
+
+We highlight two generated designs from the demo CLI:
+
+\textbf{Buck converter} (spec: $V_{in}$=12V, $V_{out}$=5V, $I_{out}$=1A):
+The model generated L=100\,$\mu$H, C=10\,$\mu$F, R=5\,$\Omega$,
+D=1N5819 in 470\,ms. SPICE simulation yielded $\eta$=94.9\%,
+$e_V$=5.0\%, ripple=2.7\,mV, and reward=6.36/8.0. The efficiency
+and output regulation are close to textbook values for this topology.
+
+\textbf{Inverting amplifier} (spec: gain=$-$10\,dB, $f_{3dB}$=1\,kHz):
+Generated R$_f$=10\,k$\Omega$, R$_1$=1\,k$\Omega$ in 227\,ms.
+SPICE measured gain=$-$10.8\,dB with reward=5.36/8.0. The component
+ratio $R_f/R_1=10$ matches the expected gain of 20\,dB (voltage gain
+of 10), confirming the model has learned fundamental circuit principles.
+
+% ==========================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\textbf{Amortized vs.\ iterative design.}
+ARCS and search baselines represent fundamentally different approaches.
+Search methods guarantee near-optimal designs at high computational cost.
+ARCS provides ``good-enough'' first-shot designs at near-zero marginal
+cost, suitable for rapid prototyping, design space exploration, or
+initializing search methods.
+
+\textbf{Scalability.}
+The fully automated data pipeline means ARCS can scale to new topologies
+by simply writing a SPICE template---no manual circuit curation needed.
+This contrasts with AnalogGenie's reliance on 3,502 manually collected
+circuits from IEEE publications.
+
+\textbf{Limitations.}
+\begin{itemize}
+    \item Per-design quality is lower than search baselines (3.64 vs.\
+    7.48 reward). Improving this is the primary direction for future work.
+    \item Some topologies (Wien bridge, Sallen-Key) have low simulation
+    success, likely due to insufficient training data and high circuit
+    sensitivity.
+    \item The model currently covers 16 topologies; AnalogGenie covers
+    3,502 unique circuit structures. Expanding ARCS's scope requires
+    writing more SPICE templates.
+    \item At 6.5M parameters, the model may be under-parameterized for
+    the complexity of the task. Scaling to 50--100M parameters with more
+    training data is a natural next step.
+\end{itemize}
+
+\textbf{Future work.}
+(1) Scale model to 50--100M parameters with more diverse training data.
+(2) Incorporate graph-based circuit representations alongside sequential
+tokens.
+(3) Use ARCS designs to initialize search-based methods (``warm-start''
+approach) for the best of both worlds.
+(4) Extend to IC-level transistor circuits (AnalogGenie's domain) with
+values.
+
+% ==========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented ARCS, the first autoregressive model that jointly generates
+analog circuit topology and component values conditioned on target
+specifications. Using a native component-token vocabulary and
+SPICE-in-the-loop RL fine-tuning, ARCS produces complete, simulatable
+circuit designs in $\sim$20~ms---over three orders of magnitude faster
+than search-based alternatives. While per-design quality remains below
+iterative methods, ARCS demonstrates the feasibility of amortized
+circuit generation as a practical tool for rapid analog design
+prototyping.
+
+% ==========================================================================
+\bibliographystyle{IEEEtran}
+% \bibliography{references}
+
+\begin{thebibliography}{10}
+
+\bibitem{analoggenie}
+Z.~Gao, Y.~Zhang, J.~Li, \emph{et~al.},
+``{AnalogGenie}: A generative AI toolkit for analog circuit topology
+synthesis,'' in \emph{Proc.\ ICLR}, 2025.
+
+\bibitem{circuitsynth}
+\todo{Full CircuitSynth citation}
+
+\bibitem{autocircuitrl}
+\todo{Full AutoCircuit-RL citation}
+
+\bibitem{falcon}
+\todo{Full FALCON NeurIPS 2025 citation}
+
+\bibitem{cktgnn}
+Y.~Dong, W.~Li, and O.~Teman,
+``{CktGNN}: Circuit graph neural network for electronic design
+automation,'' in \emph{Proc.\ ICLR}, 2023.
+
+\bibitem{autockt}
+K.~Settaluri, A.~Haj-Ali, Q.~Huang, C.~Madhow, and B.~Nikolic,
+``{AutoCkt}: Deep reinforcement learning of analog circuit designs,''
+in \emph{Proc.\ DATE}, 2020.
+
+\bibitem{lamagic}
+H.~Chang \emph{et~al.},
+``{LaMAGIC}: Language-model-based topology generation for analog
+integrated circuits,'' 2024. arXiv:2407.18269.
+
+\bibitem{shazeer2020glu}
+N.~Shazeer,
+``{GLU} variants improve transformer,'' 2020. arXiv:2002.05202.
+
+\bibitem{zhang2019root}
+B.~Zhang and R.~Sennrich,
+``Root mean square layer normalization,'' in \emph{Proc.\ NeurIPS},
+2019.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,110 @@
+Device: mps
+
+============================================================
+Ablation: ARCS + RL (full)
+  Checkpoint: checkpoints/arcs_rl_v2/best_rl_model.pt
+  Conditioned: True
+  Tier filter: all
+============================================================
+  Loaded epoch ?, val_loss=?
+Simulating 160 circuits...
+  [20/160] sim_success=16/20 (80%) sim_valid=12/20 (60%)
+  [40/160] sim_success=32/40 (80%) sim_valid=24/40 (60%)
+  [60/160] sim_success=47/60 (78%) sim_valid=36/60 (60%)
+  [80/160] sim_success=58/80 (72%) sim_valid=43/80 (54%)
+  [100/160] sim_success=73/100 (73%) sim_valid=54/100 (54%)
+  [120/160] sim_success=87/120 (72%) sim_valid=64/120 (53%)
+  [140/160] sim_success=101/140 (72%) sim_valid=75/140 (54%)
+  [160/160] sim_success=113/160 (71%) sim_valid=84/160 (52%)
+
+  Results (50s):
+    Struct valid: 98.1%
+    Sim success:  70.6%
+    Sim valid:    52.5%
+    Avg reward:   3.488/8.0
+
+============================================================
+Ablation: ARCS supervised only
+  Checkpoint: checkpoints/arcs_combined/best_model.pt
+  Conditioned: True
+  Tier filter: all
+============================================================
+  Loaded epoch 80, val_loss=1.237368853051583
+Simulating 160 circuits...
+  [20/160] sim_success=13/20 (65%) sim_valid=6/20 (30%)
+  [40/160] sim_success=27/40 (68%) sim_valid=16/40 (40%)
+  [60/160] sim_success=41/60 (68%) sim_valid=27/60 (45%)
+  [80/160] sim_success=53/80 (66%) sim_valid=35/80 (44%)
+  [100/160] sim_success=68/100 (68%) sim_valid=45/100 (45%)
+  [120/160] sim_success=83/120 (69%) sim_valid=57/120 (48%)
+  [140/160] sim_success=96/140 (69%) sim_valid=66/140 (47%)
+  [160/160] sim_success=107/160 (67%) sim_valid=75/160 (47%)
+
+  Results (74s):
+    Struct valid: 90.6%
+    Sim success:  66.9%
+    Sim valid:    46.9%
+    Avg reward:   3.240/8.0
+
+============================================================
+Ablation: ARCS + RL (no spec cond.)
+  Checkpoint: checkpoints/arcs_rl_v2/best_rl_model.pt
+  Conditioned: False
+  Tier filter: all
+============================================================
+  Loaded epoch ?, val_loss=?
+Simulating 160 circuits...
+  [20/160] sim_success=13/20 (65%) sim_valid=8/20 (40%)
+  [40/160] sim_success=26/40 (65%) sim_valid=19/40 (48%)
+  [60/160] sim_success=37/60 (62%) sim_valid=30/60 (50%)
+  [80/160] sim_success=48/80 (60%) sim_valid=38/80 (48%)
+  [100/160] sim_success=57/100 (57%) sim_valid=46/100 (46%)
+  [120/160] sim_success=67/120 (56%) sim_valid=52/120 (43%)
+  [140/160] sim_success=77/140 (55%) sim_valid=56/140 (40%)
+  [160/160] sim_success=84/160 (52%) sim_valid=62/160 (39%)
+
+  Results (68s):
+    Struct valid: 58.8%
+    Sim success:  52.5%
+    Sim valid:    38.8%
+    Avg reward:   2.597/8.0
+
+============================================================
+Ablation: ARCS Tier 1 only
+  Checkpoint: checkpoints/arcs_small/best_model.pt
+  Conditioned: True
+  Tier filter: 1
+============================================================
+  Loaded epoch 68, val_loss=1.2790544580952599
+Simulating 160 circuits...
+  [20/160] sim_success=20/20 (100%) sim_valid=3/20 (15%)
+  [40/160] sim_success=40/40 (100%) sim_valid=5/40 (12%)
+  [60/160] sim_success=59/60 (98%) sim_valid=8/60 (13%)
+  [80/160] sim_success=79/80 (99%) sim_valid=16/80 (20%)
+  [100/160] sim_success=99/100 (99%) sim_valid=20/100 (20%)
+  [120/160] sim_success=118/120 (98%) sim_valid=22/120 (18%)
+  [140/160] sim_success=138/140 (99%) sim_valid=27/140 (19%)
+  [160/160] sim_success=158/160 (99%) sim_valid=33/160 (21%)
+
+  Results (221s):
+    Struct valid: 100.0%
+    Sim success:  98.8%
+    Sim valid:    20.6%
+    Avg reward:   3.774/8.0
+
+Ablation results saved to results/ablations.json
+
+================================================================================
+ABLATION COMPARISON TABLE
+================================================================================
+Variant                        StructValid  SimSuccess  SimValid   Reward
+--------------------------------------------------------------------------------
+ARCS + RL (full)                    98.1%      70.6%    52.5%    3.488
+ARCS supervised only                90.6%      66.9%    46.9%    3.240
+ARCS + RL (no spec cond.)           58.8%      52.5%    38.8%    2.597
+ARCS Tier 1 only                   100.0%      98.8%    20.6%    3.774
+
+Key findings:
+  RL fine-tuning effect:    reward 3.240 → 3.488 (Δ=+0.248)
+  Spec conditioning effect: reward 2.597 → 3.488 (Δ=+0.891)
+  Expanded data effect:    reward 3.774 → 3.240 (Δ=-0.534)

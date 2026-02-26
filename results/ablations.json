@@ -1,0 +1,510 @@
+[
+  {
+    "name": "ARCS + RL (full)",
+    "description": "Full model: combined training + RL fine-tuning, spec-conditioned",
+    "checkpoint": "checkpoints/arcs_rl_v2/best_rl_model.pt",
+    "conditioned": true,
+    "tier": null,
+    "n_samples": 160,
+    "wall_time": 50.2,
+    "struct_valid_rate": 0.98125,
+    "sim_success_rate": 0.70625,
+    "sim_valid_rate": 0.525,
+    "avg_reward": 3.488,
+    "avg_efficiency": 0.5399,
+    "avg_vout_error": 42.22,
+    "diversity_score": 0.229,
+    "per_topology": {
+      "buck": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_vout_error": 22.39,
+        "avg_efficiency": 0.7829
+      },
+      "boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7,
+        "avg_vout_error": 31.92,
+        "avg_efficiency": 0.4837
+      },
+      "buck_boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_vout_error": 24.02,
+        "avg_efficiency": 0.5369
+      },
+      "cuk": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.3,
+        "avg_vout_error": 65.01,
+        "avg_efficiency": 0.6011
+      },
+      "sepic": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 53.32,
+        "avg_efficiency": 0.582
+      },
+      "flyback": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7,
+        "avg_vout_error": 44.46,
+        "avg_efficiency": 0.2989
+      },
+      "forward": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6,
+        "avg_vout_error": 54.41,
+        "avg_efficiency": 0.4941
+      },
+      "inverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -10.54
+      },
+      "noninverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -1.79
+      },
+      "instrumentation_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -12.76
+      },
+      "differential_amp": {
+        "n": 10,
+        "sim_success": 8,
+        "sim_valid": 8,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -0.17
+      },
+      "sallen_key_lowpass": {
+        "n": 10,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.1,
+        "sim_valid_rate": 0.1,
+        "avg_gain_db": -69.33
+      },
+      "sallen_key_highpass": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "sallen_key_bandpass": {
+        "n": 10,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": 1.45
+      },
+      "wien_bridge": {
+        "n": 10,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.1,
+        "sim_valid_rate": 0.1
+      },
+      "colpitts": {
+        "n": 10,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.1,
+        "sim_valid_rate": 0.1
+      }
+    }
+  },
+  {
+    "name": "ARCS supervised only",
+    "description": "Combined Tier 1+2 training only, no RL fine-tuning",
+    "checkpoint": "checkpoints/arcs_combined/best_model.pt",
+    "conditioned": true,
+    "tier": null,
+    "n_samples": 160,
+    "wall_time": 74.0,
+    "struct_valid_rate": 0.90625,
+    "sim_success_rate": 0.66875,
+    "sim_valid_rate": 0.46875,
+    "avg_reward": 3.24,
+    "avg_efficiency": 0.5325,
+    "avg_vout_error": 40.03,
+    "diversity_score": 0.283,
+    "per_topology": {
+      "buck": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_vout_error": 24.35,
+        "avg_efficiency": 0.7693
+      },
+      "boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7,
+        "avg_vout_error": 30.04,
+        "avg_efficiency": 0.5855
+      },
+      "buck_boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_vout_error": 34.16,
+        "avg_efficiency": 0.4705
+      },
+      "cuk": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 49.32,
+        "avg_efficiency": 0.5319
+      },
+      "sepic": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.4,
+        "avg_vout_error": 44.69,
+        "avg_efficiency": 0.6466
+      },
+      "flyback": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 48.01,
+        "avg_efficiency": 0.3096
+      },
+      "forward": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6,
+        "avg_vout_error": 49.66,
+        "avg_efficiency": 0.4142
+      },
+      "inverting_amp": {
+        "n": 10,
+        "sim_success": 6,
+        "sim_valid": 6,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -10.98
+      },
+      "noninverting_amp": {
+        "n": 10,
+        "sim_success": 7,
+        "sim_valid": 7,
+        "sim_success_rate": 0.7,
+        "sim_valid_rate": 0.7,
+        "avg_gain_db": -1.04
+      },
+      "instrumentation_amp": {
+        "n": 10,
+        "sim_success": 9,
+        "sim_valid": 9,
+        "sim_success_rate": 0.9,
+        "sim_valid_rate": 0.9,
+        "avg_gain_db": -21.64
+      },
+      "differential_amp": {
+        "n": 10,
+        "sim_success": 6,
+        "sim_valid": 6,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -4.52
+      },
+      "sallen_key_lowpass": {
+        "n": 10,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.1,
+        "sim_valid_rate": 0.1,
+        "avg_gain_db": 0.01
+      },
+      "sallen_key_highpass": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "sallen_key_bandpass": {
+        "n": 10,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": 14.1
+      },
+      "wien_bridge": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "colpitts": {
+        "n": 10,
+        "sim_success": 6,
+        "sim_valid": 4,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.4
+      }
+    }
+  },
+  {
+    "name": "ARCS + RL (no spec cond.)",
+    "description": "Same full model but generating unconditionally (no spec prefix)",
+    "checkpoint": "checkpoints/arcs_rl_v2/best_rl_model.pt",
+    "conditioned": false,
+    "tier": null,
+    "n_samples": 160,
+    "wall_time": 68.5,
+    "struct_valid_rate": 0.5875,
+    "sim_success_rate": 0.525,
+    "sim_valid_rate": 0.3875,
+    "avg_reward": 2.597,
+    "avg_efficiency": 0.7128,
+    "avg_vout_error": 27.53,
+    "diversity_score": 0.319,
+    "per_topology": {
+      "buck_boost": {
+        "n": 13,
+        "sim_success": 5,
+        "sim_valid": 1,
+        "sim_success_rate": 0.38461538461538464,
+        "sim_valid_rate": 0.07692307692307693,
+        "avg_vout_error": 34.84,
+        "avg_efficiency": 0.936
+      },
+      "differential_amp": {
+        "n": 8,
+        "sim_success": 8,
+        "sim_valid": 8,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -16.9
+      },
+      "cuk": {
+        "n": 21,
+        "sim_success": 15,
+        "sim_valid": 11,
+        "sim_success_rate": 0.7142857142857143,
+        "sim_valid_rate": 0.5238095238095238,
+        "avg_vout_error": 27.52,
+        "avg_efficiency": 0.6834
+      },
+      "noninverting_amp": {
+        "n": 9,
+        "sim_success": 7,
+        "sim_valid": 7,
+        "sim_success_rate": 0.7777777777777778,
+        "sim_valid_rate": 0.7777777777777778,
+        "avg_gain_db": -1.63
+      },
+      "forward": {
+        "n": 12,
+        "sim_success": 10,
+        "sim_valid": 5,
+        "sim_success_rate": 0.8333333333333334,
+        "sim_valid_rate": 0.4166666666666667,
+        "avg_vout_error": 54.22,
+        "avg_efficiency": 0.3962
+      },
+      "boost": {
+        "n": 18,
+        "sim_success": 9,
+        "sim_valid": 9,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 10.7,
+        "avg_efficiency": 0.832
+      },
+      "sepic": {
+        "n": 12,
+        "sim_success": 8,
+        "sim_valid": 3,
+        "sim_success_rate": 0.6666666666666666,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 12.79,
+        "avg_efficiency": 0.6757
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -8.1
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "buck": {
+        "n": 14,
+        "sim_success": 11,
+        "sim_valid": 8,
+        "sim_success_rate": 0.7857142857142857,
+        "sim_valid_rate": 0.5714285714285714,
+        "avg_vout_error": 20.71,
+        "avg_efficiency": 0.9429
+      },
+      "instrumentation_amp": {
+        "n": 6,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.3333333333333333,
+        "sim_valid_rate": 0.3333333333333333,
+        "avg_gain_db": -31.14
+      },
+      "flyback": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 2,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 41.24,
+        "avg_efficiency": 0.4414
+      },
+      "wien_bridge": {
+        "n": 2,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      }
+    }
+  },
+  {
+    "name": "ARCS Tier 1 only",
+    "description": "Trained on Tier 1 (power converters) only, no Tier 2 signal circuits",
+    "checkpoint": "checkpoints/arcs_small/best_model.pt",
+    "conditioned": true,
+    "tier": 1,
+    "n_samples": 160,
+    "wall_time": 221.2,
+    "struct_valid_rate": 1.0,
+    "sim_success_rate": 0.9875,
+    "sim_valid_rate": 0.20625,
+    "avg_reward": 3.774,
+    "avg_efficiency": 0.6078,
+    "avg_vout_error": 125.77,
+    "diversity_score": 0.175,
+    "per_topology": {
+      "buck": {
+        "n": 23,
+        "sim_success": 23,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.21739130434782608,
+        "avg_vout_error": 77.76,
+        "avg_efficiency": 0.9091
+      },
+      "boost": {
+        "n": 23,
+        "sim_success": 23,
+        "sim_valid": 10,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.43478260869565216,
+        "avg_vout_error": 75.13,
+        "avg_efficiency": 0.6959
+      },
+      "buck_boost": {
+        "n": 23,
+        "sim_success": 23,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.13043478260869565,
+        "avg_vout_error": 140.56,
+        "avg_efficiency": 0.7534
+      },
+      "cuk": {
+        "n": 23,
+        "sim_success": 23,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.17391304347826086,
+        "avg_vout_error": 230.07,
+        "avg_efficiency": 0.6757
+      },
+      "sepic": {
+        "n": 23,
+        "sim_success": 23,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.13043478260869565,
+        "avg_vout_error": 184.38,
+        "avg_efficiency": 0.7531
+      },
+      "flyback": {
+        "n": 23,
+        "sim_success": 22,
+        "sim_valid": 0,
+        "sim_success_rate": 0.9565217391304348,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 84.38,
+        "avg_efficiency": 0.2185
+      },
+      "forward": {
+        "n": 22,
+        "sim_success": 21,
+        "sim_valid": 8,
+        "sim_success_rate": 0.9545454545454546,
+        "sim_valid_rate": 0.36363636363636365,
+        "avg_vout_error": 82.54,
+        "avg_efficiency": 0.1963
+      }
+    }
+  }
+]
