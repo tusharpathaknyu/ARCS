@@ -1,0 +1,437 @@
+[
+  {
+    "name": "Baseline GPT",
+    "model_type": "baseline",
+    "description": "6.5M param baseline (SwiGLU + RMSNorm, weight-tied LM head)",
+    "checkpoint": "checkpoints/arcs_combined/best_model.pt",
+    "epoch": 80,
+    "val_loss": 1.237368853051583,
+    "n_params": 6504960,
+    "n_samples": 160,
+    "wall_time": 69.6,
+    "struct_valid_rate": 0.89375,
+    "sim_success_rate": 0.6625,
+    "sim_valid_rate": 0.45625,
+    "avg_reward": 3.3759237914249254,
+    "per_topology": {
+      "buck": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 42.77,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "avg_reward": 22.4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7
+      },
+      "buck_boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 29.79,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "cuk": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 1,
+        "avg_reward": 80.04,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.1
+      },
+      "sepic": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 42.9,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "flyback": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 5,
+        "avg_reward": 40.58,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.5
+      },
+      "forward": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "avg_reward": 25.14,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7
+      },
+      "inverting_amp": {
+        "n": 10,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "avg_reward": 0,
+        "sim_success_rate": 0.3,
+        "sim_valid_rate": 0.3
+      },
+      "noninverting_amp": {
+        "n": 10,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "avg_reward": 0,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4
+      },
+      "instrumentation_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "differential_amp": {
+        "n": 10,
+        "sim_success": 9,
+        "sim_valid": 9,
+        "avg_reward": 0,
+        "sim_success_rate": 0.9,
+        "sim_valid_rate": 0.9
+      },
+      "sallen_key_lowpass": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "avg_reward": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "sallen_key_highpass": {
+        "n": 10,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "avg_reward": 0,
+        "sim_success_rate": 0.1,
+        "sim_valid_rate": 0.1
+      },
+      "sallen_key_bandpass": {
+        "n": 10,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "avg_reward": 0,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "wien_bridge": {
+        "n": 10,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "avg_reward": 0,
+        "sim_success_rate": 0.3,
+        "sim_valid_rate": 0.3
+      },
+      "colpitts": {
+        "n": 10,
+        "sim_success": 4,
+        "sim_valid": 3,
+        "avg_reward": 0,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.3
+      }
+    }
+  },
+  {
+    "name": "Two-Head",
+    "model_type": "two_head",
+    "description": "6.8M param, separate structure head (weight-tied) + value head (SiLU MLP)",
+    "checkpoint": "checkpoints/arcs_two_head/best_model.pt",
+    "epoch": 80,
+    "val_loss": 0.9543419215789848,
+    "n_params": 6811648,
+    "n_samples": 160,
+    "wall_time": 62.4,
+    "struct_valid_rate": 0.94375,
+    "sim_success_rate": 0.79375,
+    "sim_valid_rate": 0.61875,
+    "avg_reward": 4.226291455001109,
+    "per_topology": {
+      "buck": {
+        "n": 10,
+        "sim_success": 7,
+        "sim_valid": 6,
+        "avg_reward": 20.1,
+        "sim_success_rate": 0.7,
+        "sim_valid_rate": 0.6
+      },
+      "boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "avg_reward": 19.37,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8
+      },
+      "buck_boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "avg_reward": 34.99,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7
+      },
+      "cuk": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 2,
+        "avg_reward": 32.0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2
+      },
+      "sepic": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 41.65,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "flyback": {
+        "n": 10,
+        "sim_success": 8,
+        "sim_valid": 4,
+        "avg_reward": 46.48,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.4
+      },
+      "forward": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "avg_reward": 31.39,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7
+      },
+      "inverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "noninverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "instrumentation_amp": {
+        "n": 10,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "avg_reward": 0,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4
+      },
+      "differential_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "sallen_key_lowpass": {
+        "n": 10,
+        "sim_success": 8,
+        "sim_valid": 8,
+        "avg_reward": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8
+      },
+      "sallen_key_highpass": {
+        "n": 10,
+        "sim_success": 8,
+        "sim_valid": 8,
+        "avg_reward": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8
+      },
+      "sallen_key_bandpass": {
+        "n": 10,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "avg_reward": 0,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "wien_bridge": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "avg_reward": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "colpitts": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 7,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.7
+      }
+    }
+  },
+  {
+    "name": "Graph Transformer",
+    "model_type": "graph_transformer",
+    "description": "6.8M param, topology-aware causal attention + two-head output",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "epoch": 81,
+    "val_loss": 0.9895300744630049,
+    "n_params": 6820272,
+    "n_samples": 160,
+    "wall_time": 62.7,
+    "struct_valid_rate": 0.94375,
+    "sim_success_rate": 0.85,
+    "sim_valid_rate": 0.71875,
+    "avg_reward": 4.553522683302061,
+    "per_topology": {
+      "buck": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 14.23,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 9,
+        "avg_reward": 8.27,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.9
+      },
+      "buck_boost": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 8,
+        "avg_reward": 27.47,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8
+      },
+      "cuk": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 37.03,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "sepic": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 6,
+        "avg_reward": 23.11,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "flyback": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 4,
+        "avg_reward": 58.11,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.4
+      },
+      "forward": {
+        "n": 10,
+        "sim_success": 9,
+        "sim_valid": 7,
+        "avg_reward": 40.38,
+        "sim_success_rate": 0.9,
+        "sim_valid_rate": 0.7
+      },
+      "inverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 9,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.9
+      },
+      "noninverting_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "instrumentation_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "differential_amp": {
+        "n": 10,
+        "sim_success": 10,
+        "sim_valid": 10,
+        "avg_reward": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "sallen_key_lowpass": {
+        "n": 10,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "avg_reward": 0,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.5
+      },
+      "sallen_key_highpass": {
+        "n": 10,
+        "sim_success": 7,
+        "sim_valid": 7,
+        "avg_reward": 0,
+        "sim_success_rate": 0.7,
+        "sim_valid_rate": 0.7
+      },
+      "sallen_key_bandpass": {
+        "n": 10,
+        "sim_success": 6,
+        "sim_valid": 6,
+        "avg_reward": 0,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6
+      },
+      "wien_bridge": {
+        "n": 10,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "avg_reward": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "colpitts": {
+        "n": 10,
+        "sim_success": 9,
+        "sim_valid": 8,
+        "avg_reward": 0,
+        "sim_success_rate": 0.9,
+        "sim_valid_rate": 0.8
+      }
+    }
+  }
+]

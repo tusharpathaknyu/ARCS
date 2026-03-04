@@ -103,19 +103,16 @@ def run_model_eval(
     }
 
     # Per-topology breakdown
-    for topo, topo_results in results.per_topology.items():
-        n = len(topo_results)
-        if n == 0:
-            continue
-        sim_ok = sum(1 for r in topo_results if r.sim_outcome and r.sim_outcome.success)
-        sim_valid = sum(1 for r in topo_results if r.sim_outcome and r.sim_outcome.valid)
-        rewards = [r.reward for r in topo_results if r.reward is not None]
-        summary["per_topology"][topo] = {
-            "n": n,
-            "sim_success": sim_ok,
-            "sim_valid": sim_valid,
-            "avg_reward": round(sum(rewards) / len(rewards), 3) if rewards else 0,
-        }
+    if results.per_topology_sim:
+        for topo, ts in results.per_topology_sim.items():
+            summary["per_topology"][topo] = {
+                "n": ts["n"],
+                "sim_success": ts["sim_success"],
+                "sim_valid": ts["sim_valid"],
+                "avg_reward": ts.get("avg_vout_error", 0),
+                "sim_success_rate": ts.get("sim_success_rate", 0),
+                "sim_valid_rate": ts.get("sim_valid_rate", 0),
+            }
 
     # Print summary
     print(f"\n  Results ({n_samples} samples, {wall_time:.1f}s):")
@@ -124,11 +121,12 @@ def run_model_eval(
     print(f"    Sim valid:     {results.sim_valid_rate:.1%}")
     print(f"    Avg reward:    {results.avg_reward:.3f}/8.0")
 
-    if verbose:
+    if verbose and summary["per_topology"]:
         print(f"\n  Per-topology:")
         for topo, d in sorted(summary["per_topology"].items()):
             print(f"    {topo:<25s} n={d['n']:>3d} sim_ok={d['sim_success']:>3d} "
-                  f"sim_valid={d['sim_valid']:>3d} reward={d['avg_reward']:.3f}")
+                  f"sim_valid={d['sim_valid']:>3d} sr={d['sim_success_rate']:.0%} "
+                  f"vr={d['sim_valid_rate']:.0%}")
 
     return summary
 

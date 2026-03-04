@@ -499,7 +499,7 @@ This is actually an advantage — explicit inductive bias from known topology gr
 
 ## Phase 6: Enhanced Model Training & Evaluation
 
-### Status: 🔄 IN PROGRESS — Two-Head Training
+### Status: ✅ COMPLETE — Architecture Comparison Done
 
 #### Training Configuration
 | Parameter | Value |
@@ -513,13 +513,59 @@ This is actually an advantage — explicit inductive bias from known topology gr
 | Value weight | 5× |
 | Device | MPS (M3 MacBook Air) |
 
-#### Two-Head Model Training (PID 2984, started Feb 26 ~16:49)
-| Epoch | Train Loss | Val Loss | Val PPL | Acc | Value Acc | Struct Acc | Time |
-|-------|-----------|----------|---------|-----|-----------|------------|------|
-| 1 | 2.992 | 2.103 | 8.2 | 0.690 | 0.399 | 0.894 | 823s |
-| ... | *training* | — | — | — | — | — | ~14 min/ep |
+#### Two-Head Model Training (100/100 epochs, best @ epoch 80)
+| Epoch | Train Loss | Val Loss | Acc | Value Acc | Struct Acc |
+|-------|-----------|----------|-----|-----------|-----------|
+| 1 | 2.992 | 2.103 | 0.690 | 0.399 | 0.894 |
+| 25 | 1.059 | 1.034 | 0.810 | 0.685 | 0.897 |
+| 50 | 0.926 | 0.975 | 0.818 | 0.705 | 0.897 |
+| 75 | 0.830 | 0.959 | 0.819 | 0.709 | 0.897 |
+| **80** | **0.815** | **0.954** | **0.820** | **0.709** | **0.898** |
+| 100 | 0.810 | 0.959 | 0.820 | 0.709 | 0.898 |
 
-**Estimated completion**: ~Feb 27 at 16:00 EST (23 hours total)
+#### Graph Transformer Model Training (100/100 epochs, best @ epoch 81)
+| Epoch | Train Loss | Val Loss | Acc | Value Acc | Struct Acc |
+|-------|-----------|----------|-----|-----------|-----------|
+| 1 | 3.006 | 2.114 | 0.693 | 0.398 | 0.900 |
+| 25 | 1.068 | 1.056 | 0.812 | 0.683 | 0.903 |
+| 50 | 0.933 | 1.005 | 0.819 | 0.699 | 0.903 |
+| 70 | 0.852 | 0.991 | 0.821 | 0.704 | 0.903 |
+| **81** | — | **0.990** | — | — | **0.903** |
+| 100 | 0.816 | 0.993 | 0.821 | 0.704 | 0.903 |
+
+#### Architecture Comparison (160-spec SPICE evaluation, conditioned generation)
+| Model | Params | Val Loss | Struct Valid | Sim Success | Sim Valid | Avg Reward |
+|-------|--------|----------|-------------|-------------|-----------|------------|
+| Baseline GPT | 6.5M | 1.237 | 89.4% | 66.2% | 45.6% | 3.376 |
+| Two-Head | 6.8M | 0.954 | 94.4% | 79.4% | 61.9% | 4.226 |
+| **Graph Transformer** | **6.8M** | **0.990** | **94.4%** | **85.0%** | **71.9%** | **4.554** |
+
+**Key takeaways:**
+- Graph Transformer has the **highest sim success (85.0%)**, sim valid (71.9%), and reward (4.554) despite slightly higher val loss
+- Two-Head has the **lowest val loss (0.954)** but weaker sim valid (61.9%)
+- Both enhanced models massively outperform baseline on all SPICE metrics (+5pp struct, +13-19pp sim success, +16-26pp sim valid, +0.85-1.18 reward)
+- Graph Transformer's topology-aware attention bias yields the best structural accuracy (0.903) and generalizes better to SPICE validation
+- The val loss vs SPICE performance gap suggests Graph Transformer learns more *physically meaningful* representations
+
+#### Per-Topology Breakdown (Graph Transformer, best model)
+| Topology | Sim Success | Sim Valid |
+|----------|-------------|-----------|
+| buck | 100% | 100% |
+| boost | 100% | 90% |
+| buck_boost | 100% | 80% |
+| cuk | 100% | 60% |
+| sepic | 100% | 60% |
+| flyback | 100% | 40% |
+| forward | 90% | 70% |
+| inverting_amp | 100% | 90% |
+| noninverting_amp | 100% | 100% |
+| instrumentation_amp | 100% | 100% |
+| differential_amp | 100% | 100% |
+| colpitts | 90% | 80% |
+| sallen_key_bandpass | 60% | 60% |
+| sallen_key_highpass | 70% | 70% |
+| sallen_key_lowpass | 50% | 50% |
+| wien_bridge | 0% | 0% |
 
 #### Key Bug Fixes Before Training
 1. **MPS pin_memory**: Disabled `pin_memory=True` in DataLoader on MPS — was causing `UserWarning` and potential deadlocks
@@ -552,11 +598,11 @@ This is actually an advantage — explicit inductive bias from known topology gr
 4. ~~Phase 4: Tier 2 expansion~~ ✅ (9 new topologies, combined val_loss=1.237)
 5. ~~Phase 5: Baselines, ablations, demo~~ ✅
 6. ~~Phase 5b: Enhanced architectures~~ ✅ (code + 96 tests)
-7. **Phase 6: Train & evaluate enhanced models** ← CURRENT
-   - ✅ Train two_head on combined data (100 epochs) — IN PROGRESS
-   - Train graph_transformer on combined data (100 epochs)
-   - Compare all 3 architectures on 160-spec evaluation
-   - RL fine-tune the best enhanced model
+7. ~~Phase 6: Train & evaluate enhanced models~~ ✅
+   - ✅ Train two_head on combined data (100 epochs, best val_loss=0.954)
+   - ✅ Train graph_transformer on combined data (100 epochs, best val_loss=0.990)
+   - ✅ Compare all 3 architectures on 160-spec SPICE evaluation
+   - **RL fine-tune Graph Transformer** ← NEXT
 8. **Phase 7: Paper**
    - Architecture comparison table (3 models × metrics)
    - Final paper targeting DAC / ICCAD / NeurIPS workshop
