@@ -589,6 +589,59 @@ This is actually an advantage — explicit inductive bias from known topology gr
 - `scripts/train_all_enhanced.sh`: Sequential two_head → graph_transformer → comparison
 - `scripts/train_two_head.sh` / `scripts/train_graph_transformer.sh`: Individual training scripts
 
+### RL Fine-Tuning of Graph Transformer
+
+#### Configuration
+- Base checkpoint: `arcs_graph_transformer/best_model.pt` (epoch 81, val_loss=0.990)
+- REINFORCE + KL penalty, 5000 steps, batch=8, lr=1e-5, kl_coeff=0.1
+- entropy_coeff=0.01, temperature=0.8, top_k=50, 50-sample eval every 100 steps
+
+#### Training Results
+- **Best eval reward: 7.468/8.0** (saved as `best_rl_model.pt`)
+- Total training time: 55,370 seconds (~15.4 hours)
+- Final eval (step 5000): reward=7.151, struct_valid=94%, sim_valid=90%, eff=92.3%, vout_err=0.4%
+
+Reward progression through training:
+| Step | Eval Reward |
+|------|-------------|
+| 100 | 1.08 |
+| 500 | 2.41 |
+| 1000 | 4.23 |
+| 1500 | 5.23 |
+| 2000 | 6.16 |
+| 2500 | 6.80 |
+| 3000 | 7.26 |
+| 3500 | 7.47 (best) |
+| 4000 | 7.38 |
+| 5000 | 7.15 |
+
+#### 160-Spec Conditioned SPICE Evaluation (apples-to-apples)
+
+| Model | Struct Valid | Sim Success | Sim Valid | Reward |
+|-------|-------------|-------------|-----------|--------|
+| Baseline SL | — | 66.2% | 45.6% | 3.376 |
+| Baseline RL v2 | — | 55.0% | 55.0% | 3.644 |
+| Two-Head SL | — | 79.4% | 61.9% | 4.226 |
+| Graph Trans. SL | — | 85.0% | 71.9% | 4.554 |
+| **Graph Trans. + RL** | **100%** | **86.9%** | 55.0% | 4.354 |
+| Random Search | — | 81.2% | 81.2% | 7.282 |
+| GA (30×20) | — | 80.0% | 80.0% | 7.477 |
+
+#### Key Takeaways from RL Fine-Tuning
+1. **Structure validity → 100%**: RL completely eliminated structural errors — every generated circuit is a valid netlist
+2. **Sim success improved**: 85.0% → 86.9% — more circuits converge in SPICE
+3. **Sim valid dropped**: 71.9% → 55.0% — RL over-optimized for reward signal; circuits converge but with worse metric fidelity on some power converter topologies
+4. **Power vs Signal gap**: Signal circuits (amps) remain at 100% sim_valid; power converters (especially boost, buck, flyback) degraded — RL reward structure may under-represent per-topology balance
+5. **RL in-training eval vs conditioned eval divergence**: RL eval reported 7.468 reward / 90% sim_valid on 50 random samples, but the 160-spec uniform evaluation shows 4.354 / 55.0% — this reflects distribution mismatch (RL samples easier topologies more often)
+
+#### Design Decision D20: Auto-Detection of Model Type in Checkpoints
+- RL checkpoints did not store `model_type` metadata
+- Fixed `load_model()` to auto-detect model type from state dict keys:
+  - `walk_pos_emb.weight` → `graph_transformer`
+  - `value_head.weight` → `two_head`
+  - Neither → `baseline`
+- This makes all checkpoint loading robust regardless of how the checkpoint was saved
+
 ---
 
 ## Next Steps (Priority Order)
@@ -602,7 +655,8 @@ This is actually an advantage — explicit inductive bias from known topology gr
    - ✅ Train two_head on combined data (100 epochs, best val_loss=0.954)
    - ✅ Train graph_transformer on combined data (100 epochs, best val_loss=0.990)
    - ✅ Compare all 3 architectures on 160-spec SPICE evaluation
-   - **RL fine-tune Graph Transformer** ← NEXT
-8. **Phase 7: Paper**
-   - Architecture comparison table (3 models × metrics)
+   - ✅ RL fine-tune Graph Transformer (5000 steps, best eval reward=7.468/8.0)
+   - ✅ Post-RL 160-spec evaluation (sim_success=86.9%, struct_valid=100%)
+8. **Phase 7: Paper** ← NEXT
+   - Architecture comparison table (5 models + 2 baselines × metrics)
    - Final paper targeting DAC / ICCAD / NeurIPS workshop

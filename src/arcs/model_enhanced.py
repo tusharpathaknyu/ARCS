@@ -893,7 +893,16 @@ def load_model(
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     config = ARCSConfig.from_dict(ckpt["config"])
 
-    mt = ckpt.get("model_type", model_type or "baseline")
+    # Auto-detect model type from state dict keys when not stored in checkpoint
+    mt = ckpt.get("model_type", model_type)
+    if mt is None:
+        state_keys = set(ckpt.get("model_state_dict", {}).keys())
+        if "walk_pos_emb.weight" in state_keys:
+            mt = "graph_transformer"
+        elif "value_head.weight" in state_keys:
+            mt = "two_head"
+        else:
+            mt = "baseline"
 
     model = create_model(mt, config)
     model.load_state_dict(ckpt["model_state_dict"])
