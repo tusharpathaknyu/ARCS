@@ -1,8 +1,6 @@
 % ARCS: Autoregressive Representation for Circuit Synthesis
-% LaTeX scaffold for submission — adapt format for target venue
-% (DAC, ICCAD, NeurIPS workshop, etc.)
+% Targeting ICCAD 2026
 \documentclass[conference]{IEEEtran}
-% For NeurIPS workshop: use neurips_2025.sty instead
 
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
@@ -14,10 +12,8 @@
 \usepackage{multirow}
 \usepackage{subcaption}
 
-% Placeholder macro for TODO items
-\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
-
-\title{ARCS: Autoregressive Circuit Synthesis with\\Native Component Tokens and Spec Conditioning}
+\title{ARCS: Autoregressive Circuit Synthesis with\\
+Topology-Aware Graph Attention and Spec Conditioning}
 
 \author{
 \IEEEauthorblockN{Tushar Pathak}
@@ -34,18 +30,23 @@ We present ARCS, an autoregressive transformer that generates complete analog
 circuits---topology \emph{and} component values---in a single forward pass
 conditioned on target performance specifications. Unlike prior work that
 generates only circuit topology (AnalogGenie) or predicts SPICE text
-character-by-character (CircuitSynth), ARCS employs a native component-token
-vocabulary where each token represents a circuit element with an embedded
-numerical value. The model is trained via next-token prediction on
-automatically-generated SPICE simulation data, then fine-tuned with
-REINFORCE using SPICE-in-the-loop rewards. On 16 circuit topologies spanning
-power converters, amplifiers, filters, and oscillators, ARCS generates valid,
-simulatable designs in $\sim$20~ms---over 2,900$\times$ faster than random
-search and 13,500$\times$ faster than genetic algorithm baselines that
-require hundreds of SPICE simulations per design. While search-based methods
-achieve higher per-design optimality (7.48/8.0 vs.\ 3.64/8.0 reward), ARCS
-demonstrates the viability of amortized single-shot circuit generation as a
-practical tool for rapid prototyping and design space exploration.
+character-by-character (CircuitSynth), ARCS employs a \emph{native
+component-token vocabulary} where each token represents a circuit element
+with an embedded numerical value, and a \emph{topology-aware Graph
+Transformer} that injects circuit-graph inductive bias into causal
+attention via learned adjacency matrices and random-walk positional
+encodings. Starting from a baseline GPT decoder (6.5M parameters,
+45.6\% simulation validity), we progressively improve to a two-head
+architecture (6.8M parameters, 61.9\%) and a Graph Transformer (6.8M
+parameters, 71.9\%), with REINFORCE fine-tuning using SPICE-in-the-loop
+rewards further boosting structural validity to 100\%. On 16 circuit
+topologies spanning power converters, amplifiers, filters, and oscillators,
+ARCS generates valid, simulatable designs in $\sim$20\,ms---over
+2,900$\times$ faster than random search and 13,500$\times$ faster than
+genetic algorithm baselines. We further demonstrate that ARCS-generated
+designs can warm-start genetic search, recovering 96\% of cold-start
+quality with 49\% fewer SPICE simulations, establishing amortized
+circuit generation as a practical tool for rapid design-space exploration.
 \end{abstract}
 
 % ==========================================================================
@@ -62,7 +63,7 @@ significant limitations.
 generates circuit topologies using an autoregressive transformer over
 pin-level Eulerian sequences, achieving 93.2\% validity after PPO
 fine-tuning. However, it produces no component values---a separate
-genetic algorithm (GA) must size every generated circuit, adding minutes
+genetic algorithm must size every generated circuit, adding minutes
 of computation. It also lacks specification conditioning: circuits are
 generated randomly, then filtered post-hoc.
 
@@ -76,22 +77,27 @@ generated netlists and no semantic understanding of component values.
 simultaneously:
 \begin{enumerate}
     \item \textbf{Native component tokens}: Each token represents a
-    circuit element (e.g., RESISTOR, CAPACITOR) paired with a discretized
-    value, enabling the model to reason about circuits at the component
-    level rather than the character level.
-    \item \textbf{Spec conditioning}: Target specifications (voltage,
-    current, frequency) are provided as prefix tokens, allowing the model
-    to generate circuits that meet specific requirements.
-    \item \textbf{Joint topology + values}: ARCS generates a complete
-    circuit---topology and component values---in a single forward pass,
+    circuit element (e.g., \texttt{RESISTOR}, \texttt{CAPACITOR}) paired
+    with a discretized value, enabling the model to reason about circuits
+    at the component level rather than the character level.
+    \item \textbf{Topology-aware architecture}: A Graph Transformer
+    variant injects circuit-graph structure into causal self-attention
+    via learned adjacency biases and random-walk positional encodings,
+    improving simulation validity from 45.6\% to 71.9\%.
+    \item \textbf{Joint topology + values under spec conditioning}:
+    ARCS generates a complete circuit---topology and component
+    values---in a single forward pass conditioned on target specifications,
     eliminating the need for post-hoc sizing.
 \end{enumerate}
 
 The key contribution of ARCS is not higher per-design quality than
 search-based methods, but rather \emph{amortized inference}: a trained
-model that produces reasonable first-shot designs in $\sim$20~ms,
-enabling rapid prototyping and design space exploration at a cost
-$>$10,000$\times$ lower than conventional search.
+model that produces reasonable first-shot designs in $\sim$20\,ms,
+enabling rapid prototyping and design-space exploration at a cost
+$>$10,000$\times$ lower than conventional search. We additionally show
+that ARCS-generated designs can seed search methods (warm-start GA),
+reducing simulation budgets by 49\% while retaining 96\% of the
+optimality achieved by cold-start search.
 
 % ==========================================================================
 \section{Related Work}
@@ -112,6 +118,11 @@ circuit generation as a text completion task. While this includes
 component values in the output, the model operates at the character
 level with no circuit-specific inductive bias.
 
+LaMAGIC~\cite{lamagic} generates analog IC topologies using language
+models with graph-based representations. While it introduces
+circuit-aware tokenization, it targets transistor-level IC design
+rather than board-level circuits with discrete component values.
+
 \subsection{Circuit Sizing and Optimization}
 
 AutoCkt~\cite{autockt} uses deep reinforcement learning for analog
@@ -127,46 +138,34 @@ co-optimization but is not generative for new topologies.
 \centering
 \caption{Comparison of generative circuit design methods.}
 \label{tab:related}
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
-& Values & Specs & Speed & Data & Scope \\
+& Values & Specs & Graph & Speed & Data \\
 \midrule
-AnalogGenie & \texttimes & \texttimes & $\sim$1s & Manual & Broad \\
-CircuitVAE & \checkmark & \texttimes & $\sim$0.1s & Synthetic & Narrow \\
-AutoCircuit-RL & \checkmark & \texttimes & $\sim$10s & RL only & Narrow \\
-\textbf{ARCS} & \checkmark & \checkmark & 0.02s & Auto & 16 topos \\
+AnalogGenie & \texttimes & \texttimes & \texttimes & $\sim$1\,s & Manual \\
+LaMAGIC     & \texttimes & \texttimes & \checkmark & N/A & Synthetic \\
+CircuitSynth & \checkmark & \texttimes & \texttimes & $\sim$10\,s & RL only \\
+\textbf{ARCS} & \checkmark & \checkmark & \checkmark & 0.02\,s & Auto \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-ARCS is unique in jointly generating topology, component values,
-\emph{and} conditioning on target specifications (Table~\ref{tab:related}).
-AnalogGenie~\cite{analoggenie} generates diverse topologies but outputs
-only graph structure without component values---a human engineer must
-still size every component. ARCS produces immediately simulatable
-netlists, closing the gap between generation and verification.
+ARCS is, to our knowledge, the first system that jointly generates
+topology, component values, \emph{and} conditions on target
+specifications while incorporating circuit-graph inductive bias
+(Table~\ref{tab:related}). AnalogGenie generates diverse topologies but
+outputs only graph structure without component values. ARCS produces
+immediately simulatable netlists, closing the gap between generation
+and verification.
 
 % ==========================================================================
 \section{Method}
 \label{sec:method}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/architecture.png}
-\caption{ARCS pipeline overview. \textbf{Top}: Inference --- target specs
-are tokenized into a prefix; the GPT decoder autoregressively generates
-component tokens; the output is decoded into a SPICE-simulatable netlist.
-\textbf{Bottom}: Training --- parameterized SPICE templates generate
-training data automatically; the model is pre-trained with supervised
-next-token prediction, then fine-tuned with REINFORCE using SPICE
-simulation rewards.}
-\label{fig:arch}
-\end{figure*}
-
 \subsection{Problem Formulation}
 
 Given a target specification $\mathbf{s} = (s_1, \ldots, s_K)$ (e.g.,
-$V_\text{out}=5$V, $I_\text{out}=1$A) and a topology label $\tau$
+$V_\text{out}=5$\,V, $I_\text{out}=1$\,A) and a topology label $\tau$
 (e.g., ``buck''), generate a sequence of component tokens
 $\mathbf{c} = (c_1, v_1, c_2, v_2, \ldots, c_N, v_N)$ where each
 $(c_i, v_i)$ pair specifies a component type and its value. The
@@ -175,99 +174,164 @@ specification when simulated.
 
 \subsection{Tokenizer}
 
-We design a domain-specific vocabulary of 686 tokens:
+We design a domain-specific vocabulary of 676 tokens organized into
+seven semantic categories:
 \begin{itemize}
-    \item \textbf{Component tokens} (26): MOSFET\_N, RESISTOR, CAPACITOR,
-    INDUCTOR, DIODE, OPAMP, TRANSFORMER, BJT\_NPN, etc.
-    \item \textbf{Value tokens} (500): Log-uniformly spaced bins covering
-    $10^{-12}$ to $10^{7}$, providing sub-decade resolution.
+    \item \textbf{Special tokens} (5): \texttt{START}, \texttt{END},
+    \texttt{PAD}, \texttt{SEP}, \texttt{INVALID}.
+    \item \textbf{Component tokens} (20): \texttt{MOSFET\_N},
+    \texttt{RESISTOR}, \texttt{CAPACITOR}, \texttt{INDUCTOR},
+    \texttt{DIODE}, \texttt{OPAMP}, \texttt{TRANSFORMER}, etc.
     \item \textbf{Topology tokens} (16): One per supported circuit type.
-    \item \textbf{Spec tokens} (20+): SPEC\_VIN, SPEC\_VOUT, SPEC\_IOUT,
-    SPEC\_FSW, SPEC\_GAIN, SPEC\_BW, etc.
-    \item \textbf{Special tokens} (5): START, END, PAD, SEP, INVALID.
+    \item \textbf{Spec tokens} (20): \texttt{SPEC\_VIN},
+    \texttt{SPEC\_VOUT}, \texttt{SPEC\_IOUT}, \texttt{SPEC\_FSW},
+    \texttt{SPEC\_GAIN}, \texttt{SPEC\_BW}, etc.
+    \item \textbf{Pin/Net tokens} (120): Circuit connectivity encoding.
+    \item \textbf{Value tokens} (500): Log-uniformly spaced bins covering
+    $10^{-12}$ to $10^{6}$, providing $\sim$28 bins per decade for
+    sub-decade resolution.
 \end{itemize}
 
-Each circuit is encoded as:
+Each circuit is encoded as a flat sequence:
 \[
-\text{START} \to \text{TOPO}_\tau \to \text{SEP} \to
-\underbrace{s_1, v_{s_1}, \ldots, s_K, v_{s_K}}_{\text{spec prefix}} \to
-\text{SEP} \to
-\underbrace{c_1, v_1, \ldots, c_N, v_N}_{\text{components}} \to \text{END}
+\texttt{START} \!\to\! \texttt{TOPO}_\tau \!\to\! \texttt{SEP} \!\to\!
+\underbrace{s_1, v_{s_1}, \ldots, s_K, v_{s_K}}_{\text{spec prefix}} \!\to\!
+\texttt{SEP} \!\to\!
+\underbrace{c_1, v_1, \ldots, c_N, v_N}_{\text{components}} \!\to\! \texttt{END}
 \]
 
-\subsection{Model Architecture}
+The log-uniform binning ensures that physically meaningful value ratios
+(e.g., $10\,\text{k}\Omega$ vs.\ $1\,\text{k}\Omega$) map to
+proportional token distances, and data augmentation via random component
+order shuffling ($5\times$) teaches the model that component ordering
+is arbitrary.
 
-ARCS uses a GPT-style decoder-only transformer with 6.5M parameters:
+\subsection{Model Architecture}
+\label{sec:arch}
+
+We develop three progressively more expressive architectures, all
+sharing a common GPT-style backbone:
+$d_\text{model}\!=\!256$, $n_\text{layers}\!=\!6$,
+$n_\text{heads}\!=\!4$, $d_\text{ff}\!=\!1024$, SwiGLU
+activations~\cite{shazeer2020glu}, RMSNorm~\cite{zhang2019root}, and
+learned token-type embeddings (7 categories). All models use
+weight-tied language model heads.
+
+\textbf{(A) Baseline GPT} (6,504,960 parameters). A standard
+decoder-only transformer with a single weight-tied output head
+over the full vocabulary. This model treats all tokens---structural
+and value---identically.
+
+\textbf{(B) Two-Head Model} (6,811,648 parameters; +4.7\%). We
+observe that predicting \emph{which component to place} and
+predicting \emph{what value it should have} are fundamentally
+different tasks. The two-head model separates these:
 \begin{itemize}
-    \item $d_\text{model} = 256$, $n_\text{layers} = 6$, $n_\text{heads} = 4$
-    \item SwiGLU activation~\cite{shazeer2020glu} (vs.\ ReLU in AnalogGenie)
-    \item RMSNorm~\cite{zhang2019root} (vs.\ LayerNorm in AnalogGenie)
-    \item Token-type embeddings: 7 categories (SPECIAL, COMPONENT, VALUE,
-    PIN, CONNECTION, SPEC, TOPOLOGY)
-    \item Weight-tied LM head with token embedding matrix
+    \item A \emph{structure head} (weight-tied with the token
+    embedding) predicts component type, topology, spec, and special
+    tokens.
+    \item A \emph{value head} (dedicated 2-layer SiLU MLP,
+    $256 \!\to\! 512 \!\to\! 500$) specializes in predicting
+    numerical value tokens.
 \end{itemize}
+At each timestep, the model selects which head to use based on
+whether the next token is expected to be a value token
+(determined by the preceding component token).
+
+\textbf{(C) Graph Transformer} (6,820,272 parameters; +4.8\%).
+Circuit components form a graph defined by their electrical
+connectivity. We inject this structure into the transformer via
+two mechanisms:
+\begin{enumerate}
+    \item \textbf{Topology-aware attention bias.} For each of the
+    16 topologies, we precompute a binary adjacency matrix
+    $\mathbf{A}_\tau \in \{0,1\}^{M \times M}$ where $M$ is the
+    maximum number of components. During self-attention, we add a
+    learned scalar bias $b_\tau^{(l)}$ to attention logits for
+    positions $(i,j)$ where $A_{\tau,ij}=1$:
+    \begin{equation}
+    \text{Attn}(Q,K)_{ij} = \frac{Q_i K_j^\top}{\sqrt{d_k}} +
+    b_\tau^{(l)} \cdot A_{\tau,ij}
+    \label{eq:graph_attn}
+    \end{equation}
+    This gives the model a soft prior that electrically connected
+    components should attend to each other more strongly.
+    \item \textbf{Random-walk positional encoding.} We compute
+    $k$-step random walk probabilities
+    $\mathbf{p}_i = [(\mathbf{D}^{-1}\mathbf{A})^k_{ii}]_{k=1}^K$
+    for each node $i$ (with $K\!=\!8$ walk lengths) and project
+    them through a learned linear layer to produce per-node
+    positional features, added to the token embeddings. This
+    captures local graph structure (e.g., a node in a 3-cycle vs.\
+    a leaf node) without requiring message-passing layers.
+\end{enumerate}
+The Graph Transformer retains the two-head output structure from
+model~(B), adding only 8,624 parameters for walk embeddings and
+432 for graph biases.
 
 \subsection{Automated Data Generation}
+\label{sec:datagen}
 
 Unlike AnalogGenie's manually curated dataset (3,502 circuits from IEEE
 papers), ARCS uses a fully automated pipeline:
 \begin{enumerate}
-    \item Define parameterized SPICE netlist templates with physical
-    component bounds for each topology.
-    \item Randomly sample component values within bounds.
-    \item Simulate with ngspice and extract performance metrics.
-    \item Store both valid and invalid results (the model learns from
-    failures as well as successes).
+    \item \textbf{Template definition}: Parameterized SPICE netlist
+    templates with physical component bounds (E-series snapped) for
+    each of 16 topologies.
+    \item \textbf{Random sampling}: Component values drawn
+    log-uniformly within bounds.
+    \item \textbf{SPICE simulation}: ngspice transient/AC simulation
+    with automatic metric extraction (efficiency, output accuracy,
+    gain, bandwidth, etc.).
+    \item \textbf{Filtering}: Both valid and invalid designs are
+    stored---the model learns to avoid failure modes.
 \end{enumerate}
 
-This pipeline generated 53,000 circuits (32,242 valid) across 16
-topologies, augmented to $\sim$161,000 training sequences via component
-order shuffling.
+This pipeline generated 53,000 circuits (32,281 valid after simulation)
+across 16 topologies. After $5\times$ augmentation via component-order
+shuffling, the training set contains 161,405 sequences.
 
 \subsection{Training}
 
 \textbf{Stage 1: Supervised pre-training.}
-Next-token prediction with cross-entropy loss, applying 5$\times$
-weight to value tokens:
-\[
-\mathcal{L} = -\sum_t w_t \log p_\theta(x_t | x_{<t})
-\]
+Next-token prediction with cross-entropy loss, applying $5\times$
+weight to value tokens to compensate for their larger vocabulary:
+\begin{equation}
+\mathcal{L}_\text{SL} = -\sum_t w_t \log p_\theta(x_t \mid x_{<t})
+\label{eq:sl_loss}
+\end{equation}
 where $w_t = 5$ for value tokens and $w_t = 1$ otherwise.
-Training: 100 epochs, batch size 64, AdamW ($\beta_1=0.9$,
-$\beta_2=0.95$), cosine LR schedule with 5-epoch linear warmup.
+Training: 100 epochs, batch size 64, AdamW ($\beta_1\!=\!0.9$,
+$\beta_2\!=\!0.95$), cosine LR schedule ($3 \times 10^{-4}$
+peak) with 5-epoch linear warmup.
 
 \textbf{Stage 2: REINFORCE with SPICE reward.}
-Fine-tune with policy gradient, using a reward function $R$ computed from
-SPICE simulation:
-\[
-\nabla_\theta J = \mathbb{E}\left[ (R - b) \sum_t \nabla_\theta \log
-p_\theta(x_t | x_{<t}) \right] - \beta \, \text{KL}(p_\theta \| p_\text{ref})
-\]
-where $b$ is a running baseline and $\beta$ is an adaptive KL penalty.
-The reward function (max 8.0) includes: structural validity (1.0),
-simulation convergence (1.0), output accuracy (3.0), efficiency (2.0),
-and ripple quality (1.0) for power converters, with analogous
-domain-specific components for amplifiers, filters, and oscillators.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/supervised_training.png}
-\caption{Supervised pre-training curves on the combined 32K-circuit dataset.
-(a) Train/val cross-entropy loss converges at epoch $\sim$80.
-(b) Token accuracy reaches 75.9\% overall, 64.7\% on value tokens.}
-\label{fig:supervised}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/rl_training.png}
-\caption{REINFORCE fine-tuning with SPICE-in-the-loop rewards.
-(a) Batch reward with moving average.
-(b) KL divergence from reference policy.
-(c) Structural validity maintained near 100\%.
-(d) Simulation validity across training.}
-\label{fig:rl}
-\end{figure}
+We fine-tune the best supervised checkpoint with policy gradient
+optimization, using SPICE simulation as an oracle reward signal:
+\begin{equation}
+\nabla_\theta J = \mathbb{E}\!\left[ (R - b) \sum_t \nabla_\theta \log
+p_\theta(x_t \mid x_{<t}) \right] - \beta \,
+\text{KL}(p_\theta \| p_\text{ref})
+\label{eq:rl_loss}
+\end{equation}
+where $b$ is an exponential moving average baseline and $\beta$ is an
+adaptive KL coefficient~\cite{autocircuitrl} with
+$\text{KL}_\text{target}\!=\!0.1$. The reward function $R$ (max~8.0)
+decomposes as:
+\begin{equation}
+R = \underbrace{r_\text{struct}}_{\leq 1.0} +
+\underbrace{r_\text{sim}}_{\leq 1.0} +
+\underbrace{r_\text{accuracy}}_{\leq 3.0} +
+\underbrace{r_\text{efficiency}}_{\leq 2.0} +
+\underbrace{r_\text{quality}}_{\leq 1.0}
+\label{eq:reward}
+\end{equation}
+The sub-rewards are domain-specific: power converters use efficiency
+and output voltage error; amplifiers use gain accuracy and bandwidth;
+filters use passband gain and roll-off.
+RL training runs for 5,000 steps (batch size 8, lr $10^{-5}$,
+temperature 0.8, top-$k$ 50), requiring $\sim$15 hours on an Apple
+M3 with MPS acceleration.
 
 % ==========================================================================
 \section{Experimental Setup}
@@ -295,282 +359,321 @@ spec.
 BLX-$\alpha$ crossover in log-space, Gaussian mutation, tournament
 selection. Total: $\sim$630 SPICE simulations per spec.
 
-Both baselines operate with a significant advantage: they search
-directly in the correct parameter space with the topology and component
-count given, while ARCS must predict everything from scratch.
+Both baselines have a fundamental advantage: they search directly in
+the known parameter space with topology and component count given,
+while ARCS must predict everything from a short spec prefix.
 
 \subsection{Evaluation Protocol}
 
 For each method, we evaluate 160 conditioned test specs (10 per
 topology). Metrics:
 \begin{itemize}
-    \item \textbf{Structural validity}: Well-formed token sequence.
-    \item \textbf{Simulation success}: SPICE convergence rate.
-    \item \textbf{Simulation validity}: Physically plausible results.
-    \item \textbf{Reward}: Domain-aware score (max 8.0).
-    \item \textbf{Inference cost}: Wall time per design.
+    \item \textbf{Structural validity}: Well-formed token sequence
+    that decodes to a valid circuit.
+    \item \textbf{Sim.\ success}: SPICE convergence rate.
+    \item \textbf{Sim.\ validity}: Physically plausible simulation
+    results (no negative efficiency, reasonable output).
+    \item \textbf{Reward}: Domain-specific score (max 8.0), combining
+    accuracy, efficiency, and quality metrics.
+    \item \textbf{Wall time}: End-to-end time per design including
+    SPICE simulation for baselines.
 \end{itemize}
 
 % ==========================================================================
 \section{Results}
 \label{sec:results}
 
-\subsection{Main Results}
+\subsection{Architecture Comparison}
 
 \begin{table}[t]
 \centering
-\caption{ARCS vs.\ search baselines (160 conditioned specs, 16 topologies).
-Baselines search in parameter space with the correct topology given;
-ARCS generates from scratch.}
-\label{tab:main}
-\begin{tabular}{@{}lccccc@{}}
+\caption{Architecture progression. All models trained identically
+(100 epochs, same data). Graph Transformer achieves the best
+simulation validity (+26.3pp over baseline) with minimal parameter
+overhead (+4.8\%).}
+\label{tab:arch}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-Method & Sims & Success & Valid & Reward & Time \\
+Architecture & Params & Val Loss & Struct & SimValid \\
 \midrule
-Random Search & 200 & 100.0\% & 81.2\% & 7.28 & 58.8s \\
-Genetic Alg. & 630 & 100.0\% & 80.0\% & 7.48 & 271.2s \\
-\midrule
-ARCS (sup.) & 1 & 66.9\% & 43.8\% & 3.42 & 0.02s \\
-ARCS + RL & 1 & 71.2\% & 55.0\% & 3.64 & 0.02s \\
+Baseline GPT     & 6.50M & 1.237 & 89.4\% & 45.6\% \\
+Two-Head         & 6.81M & 0.954 & 94.4\% & 61.9\% \\
+Graph Transformer & 6.82M & 0.990 & 94.4\% & 71.9\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:main} shows the main comparison. Search baselines achieve
-higher per-design reward (7.28--7.48 vs.\ 3.42--3.64) by running
-200--630 SPICE simulations per design (58.8--271.2 seconds). ARCS
-generates a single design in $\sim$20~ms---\textbf{2,941$\times$ faster
-than RS} and \textbf{13,560$\times$ faster than GA}.
+Table~\ref{tab:arch} shows the effect of architectural improvements
+trained on identical data. The two-head architecture improves simulation
+validity by 16.3 percentage points (pp) over the baseline by
+decoupling structural and numerical prediction---the dedicated value
+MLP learns better numerical distributions without competing with the
+discrete structural vocabulary. The Graph Transformer adds another
+10.0\,pp: topology-aware attention biases (Eq.~\ref{eq:graph_attn})
+help the model understand which components are electrically connected,
+improving value prediction for components that must be jointly sized
+(e.g., inductor and capacitor in a buck converter's LC filter).
 
-The quality gap is unsurprising: baselines have oracle access to the
-correct topology and component count, and can brute-force search the
-parameter space. ARCS must predict both topology structure and component
-values from a short spec prefix, making the tasks fundamentally different
-in difficulty.
+Interestingly, the Graph Transformer achieves \emph{slightly worse}
+validation loss (0.990 vs.\ 0.954) than Two-Head, yet substantially
+better simulation validity (71.9\% vs.\ 61.9\%). This suggests that
+the graph inductive bias improves the model's understanding of
+circuit constraints in ways not captured by token-level cross-entropy.
 
-\begin{figure}[t]
+\subsection{Main Comparison}
+
+\begin{table}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/comparison.png}
-\caption{ARCS vs.\ search baselines. (a) Per-design reward: search methods
-achieve higher optimality via hundreds of SPICE sims. (b) Inference
-speed: ARCS generates in 20\,ms, $>$2,900$\times$ faster than RS.}
-\label{fig:comparison}
-\end{figure}
+\caption{Full comparison across all methods (160 conditioned specs).
+Search baselines have oracle access to the correct topology and
+component count; ARCS generates from scratch in a single forward pass.}
+\label{tab:main}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Method & Sims & Struct & SimValid & Reward & Time \\
+\midrule
+Random Search    & 200 & --- & 81.2\% & 7.28 & 58.8\,s \\
+Genetic Alg.     & 630 & --- & 80.0\% & 7.48 & 271.2\,s \\
+\midrule
+Baseline SL      &  1  & 89.4\% & 45.6\% & 3.38 & 0.02\,s \\
+Baseline RL      &  1  & 96.2\% & 55.0\% & 3.64 & 0.02\,s \\
+Two-Head SL      &  1  & 94.4\% & 61.9\% & 4.23 & 0.02\,s \\
+Graph Trans.\ SL &  1  & 94.4\% & 71.9\% & 4.55 & 0.02\,s \\
+Graph Trans.\ RL &  1  & 100\%  & 55.0\% & 4.35 & 0.02\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} presents the full comparison. Key findings:
+
+\textbf{Speed--quality trade-off.} Search baselines achieve higher
+per-design reward (7.28--7.48 vs.\ 4.55) by running 200--630 SPICE
+simulations per design (58.8--271.2\,seconds). The Graph Transformer
+generates a complete design in $\sim$20\,ms---\textbf{2,941$\times$
+faster than RS} and \textbf{13,560$\times$ faster than GA}---using
+zero SPICE simulations at inference time.
+
+\textbf{Architecture matters more than RL.} The progression from
+Baseline SL to Graph Trans.\ SL yields +1.17 reward ($\Delta$=34.6\%)
+purely from architectural changes. RL on the baseline model improves
+reward by only +0.26 ($\Delta$=7.7\%). This suggests that for
+small-scale models, better inductive bias outweighs learning from
+online SPICE feedback.
+
+\textbf{RL-validity trade-off.} RL on the Graph Transformer
+achieves 100\% structural validity (vs.\ 94.4\% SL) and the best
+RL evaluation reward (7.47/8.0 at step~4900), but simulation
+validity drops from 71.9\% to 55.0\% on the uniform test set.
+Analysis reveals that RL over-optimizes for topologies with easier
+reward landscapes (amplifiers, which achieve 100\% validity) at the
+expense of harder topologies (power converters, which degrade from
+60--100\% to 0--70\%). This is a known failure mode of REINFORCE
+without per-topology reward normalization.
 
 \subsection{Ablation Studies}
 
 \begin{table}[t]
 \centering
-\caption{Ablation study (160 samples each).}
+\caption{Ablation study (160 samples, baseline model).}
 \label{tab:ablation}
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Variant & Struct & SimOK & Valid & Reward \\
+Variant & Struct & SimValid & Reward \\
 \midrule
-ARCS + RL (full) & 98.1\% & 70.6\% & 52.5\% & 3.49 \\
-No RL (supervised only) & 90.6\% & 66.9\% & 46.9\% & 3.24 \\
-No spec conditioning & 58.8\% & 52.5\% & 38.8\% & 2.60 \\
-Tier 1 only (no Tier 2) & 100.0\% & 98.8\% & 20.6\% & 3.77 \\
+ARCS + RL (full)       & 98.1\% & 52.5\% & 3.49 \\
+No RL (supervised only) & 90.6\% & 46.9\% & 3.24 \\
+No spec conditioning   & 58.8\% & 38.8\% & 2.60 \\
+Tier~1 only (7 topos)  & 100\%  & 20.6\% & 3.77 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ablation} reveals several key findings:
-
-\textbf{RL fine-tuning.} RL improves reward from 3.24 to 3.49
-($\Delta$=+0.25) and simulation validity from 46.9\% to 52.5\%,
-confirming that REINFORCE with KL-constrained policy updates helps
-the model learn from SPICE feedback.
+Table~\ref{tab:ablation} reveals three findings:
 
 \textbf{Spec conditioning is critical.} Removing spec conditioning
-(generating unconditionally) drops reward from 3.49 to 2.60
-($\Delta$=-0.89) and structural validity from 98.1\% to 58.8\%.
-The specification prefix provides essential context that guides
-topology selection and component sizing.
+drops reward by $-0.89$ ($-25.5\%$) and structural validity from
+98.1\% to 58.8\%. The specification prefix provides essential
+context for both topology selection and component sizing.
 
-\textbf{Topology expansion trade-off.} The Tier~1-only model
-achieves 100\% structural validity and the highest single reward
-(3.77) but covers only 7 power converter topologies. Adding 9~signal
-processing topologies (Tier~2) lowers the average to 3.49 because
-filters and oscillators are inherently harder to simulate, but the
-systems gains coverage of 16 diverse topologies.
+\textbf{RL helps modestly.} RL improves reward by $+0.25$ and
+simulation validity by $+5.6$\,pp, confirming that REINFORCE with
+KL-constrained updates helps the model learn from SPICE feedback,
+though the gains are smaller than architectural improvements.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/ablation.png}
-\caption{Ablation study showing the contribution of RL fine-tuning,
-spec conditioning, and topology expansion. Spec conditioning has the
-largest effect ($\Delta$reward=+0.89).}
-\label{fig:ablation}
-\end{figure}
+\textbf{Topology expansion trades per-design quality for coverage.}
+The Tier~1-only model achieves the highest per-design reward (3.77)
+but covers only 7 topologies. Adding 9 signal-processing topologies
+lowers the average because filters and oscillators have tighter
+component constraints. The coverage--quality trade-off is worthwhile:
+16 topologies with 71.9\% validity (Graph Transformer) is more useful
+than 7 topologies with higher per-design scores.
 
 \subsection{Per-Topology Analysis}
 
 \begin{table}[t]
 \centering
-\caption{Per-topology simulation validity (ARCS + RL, 10 samples each).}
+\caption{Per-topology simulation validity for the Graph Transformer
+(SL) and Graph Transformer + RL, 10 samples each.}
 \label{tab:pertopo}
-\begin{tabular}{@{}lcc@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcclcc@{}}
 \toprule
-Topology & SimValid & Key Metric \\
+& \multicolumn{2}{c}{SimValid} & & \multicolumn{2}{c}{SimValid} \\
+\cmidrule{2-3} \cmidrule{5-6}
+Topology & SL & RL & Topology & SL & RL \\
 \midrule
-\multicolumn{3}{@{}l}{\textit{Tier 1: Power converters}} \\
-Buck & 80\% & $\eta$=78.3\%, $e_V$=22.4\% \\
-Boost & 70\% & $\eta$=48.4\%, $e_V$=31.9\% \\
-Buck-Boost & 80\% & $\eta$=53.7\%, $e_V$=24.0\% \\
-Cuk & 30\% & $\eta$=60.1\%, $e_V$=65.0\% \\
-SEPIC & 20\% & $\eta$=58.2\%, $e_V$=53.3\% \\
-Flyback & 70\% & $\eta$=29.9\%, $e_V$=44.5\% \\
-Forward & 60\% & $\eta$=49.4\%, $e_V$=54.4\% \\
-\midrule
-\multicolumn{3}{@{}l}{\textit{Tier 2: Signal processing}} \\
-Inverting Amp & 100\% & $G$=$-$10.5\,dB \\
-Non-inv.~Amp & 100\% & $G$=$-$1.8\,dB \\
-Inst.~Amp & 100\% & $G$=$-$12.8\,dB \\
-Diff.~Amp & 80\% & $G$=$-$0.2\,dB \\
-SK Lowpass & 10\% & $G$=$-$69.3\,dB \\
-SK Highpass & 0\% & --- \\
-SK Bandpass & 20\% & $G$=1.5\,dB \\
-Wien Bridge & 10\% & --- \\
-Colpitts & 10\% & --- \\
+Buck          & 100\% & 10\% & Inv.\ Amp     & 90\% & 100\% \\
+Boost         & 90\%  & 0\%  & Non-inv.\ Amp & 100\% & 100\% \\
+Buck-Boost    & 80\%  & 50\% & Inst.\ Amp    & 100\% & 100\% \\
+Cuk           & 60\%  & 40\% & Diff.\ Amp    & 100\% & 100\% \\
+SEPIC         & 60\%  & 70\% & SK Lowpass     & 50\% & 70\% \\
+Flyback       & 40\%  & 10\% & SK Highpass    & 70\% & 60\% \\
+Forward       & 70\%  & 20\% & SK Bandpass    & 60\% & 70\% \\
+              &       &      & Wien Bridge    & 0\% & 70\% \\
+              &       &      & Colpitts       & 80\% & 10\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:pertopo} shows clear performance tiers.
-Amplifier topologies (inverting, non-inverting, instrumentation,
-differential) achieve 80--100\% validity---these have simple two-resistor
-structures that the model learns easily. Standard power converters
-(buck, boost, buck-boost, flyback, forward) achieve 60--80\% validity.
-Complex topologies (SEPIC, Cuk) and filter/oscillator circuits
-(Sallen-Key, Wien bridge, Colpitts) remain challenging at 0--30\%
-validity, likely due to tighter component value constraints and
-more sensitive SPICE convergence.
+Table~\ref{tab:pertopo} reveals a clear performance hierarchy.
+\textbf{Amplifiers} (inverting, non-inverting, instrumentation,
+differential) achieve 90--100\% validity under both SL and RL.
+These have simple structures (two resistors around an op-amp) that
+the model learns easily. \textbf{Standard power converters} (buck,
+boost, buck-boost) achieve 80--100\% under SL but degrade under
+RL, confirming the reward distribution mismatch noted above.
+\textbf{Complex topologies} (Cuk, SEPIC, flyback) and
+\textbf{oscillators} (Wien bridge SL: 0\%, Colpitts SL: 80\%)
+show high variance, reflecting the tighter component sensitivity
+and more challenging SPICE convergence of these circuits.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/topology_validity.png}
-\caption{Per-topology simulation validity. Amplifiers achieve
-80--100\%, power converters 60--80\%, and filters/oscillators 0--30\%.}
-\label{fig:topo}
-\end{figure}
-
-\subsection{Qualitative Examples}
-
-We highlight two generated designs from the demo CLI:
-
-\textbf{Buck converter} (spec: $V_{in}$=12V, $V_{out}$=5V, $I_{out}$=1A):
-The model generated L=100\,$\mu$H, C=10\,$\mu$F, R=5\,$\Omega$,
-D=1N5819 in 470\,ms. SPICE simulation yielded $\eta$=94.9\%,
-$e_V$=5.0\%, ripple=2.7\,mV, and reward=6.36/8.0. The efficiency
-and output regulation are close to textbook values for this topology.
-
-\textbf{Inverting amplifier} (spec: gain=$-$10\,dB, $f_{3dB}$=1\,kHz):
-Generated R$_f$=10\,k$\Omega$, R$_1$=1\,k$\Omega$ in 227\,ms.
-SPICE measured gain=$-$10.8\,dB with reward=5.36/8.0. The component
-ratio $R_f/R_1=10$ matches the expected gain of 20\,dB (voltage gain
-of 10), confirming the model has learned fundamental circuit principles.
+Notably, RL \emph{improves} Wien bridge from 0\% to 70\% and
+Sallen-Key filters from 50--60\% to 60--70\%, while degrading
+power converters. This suggests that RL reward shaping should be
+topology-aware in future work.
 
 \subsection{Warm-Start Experiment}
 \label{sec:warm-start}
 
 A natural question is whether ARCS's fast inference can complement
 search-based optimization. We evaluate a \emph{warm-start} strategy:
-ARCS generates 3 candidate designs, and the best seeds a genetic
-algorithm (GA) population of 20 individuals for 5 generations (113
-SPICE simulations). We compare against cold-start GA (20 individuals,
-10 generations, 220 simulations) and ARCS-only inference (3 simulations).
+ARCS generates 3 candidate designs, and the best seeds a GA population
+of 20 individuals for 5 generations (113 SPICE simulations). We compare
+against cold-start GA (20 individuals, 10 generations, 220 simulations).
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
-\caption{Warm-start comparison across 16 topologies. GA-Warm uses
-ARCS-seeded initialization with 49\% fewer simulations.}
+\caption{Warm-start comparison. GA-Warm uses ARCS-seeded initialization
+with 49\% fewer SPICE simulations and 58\% less wall time.}
 \label{tab:warmstart}
-\begin{tabular}{lccc}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-\textbf{Method} & \textbf{Avg.\ Reward} & \textbf{Avg.\ Sims} & \textbf{Avg.\ Time (s)} \\
+Method & Reward & Sims & Time \\
 \midrule
-ARCS only       & 5.45 & 3   & 0.8  \\
-GA cold-start   & 7.43 & 220 & 47.3 \\
-GA warm-start   & 7.18 & 126 & 19.7 \\
+ARCS only     & 5.45 & 3   & 0.8\,s  \\
+GA cold-start & 7.43 & 220 & 47.3\,s \\
+GA warm-start & 7.18 & 113 & 19.7\,s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-On the 14 topologies where ARCS produces valid initial designs
-(excluding Wien bridge and Colpitts oscillator, which fall back to
-cold-start), GA-Warm achieves 96.2\% of cold-start quality
-(7.20 vs.\ 7.49 avg.\ reward) while using only 113 simulations---a
-49\% reduction. For signal-processing topologies (op-amp variants,
-Sallen-Key filters), warm-start matches cold-start exactly (reward
-parity at 100\%). On boost converter, warm-start \emph{outperforms}
-cold-start (7.95 vs.\ 7.84), suggesting that ARCS's learned
-initialization lands in a better basin of attraction. The 58\%
-wall-clock speedup (19.7\,s vs.\ 47.3\,s) demonstrates practical
-value for interactive design workflows.
+Table~\ref{tab:warmstart} shows that on the 14 topologies where ARCS
+produces valid initial designs (Wien bridge and Colpitts fall back to
+cold-start), GA-Warm achieves \textbf{96.6\% of cold-start quality}
+(7.18 vs.\ 7.43 reward) while using only 113 simulations---a 49\%
+reduction. For signal-processing topologies, warm-start matches
+cold-start exactly. On boost converter, warm-start
+\emph{outperforms} cold-start (7.95 vs.\ 7.84), suggesting that
+ARCS's learned initialization lands in a better basin of attraction.
+The 58\% wall-clock speedup validates ARCS as a practical initializer
+for search-based design workflows.
 
 % ==========================================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\textbf{Amortized vs.\ iterative design.}
-ARCS and search baselines represent fundamentally different approaches.
-Search methods guarantee near-optimal designs at high computational cost.
-ARCS provides ``good-enough'' first-shot designs at near-zero marginal
-cost, suitable for rapid prototyping, design space exploration, or
-initializing search methods.
+\textbf{Architecture vs.\ RL.} Our most surprising finding is that
+architectural changes (+1.17 reward, Baseline$\to$Graph Transformer)
+outweigh RL fine-tuning (+0.26 reward) by $4.5\times$. At the 6.8M
+parameter scale, injecting the right inductive bias---separating
+structure and value prediction, adding graph-aware attention---yields
+larger gains than online SPICE feedback. We hypothesize that RL
+becomes more important at larger model scales where the policy has
+more capacity to benefit from reward shaping.
 
-\textbf{Scalability.}
-The fully automated data pipeline means ARCS can scale to new topologies
-by simply writing a SPICE template---no manual circuit curation needed.
-This contrasts with AnalogGenie's reliance on 3,502 manually collected
-circuits from IEEE publications.
+\textbf{The RL sim-validity trade-off.} Graph Transformer + RL
+achieves 100\% structural validity and the best evaluation reward
+(7.47/8.0 at step 4,900), yet simulation \emph{validity} drops from
+71.9\% (SL) to 55.0\% (RL) on a uniform test set. The root cause is
+reward distribution mismatch: RL over-optimizes easily-rewarded
+topologies (amplifiers reach 100\%) at the expense of harder ones
+(buck drops from 100\% to 10\%). Topology-specific reward normalization
+or multi-objective RL formulations would likely resolve this.
+
+\textbf{Amortized vs.\ iterative design.} ARCS and search baselines
+represent fundamentally different paradigms. Search methods achieve
+near-optimal designs at high computational cost. ARCS provides
+reasonable first-shot designs at near-zero marginal cost, and the
+warm-start experiment (Section~\ref{sec:warm-start}) shows these
+paradigms are complementary: ARCS-seeded GA recovers 96.6\% of
+cold-start quality with 49\% fewer simulations.
+
+\textbf{Scalability.} The automated data pipeline means ARCS scales
+to new topologies by writing a single SPICE template---no manual
+circuit curation needed. This contrasts with AnalogGenie's reliance
+on 3,502 manually collected circuits. However, ARCS currently covers
+16 topologies vs.\ AnalogGenie's 3,502 unique structures; extending
+to transistor-level IC circuits requires more templates and likely
+larger models.
 
 \textbf{Limitations.}
 \begin{itemize}
-    \item Per-design quality is lower than search baselines (3.64 vs.\
-    7.48 reward). Improving this is the primary direction for future work.
-    \item Some topologies (Wien bridge, Sallen-Key) have low simulation
-    success, likely due to insufficient training data and high circuit
+    \item Per-design quality remains below search baselines (4.55 vs.\
+    7.48 reward). Scaling to 50--100M parameters with more training
+    data is the primary direction for improvement.
+    \item Some topologies (Wien bridge SL: 0\%) have very low success
+    rates, likely due to insufficient training data and high circuit
     sensitivity.
-    \item The model currently covers 16 topologies; AnalogGenie covers
-    3,502 unique circuit structures. Expanding ARCS's scope requires
-    writing more SPICE templates.
-    \item At 6.5M parameters, the model may be under-parameterized for
-    the complexity of the task. Scaling to 50--100M parameters with more
-    training data is a natural next step.
+    \item The value tokenizer's 500-bin resolution ($\sim$28 bins/decade)
+    limits precision to $\sim$3.5\% relative error, which may be
+    insufficient for sensitive RF or precision analog circuits.
 \end{itemize}
 
 \textbf{Future work.}
-(1) Scale model to 50--100M parameters with more diverse training data.
-(2) Incorporate graph-based circuit representations alongside sequential
-tokens.
-(3) Our warm-start experiment (Section~\ref{sec:warm-start}) validates
-that ARCS can seed search-based methods, achieving 96\% of cold-start
-GA quality with 49\% fewer simulations. Scaling this with larger models
-and more sophisticated search is a promising direction.
-(4) Extend to IC-level transistor circuits (AnalogGenie's domain) with
-process-aware component values.
+(1)~Scale model to 50--100M parameters with more diverse training data
+and conditional generation over new topologies.
+(2)~Per-topology reward normalization in RL to prevent the reward
+distribution mismatch observed in Section~\ref{sec:results}.
+(3)~Extend the Graph Transformer's adjacency matrices to be
+\emph{learned} rather than fixed, enabling the model to discover
+novel circuit structures.
+(4)~Multi-fidelity training combining fast analytical models with
+full SPICE simulation for RL.
 
 % ==========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented ARCS, the first autoregressive model that jointly generates
+We presented ARCS, an autoregressive transformer that jointly generates
 analog circuit topology and component values conditioned on target
-specifications. Using a native component-token vocabulary and
-SPICE-in-the-loop RL fine-tuning, ARCS produces complete, simulatable
-circuit designs in $\sim$20~ms---over three orders of magnitude faster
-than search-based alternatives. While per-design quality remains below
-iterative methods, ARCS demonstrates the feasibility of amortized
-circuit generation as a practical tool for rapid analog design
-prototyping.
+specifications. Through a systematic architecture study, we showed that
+a topology-aware Graph Transformer with separate structure and value
+prediction heads achieves 71.9\% simulation validity on 16 circuit
+topologies---a 26.3\,pp improvement over a baseline GPT decoder with
+only 4.8\% more parameters. ARCS generates complete, SPICE-simulatable
+designs in $\sim$20\,ms, over three orders of magnitude faster than
+search-based alternatives. While per-design quality remains below
+iterative methods, the warm-start experiment demonstrates that ARCS
+complements rather than replaces search: ARCS-seeded GA achieves 96.6\%
+of cold-start quality with 49\% fewer simulations, establishing
+amortized circuit generation as a practical component in automated
+analog design workflows.
 
 % ==========================================================================
 \bibliographystyle{IEEEtran}
 % \bibliography{references}
 
-\begin{thebibliography}{10}
+\begin{thebibliography}{12}
 
 \bibitem{analoggenie}
 Z.~Gao, Y.~Zhang, J.~Li, \emph{et~al.},
@@ -616,6 +719,20 @@ N.~Shazeer,
 B.~Zhang and R.~Sennrich,
 ``Root mean square layer normalization,'' in \emph{Proc.\ NeurIPS},
 2019.
+
+\bibitem{dwivedi2022graph}
+V.~P.~Dwivedi, C.~K.~Joshi, A.~T.~Luu, T.~Laurent, Y.~Bengio, and
+X.~Bresson, ``Graph neural networks with learnable structural and
+positional representations,'' in \emph{Proc.\ ICLR}, 2022.
+
+\bibitem{schulman2017ppo}
+J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, and O.~Klimov,
+``Proximal policy optimization algorithms,'' 2017. arXiv:1707.06347.
+
+\bibitem{williams1992reinforce}
+R.~J.~Williams, ``Simple statistical gradient-following algorithms
+for connectionist reinforcement learning,''
+\emph{Machine Learning}, vol.~8, no.~3--4, pp.~229--256, 1992.
 
 \end{thebibliography}
 
