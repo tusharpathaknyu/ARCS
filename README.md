@@ -133,14 +133,17 @@ Select model type via `--model-type {baseline,two_head,graph_transformer}` in tr
 
 ## Results
 
-### ARCS vs Search Baselines (160 conditioned specs, all 16 topologies)
+### Full Comparison (160 conditioned specs, all 16 topologies)
 
-| Method | Sims/Design | Sim Success | Sim Valid | Avg Reward | Wall Time/Design |
-|--------|-------------|-------------|-----------|------------|-----------------|
-| Random Search (N=200) | 200 | 100.0% | 81.2% | 7.28/8.0 | 58.8s |
-| Genetic Algorithm | 630 | 100.0% | 80.0% | 7.48/8.0 | 271.2s |
-| **ARCS (supervised)** | **1** | 66.9% | 43.8% | 3.42/8.0 | **~0.02s** |
-| **ARCS + RL** | **1** | 71.2% | 55.0% | 3.64/8.0 | **~0.02s** |
+| Method | Params | Sims/Design | Sim Success | Sim Valid | Avg Reward | Wall Time/Design |
+|--------|--------|-------------|-------------|-----------|------------|------------------|
+| Random Search (N=200) | — | 200 | 100.0% | 81.2% | 7.28/8.0 | 58.8s |
+| Genetic Algorithm (30×20) | — | 630 | 100.0% | 80.0% | 7.48/8.0 | 271.2s |
+| ARCS Baseline (SL) | 6.5M | 1 | 66.2% | 45.6% | 3.38/8.0 | ~0.02s |
+| ARCS Baseline + RL | 6.5M | 1 | 71.2% | 55.0% | 3.64/8.0 | ~0.02s |
+| ARCS Two-Head (SL) | 6.8M | 1 | 79.4% | 61.9% | 4.23/8.0 | ~0.02s |
+| **ARCS Graph Transformer (SL)** | **6.8M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
+| ARCS Graph Transformer + RL | 6.8M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
 
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
 20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **2,941-13,560x
@@ -148,34 +151,51 @@ faster** at inference. The baselines also have an unfair advantage: they search 
 in parameter space with the correct topology and component count given, while ARCS must
 predict everything from scratch using only the target specification.
 
-### Per-Topology Highlights (ARCS + RL)
+**Architecture progression**: Each enhancement delivers measurable gains:
+- Two-Head: Decoupling structure/value heads → +16 pp sim_valid over baseline
+- Graph Transformer: Topology-aware attention → +10 pp sim_valid over Two-Head
+- RL fine-tuning: Achieves 100% structural validity and highest sim_success (86.9%), but hurts sim_valid on power converter topologies due to reward distribution mismatch
 
-| Topology | Sim Success | Sim Valid | Key Metric |
-|----------|------------|-----------|------------|
-| Buck | 100% | 60% | verr=14.0% |
-| Boost | 100% | 60% | verr=25.8% |
-| Instrumentation Amp | 100% | 100% | gain=4.0dB |
-| Differential Amp | 100% | 100% | gain=-25.4dB |
-| Inverting Amp | 80% | 80% | gain=-15.5dB |
-| Colpitts | 70% | 70% | oscillating |
-| Sallen-Key LP | 20% | 20% | needs more data |
-| Wien Bridge | 0% | 0% | needs more data |
+### Per-Topology Highlights (Graph Transformer, best model)
+
+| Topology | SL Sim Valid | RL Sim Valid | Key Metric (RL) |
+|----------|-------------|-------------|------------------|
+| Buck | 100% | 10% | verr=6.7% |
+| Boost | 90% | 0% | verr=61.2% |
+| Buck-Boost | 80% | 50% | verr=46.3% |
+| SEPIC | 60% | 70% | verr=13.7%, eff=71% |
+| Cuk | 60% | 40% | verr=81.5% |
+| Flyback | 40% | 10% | verr=49.2% |
+| Forward | 70% | 20% | verr=26.2%, eff=73% |
+| Inverting Amp | 90% | 100% | gain=-22.7dB |
+| Non-inverting Amp | 100% | 100% | gain=-5.2dB |
+| Instrumentation Amp | 100% | 100% | gain=4.5dB |
+| Differential Amp | 100% | 100% | gain=-16.4dB |
+| Sallen-Key LP | 50% | 70% | gain=-52.2dB |
+| Sallen-Key HP | 70% | 60% | gain=-37.0dB |
+| Sallen-Key BP | 60% | 70% | gain=-24.6dB |
+| Wien Bridge | 0% | 70% | oscillating |
+| Colpitts | 80% | 10% | oscillating |
+
+**Observation**: RL dramatically improves signal circuits (Wien Bridge: 0%→70%) but hurts some power converters (Buck: 100%→10%). The reward function favors topologies where sim convergence is easier.
 
 ### Honest Assessment: ARCS vs AnalogGenie
 
-| Dimension | AnalogGenie | ARCS |
+| Dimension | AnalogGenie | ARCS (Graph Transformer) |
 |-----------|-------------|------|
-| **Validity** | 93.2% (after PPO) | 55.0% (after RL) |
+| **Validity** | 93.2% (after PPO) | 71.9% (SL) / 55.0% (RL) |
+| **Sim success** | N/A (no SPICE eval) | 85.0% (SL) / 86.9% (RL) |
 | **Topology diversity** | 3,502 unique circuits | 16 template topologies |
 | **Component values** | No (GA post-hoc) | Yes (in generation) |
 | **Spec conditioning** | No | Yes |
 | **Inference speed** | Minutes (GA sizing) | ~20ms |
 | **Data source** | IEEE papers (manual) | Automated SPICE |
-| **Model size** | 11.8M params | 6.5M params |
+| **Model size** | 11.8M params | 6.8M params |
+| **Architecture** | Standard GPT decoder | Graph Transformer with topology-aware attention |
 | **SPICE integration** | Post-hoc only | In-the-loop RL |
 | **Venue** | ICLR 2025 Spotlight | In progress |
 
-**Where ARCS wins**: Joint topology+values+specs in one shot, 3 orders of magnitude faster inference, fully automated data pipeline, SPICE-in-the-loop training.
+**Where ARCS wins**: Joint topology+values+specs in one shot, 3 orders of magnitude faster inference, fully automated data pipeline, SPICE-in-the-loop training, topology-aware attention biases.
 
 **Where AnalogGenie wins**: Higher validity rate, much larger topology diversity, IC-level circuits, novel topology discovery, published at top venue.
 
@@ -247,12 +267,11 @@ Example output:
 - [x] Combined retraining: val_loss=1.237
 - [x] Simulation-based evaluation for all 16 topologies
 
-### Phase 5: Paper (in progress)
+### Phase 5: Baselines, Ablations, Demo (complete)
 - [x] Baselines: Random Search (200 trials) + GA (pop=30, 20 gens)
 - [x] Efficiency metric fix: sign-correct current measurement
 - [x] Ablation studies: RL effect, spec conditioning effect, data expansion effect
 - [x] Demo CLI: interactive circuit design tool
-- [ ] Write paper targeting DAC / ICCAD / NeurIPS workshop
 
 ### Phase 5b: Enhanced Architectures (complete)
 - [x] Two-head model: separate structure head (weight-tied) + value head (SiLU MLP)
@@ -260,6 +279,16 @@ Example output:
 - [x] Model factory: `create_model` / `load_model` with automatic type detection from checkpoints
 - [x] Unified `--model-type` flag across train, RL, evaluate, and demo scripts
 - [x] 30 new tests for enhanced architectures (96 total)
+
+### Phase 6: Enhanced Model Training & Evaluation (complete)
+- [x] Two-Head training: 100 epochs, best val_loss=0.954 (vs baseline 1.237)
+- [x] Graph Transformer training: 100 epochs, best val_loss=0.990
+- [x] Architecture comparison: Graph Transformer wins (sim_valid=71.9% vs 61.9% vs 45.6%)
+- [x] RL fine-tuning of Graph Transformer: 5000 steps, best eval reward=7.468/8.0
+- [x] Auto-detection of model type from checkpoint state dict keys
+
+### Phase 7: Paper (next)
+- [ ] Write paper targeting DAC / ICCAD / NeurIPS workshop
 
 ---
 
@@ -282,8 +311,11 @@ brew install ngspice  # macOS
 # Quick demo
 PYTHONPATH=src python -m arcs.demo --topology buck --vin 12 --vout 5 --iout 1 --simulate
 
-# Full evaluation
-PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/arcs_rl_v2/best_rl_model.pt --n-samples 160 --simulate
+# Full evaluation (best model: Graph Transformer supervised)
+PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --n-samples 160 --simulate
+
+# Compare all architectures
+PYTHONPATH=src python scripts/compare_architectures.py --n-samples 160 -v
 
 # Ablation studies
 PYTHONPATH=src python scripts/run_ablations.py --n-samples 160
