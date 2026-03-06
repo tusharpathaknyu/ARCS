@@ -54,8 +54,12 @@ ARCS generates valid, simulatable designs in $\sim$20\,ms---over
 2,900$\times$ faster than random search and 13,500$\times$ faster than
 genetic algorithm baselines. We further demonstrate that ARCS-generated
 designs can warm-start genetic search, recovering 96\% of cold-start
-quality with 49\% fewer SPICE simulations, establishing amortized
-circuit generation as a practical tool for rapid design-space exploration.
+quality with 49\% fewer SPICE simulations. Finally, we show that
+\emph{inference-time compute scaling} via Best-of-$N$ candidate
+ranking by model confidence improves reward by 9.3\% and simulation
+validity by 12.5\,pp at $N\!=\!3$, while remaining 600$\times$ faster
+than random search---establishing amortized circuit generation as a
+practical tool for rapid design-space exploration.
 \end{abstract}
 
 % ==========================================================================
@@ -101,6 +105,10 @@ simultaneously:
     token masking scheme guarantees 100\% structural validity \emph{by
     construction} at each autoregressive step, without RL training or
     post-hoc filtering, while simultaneously reducing inference latency.
+    \item \textbf{Inference-time compute scaling}: A Best-of-$N$
+    framework that generates $N$ candidates ranked by model confidence
+    (no SPICE oracle), improving reward by 9.3\% at $N\!=\!3$ while
+    remaining orders of magnitude faster than search baselines.
 \end{enumerate}
 
 The key contribution of ARCS is not higher per-design quality than
@@ -895,6 +903,100 @@ with RL fine-tuning. A trained model with \textsc{Topology} constraints
 produces designs that are both structurally valid (guaranteed) and
 semantically meaningful (learned).
 
+\subsection{Inference-Time Compute Scaling}
+\label{sec:bestofn}
+
+ARCS generates a circuit in $\sim$30\,ms. A natural question is
+whether generating $N$ candidates and selecting the best---without
+any SPICE simulation---can improve quality by trading minimal
+additional inference cost. We rank candidates by mean log-probability
+(model confidence), which is computed for free during autoregressive
+sampling. This is analogous to recent ``test-time compute
+scaling''~\cite{snell2024scaling} results in language modeling,
+where generating more candidates and selecting by a scoring function
+yields substantial quality gains at low marginal cost.
+
+\begin{table}[t]
+\centering
+\caption{Best-of-$N$ scaling with a trained model (80 specs, \textsc{Topology}
+constraints). Model confidence (mean log-prob) improves monotonically;
+SPICE reward peaks at $N\!=\!3$. Even $N\!=\!50$ costs only 1.6\,s—still
+37$\times$ faster than random search.}
+\label{tab:bestofn}
+\begin{tabular}{@{}rccccc@{}}
+\toprule
+$N$ & Conf. & SimValid & Reward & Time & Speedup \\\midrule
+1  & $-$1.16 & 72.5\% & 5.01 & 35\,ms  & 1,700$\times$ \\
+3  & $-$0.82 & \textbf{85.0\%} & \textbf{5.48} & 97\,ms  & 600$\times$ \\
+5  & $-$0.74 & 85.0\% & 5.40 & 164\,ms & 360$\times$ \\
+10 & $-$0.67 & 77.5\% & 5.14 & 319\,ms & 180$\times$ \\
+20 & $-$0.57 & 82.5\% & 5.18 & 622\,ms & 95$\times$ \\
+50 & $-$0.52 & 82.5\% & 5.10 & 1.6\,s  & 37$\times$ \\
+\midrule
+RS & --- & 81.2\% & 7.28 & 58.8\,s & 1$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:bestofn} reveals several findings:
+
+\textbf{Diminishing returns with a sweet spot at $N\!=\!3$.}
+Model confidence improves monotonically (from $-1.16$ to $-0.52$),
+but SPICE reward peaks at $N\!=\!3$ (5.48) and then plateaus.
+This suggests that the highest-confidence sequence under the model
+is not always the highest-reward circuit under SPICE --- model
+confidence is a useful but imperfect proxy for simulation quality.
+Nevertheless, Best-of-3 improves reward by 9.3\% and simulation
+validity by 12.5\,pp over single-shot generation.
+
+\textbf{Still orders of magnitude faster than search.}
+Best-of-3 uses 97\,ms total — 600$\times$ faster than random
+search (58.8\,s) and 2,800$\times$ faster than GA (271\,s).
+Even the most expensive setting ($N\!=\!50$, 1.6\,s) is 37$\times$
+faster than RS and 170$\times$ faster than GA.
+
+\textbf{Confidence--reward misalignment at high $N$.}
+The non-monotonic reward curve at $N > 5$ indicates that the model's
+log-probability ranking does not perfectly align with SPICE reward.
+This motivates future work on \emph{learned reward models} that
+predict circuit quality without simulation, enabling more effective
+candidate ranking.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth,
+  height=4.8cm,
+  xlabel={Number of candidates ($N$)},
+  ylabel={SPICE Reward},
+  xmode=log,
+  log basis x=2,
+  xtick={1,3,5,10,20,50},
+  xticklabels={1,3,5,10,20,50},
+  ymin=4.5, ymax=7.8,
+  grid=major,
+  grid style={dashed, gray!30},
+  legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize},
+  mark options={solid},
+]
+\addplot[blue, thick, mark=*, mark size=2pt] coordinates
+  {(1,5.01) (3,5.48) (5,5.40) (10,5.14) (20,5.18) (50,5.10)};
+\addlegendentry{Best-of-$N$ (ARCS)}
+\addplot[red, dashed, thick, domain=1:50] {7.28};
+\addlegendentry{Random Search}
+\addplot[orange, dashed, thick, domain=1:50] {7.48};
+\addlegendentry{Genetic Algorithm}
+\end{axis}
+\end{tikzpicture}
+\caption{Inference-time scaling curve. Best-of-$N$ with model confidence
+ranking peaks at $N\!=\!3$ (reward 5.48, 97\,ms), narrowing the gap to
+search baselines (RS 7.28 / 58.8\,s, GA 7.48 / 271\,s) at $>$600$\times$
+less cost. The plateau beyond $N\!=\!5$ reflects the misalignment between
+model confidence and SPICE reward.}
+\label{fig:scaling}
+\end{figure}
+
 % ==========================================================================
 \section{Discussion}
 \label{sec:discussion}
@@ -947,11 +1049,21 @@ on 3,502 manually collected circuits. However, ARCS currently covers
 to transistor-level IC circuits requires more templates and likely
 larger models.
 
+\textbf{Inference-time scaling.} Our Best-of-$N$ experiments
+(Section~\ref{sec:bestofn}) reveal that model confidence (mean
+log-probability) is a useful but imperfect proxy for SPICE reward.
+Reward peaks at $N\!=\!3$ then plateaus, suggesting that the model's
+probability ranking does not fully align with simulation-based
+quality. A dedicated \emph{learned reward model}---a lightweight
+network trained to predict SPICE reward from token sequences---could
+improve candidate ranking, enabling effective scaling to higher $N$
+values.
+
 \textbf{Limitations.}
 \begin{itemize}
-    \item Per-design quality remains below search baselines (4.55 vs.\
-    7.48 reward). Scaling to 50--100M parameters with more training
-    data is the primary direction for improvement.
+    \item Per-design quality remains below search baselines (5.48
+    Best-of-3 vs.\ 7.48 GA). Scaling to 50--100M parameters with more
+    training data is the primary direction for improvement.
     \item While constrained decoding guarantees \emph{structural}
     validity, \emph{simulation} validity (i.e., whether SPICE produces
     correct output) still depends on learned component values.
@@ -972,6 +1084,8 @@ novel circuit structures.
 full SPICE simulation for RL.
 (5)~Extend constrained decoding to enforce electrical connectivity
 constraints (e.g., Kirchhoff's laws) in addition to structural grammar.
+(6)~Train a learned reward model for Best-of-$N$ candidate ranking
+that better correlates with SPICE quality than raw model confidence.
 
 % ==========================================================================
 \section{Conclusion}
@@ -987,6 +1101,9 @@ only 4.8\% more parameters. We further introduced grammar-constrained
 decoding, which guarantees 100\% structural validity by construction
 through topology-aware token masking---without RL training or post-hoc
 filtering---and is simultaneously faster than unconstrained sampling.
+Our inference-time scaling experiments show that generating $N$
+candidates and ranking by model confidence improves reward by 9.3\%
+at $N\!=\!3$ (97\,ms)---still 600$\times$ faster than random search.
 ARCS generates complete, SPICE-simulatable
 designs in $\sim$20\,ms, over three orders of magnitude faster than
 search-based alternatives. While per-design quality remains below
@@ -1000,7 +1117,7 @@ analog design workflows.
 \bibliographystyle{IEEEtran}
 % \bibliography{references}
 
-\begin{thebibliography}{13}
+\begin{thebibliography}{14}
 
 \bibitem{analoggenie}
 Z.~Gao, Y.~Zhang, J.~Li, \emph{et~al.},
@@ -1065,6 +1182,11 @@ for connectionist reinforcement learning,''
 C.~Hokamp and Q.~Liu,
 ``Lexically constrained decoding for sequence generation using grid
 beam search,'' in \emph{Proc.\ ACL}, 2017.
+
+\bibitem{snell2024scaling}
+C.~Snell, J.~Lee, K.~Xu, and A.~Kumar,
+``Scaling {LLM} test-time compute optimally can be more effective than
+scaling model parameters,'' 2024. arXiv:2408.03314.
 
 \end{thebibliography}
 

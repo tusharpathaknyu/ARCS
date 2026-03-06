@@ -1,0 +1,78 @@
+{
+  "scaling": {
+    "1": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.1606370087713003,
+      "avg_entropy": 1.1195320211350919,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 34.711416595382616,
+      "avg_time_per_design_ms": 34.711416595382616,
+      "total_candidates": 80,
+      "avg_reward": 5.008389261533549,
+      "sim_valid_rate": 0.725
+    },
+    "3": {
+      "validity_rate": 1.0,
+      "avg_confidence": -0.8219448793679476,
+      "avg_entropy": 1.0279138959944247,
+      "avg_diversity": 0.9916666666666666,
+      "avg_time_ms": 97.09547290112823,
+      "avg_time_per_design_ms": 97.09547290112823,
+      "total_candidates": 240,
+      "avg_reward": 5.475153182127806,
+      "sim_valid_rate": 0.85
+    },
+    "5": {
+      "validity_rate": 1.0,
+      "avg_confidence": -0.741179233789444,
+      "avg_entropy": 1.016243724524975,
+      "avg_diversity": 0.9949999999999999,
+      "avg_time_ms": 163.76048068632372,
+      "avg_time_per_design_ms": 163.76048068632372,
+      "total_candidates": 400,
+      "avg_reward": 5.4025850775769255,
+      "sim_valid_rate": 0.85
+    },
+    "10": {
+      "validity_rate": 1.0,
+      "avg_confidence": -0.6691734075546265,
+      "avg_entropy": 1.008368692547083,
+      "avg_diversity": 0.9969444444444445,
+      "avg_time_ms": 323.6247401800938,
+      "avg_time_per_design_ms": 323.6247401800938,
+      "total_candidates": 800,
+      "avg_reward": 5.138052601603196,
+      "sim_valid_rate": 0.775
+    },
+    "20": {
+      "validity_rate": 1.0,
+      "avg_confidence": -0.56506880633533,
+      "avg_entropy": 0.9568131305277348,
+      "avg_diversity": 0.9965131578947368,
+      "avg_time_ms": 640.8649130375125,
+      "avg_time_per_design_ms": 640.8649130375125,
+      "total_candidates": 1600,
+      "avg_reward": 5.182665109864038,
+      "sim_valid_rate": 0.825
+    },
+    "50": {
+      "validity_rate": 1.0,
+      "avg_confidence": -0.5197153758257628,
+      "avg_entropy": 0.9197604544460773,
+      "avg_diversity": 0.9966224489795918,
+      "avg_time_ms": 1606.2752723461017,
+      "avg_time_per_design_ms": 1606.2752723461017,
+      "total_candidates": 4000,
+      "avg_reward": 5.095102269630578,
+      "sim_valid_rate": 0.825
+    }
+  },
+  "config": {
+    "checkpoint": "checkpoints/arcs_combined/best_model.pt",
+    "constraint": "topology",
+    "n_specs": 80,
+    "temperature": 0.8,
+    "top_k": 50,
+    "device": "cpu"
+  }
+}

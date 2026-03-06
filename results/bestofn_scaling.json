@@ -1,0 +1,66 @@
+{
+  "scaling": {
+    "1": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.935480359196663,
+      "avg_entropy": 1.9367228731513024,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 31.742161995498464,
+      "avg_time_per_design_ms": 31.742161995498464,
+      "total_candidates": 80
+    },
+    "3": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.8760134905576706,
+      "avg_entropy": 1.9293870821595192,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 94.56798852188513,
+      "avg_time_per_design_ms": 94.56798852188513,
+      "total_candidates": 240
+    },
+    "5": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.8642551749944687,
+      "avg_entropy": 1.927935428917408,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 166.57544435583986,
+      "avg_time_per_design_ms": 166.57544435583986,
+      "total_candidates": 400
+    },
+    "10": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.8333624318242072,
+      "avg_entropy": 1.9245441421866416,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 318.4624635789078,
+      "avg_time_per_design_ms": 318.4624635789078,
+      "total_candidates": 800
+    },
+    "20": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.8109065636992454,
+      "avg_entropy": 1.9229871019721032,
+      "avg_diversity": 0.9998026315789474,
+      "avg_time_ms": 622.1821921644732,
+      "avg_time_per_design_ms": 622.1821921644732,
+      "total_candidates": 1600
+    },
+    "50": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.7956876739859582,
+      "avg_entropy": 1.9245416894555092,
+      "avg_diversity": 0.9998877551020409,
+      "avg_time_ms": 1554.8106453265063,
+      "avg_time_per_design_ms": 1554.8106453265063,
+      "total_candidates": 4000
+    }
+  },
+  "config": {
+    "checkpoint": null,
+    "constraint": "topology",
+    "n_specs": 80,
+    "temperature": 0.8,
+    "top_k": 50,
+    "device": "cpu"
+  }
+}
