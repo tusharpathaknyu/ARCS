@@ -119,14 +119,16 @@ def compute_diversity(candidates: list[ScoredCandidate]) -> float:
 def rank_candidates(
     candidates: list[ScoredCandidate],
     method: str = "confidence",
+    reward_ranker: Any | None = None,
 ) -> list[ScoredCandidate]:
     """Rank candidates by the specified method.
 
     Methods:
-        confidence: Mean log-probability (higher = more confident)
-        joint:      Total log-probability (higher = more likely)
-        entropy:    Mean entropy (lower = more certain)
-        valid_first: Valid structure first, then by confidence
+        confidence:    Mean log-probability (higher = more confident)
+        joint:         Total log-probability (higher = more likely)
+        entropy:       Mean entropy (lower = more certain)
+        valid_first:   Valid structure first, then by confidence
+        reward_model:  Learned reward model prediction (requires reward_ranker)
     """
     if method == "confidence":
         ranked = sorted(candidates, key=lambda c: c.mean_log_prob, reverse=True)
@@ -140,6 +142,13 @@ def rank_candidates(
             key=lambda c: (c.decoded.valid_structure, c.mean_log_prob),
             reverse=True,
         )
+    elif method == "reward_model":
+        if reward_ranker is None:
+            raise ValueError(
+                "reward_model ranking requires a RewardModelRanker "
+                "(pass reward_ranker=...)"
+            )
+        ranked = reward_ranker.rank_candidates(candidates)
     else:
         raise ValueError(f"Unknown ranking method: {method}")
 
@@ -167,7 +176,9 @@ class BestOfNGenerator:
         of validity guarantee + value diversity).
     ranking_method : str
         How to rank candidates: 'confidence', 'joint', 'entropy',
-        'valid_first'.
+        'valid_first', 'reward_model'.
+    reward_ranker : RewardModelRanker | None
+        Required when ranking_method='reward_model'.
     """
 
     def __init__(
@@ -176,11 +187,13 @@ class BestOfNGenerator:
         tokenizer: CircuitTokenizer,
         constraint_level: ConstraintLevel = ConstraintLevel.TOPOLOGY,
         ranking_method: str = "confidence",
+        reward_ranker: Any | None = None,
     ):
         self.model = model
         self.tokenizer = tokenizer
         self.constraint_level = constraint_level
         self.ranking_method = ranking_method
+        self.reward_ranker = reward_ranker
 
         # Build constrained generator if level > NONE
         if constraint_level != ConstraintLevel.NONE:
@@ -240,7 +253,11 @@ class BestOfNGenerator:
         total_time_ms = (time.perf_counter() - t_total_start) * 1000
 
         # Rank candidates
-        ranked = rank_candidates(candidates, method=self.ranking_method)
+        ranked = rank_candidates(
+            candidates,
+            method=self.ranking_method,
+            reward_ranker=self.reward_ranker,
+        )
 
         # Compute diversity
         diversity = compute_diversity(ranked)

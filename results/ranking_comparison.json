@@ -1,0 +1,42 @@
+{
+  "1": {
+    "n": 1,
+    "conf_validity": 1.0,
+    "rm_validity": 1.0,
+    "conf_reward": 5.379875609896111,
+    "rm_reward": 5.379875609896111,
+    "improvement_pct": 0.0
+  },
+  "3": {
+    "n": 3,
+    "conf_validity": 1.0,
+    "rm_validity": 1.0,
+    "conf_reward": 5.0005583727392615,
+    "rm_reward": 4.917230362279073,
+    "improvement_pct": -1.6663741176276237
+  },
+  "5": {
+    "n": 5,
+    "conf_validity": 1.0,
+    "rm_validity": 1.0,
+    "conf_reward": 5.285725533316519,
+    "rm_reward": 5.427592294031531,
+    "improvement_pct": 2.6839600319920147
+  },
+  "10": {
+    "n": 10,
+    "conf_validity": 1.0,
+    "rm_validity": 1.0,
+    "conf_reward": 5.199222077773721,
+    "rm_reward": 5.63022272100611,
+    "improvement_pct": 8.289714053086598
+  },
+  "20": {
+    "n": 20,
+    "conf_validity": 1.0,
+    "rm_validity": 1.0,
+    "conf_reward": 5.074196070929047,
+    "rm_reward": 5.594139955316534,
+    "improvement_pct": 10.246822888187854
+  }
+}
