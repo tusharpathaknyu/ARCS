@@ -552,11 +552,17 @@ class ConstrainedGenerator:
         topologies: list[str],
         **kwargs,
     ) -> list[torch.Tensor]:
-        """Generate multiple circuits (sequentially, each with constraints)."""
+        """Generate multiple circuits with constraints.
+
+        Note: Each sequence maintains its own FSM state and variable-length
+        output, making true batched generation non-trivial.  We wrap in
+        ``torch.no_grad()`` for inference efficiency.
+        """
         results = []
-        for prefix, topo in zip(prefixes, topologies):
-            seq = self.generate(prefix, topology=topo, **kwargs)
-            results.append(seq)
+        with torch.no_grad():
+            for prefix, topo in zip(prefixes, topologies):
+                seq = self.generate(prefix, topology=topo, **kwargs)
+                results.append(seq)
         return results
 
 
@@ -675,12 +681,16 @@ def constrained_sample_with_logprobs(
         seq = torch.cat([seq, next_tok], dim=1)
         state = _update_state(state, next_tok.item(), tokenizer)
 
-    # Force END if not done
+    # Force END if not done — compute actual log-prob of END under model
     if state.grammar != GrammarState.DONE:
         end_id = tokenizer.end_id
+        # Get model's probability of END at this position
+        with torch.no_grad():
+            logits_end = _get_next_logits(model, seq, tokenizer)
+            end_log_prob = F.log_softmax(logits_end, dim=-1)[0, end_id].item()
         gen_tokens.append(end_id)
-        gen_logprobs.append(0.0)  # Deterministic
-        gen_entropies.append(0.0)
+        gen_logprobs.append(end_log_prob)
+        gen_entropies.append(0.0)  # Forced choice, zero entropy
 
     return (
         torch.tensor(gen_tokens, device=device),
@@ -761,7 +771,16 @@ class LagrangianConstraintLoss(torch.nn.Module):
         # Compute probabilities
         probs = F.softmax(logits, dim=-1)  # (B, T, V)
 
-        violations = torch.zeros(4, device=device)
+        # Pre-compute index tensors for constraint categories
+        comp_ids_t = torch.tensor(sorted(self._comp_ids), device=device)
+        val_ids_t = torch.tensor(sorted(self._val_ids), device=device)
+
+        violation_terms = [
+            torch.tensor(0.0, device=device, requires_grad=True),  # alternating
+            torch.tensor(0.0, device=device, requires_grad=True),  # value position
+            torch.tensor(0.0, device=device, requires_grad=True),  # comp type
+            torch.tensor(0.0, device=device, requires_grad=True),  # value range
+        ]
         counts = torch.zeros(4, device=device)
 
         for b in range(B):
@@ -789,19 +808,13 @@ class LagrangianConstraintLoss(torch.nn.Module):
 
                 counts[0] += 1
                 if expect_comp:
-                    # Should be COMP_* or END
-                    comp_prob = sum(
-                        probs[b, t, tid].item()
-                        for tid in self._comp_ids
-                    ) + probs[b, t, self.tokenizer.end_id].item()
-                    violations[0] += max(0, 1.0 - comp_prob)
+                    # Should be COMP_* or END — sum prob mass on valid tokens
+                    comp_prob = probs[b, t, comp_ids_t].sum() + probs[b, t, self.tokenizer.end_id]
+                    violation_terms[0] = violation_terms[0] + F.relu(1.0 - comp_prob)
                 else:
                     # Should be VAL_*
-                    val_prob = sum(
-                        probs[b, t, tid].item()
-                        for tid in self._val_ids
-                    )
-                    violations[1] += max(0, 1.0 - val_prob)
+                    val_prob = probs[b, t, val_ids_t].sum()
+                    violation_terms[1] = violation_terms[1] + F.relu(1.0 - val_prob)
                     counts[1] += 1
 
                 target_tok = targets[b, t].item()
@@ -827,8 +840,8 @@ class LagrangianConstraintLoss(torch.nn.Module):
                             )
                             if expected_tid >= 0:
                                 counts[2] += 1
-                                violations[2] += max(
-                                    0, 1.0 - probs[b, t, expected_tid].item()
+                                violation_terms[2] = violation_terms[2] + F.relu(
+                                    1.0 - probs[b, t, expected_tid]
                                 )
                             comp_idx += 1
 
@@ -847,13 +860,18 @@ class LagrangianConstraintLoss(torch.nn.Module):
                         lo_id, hi_id = _get_value_token_range(
                             bounds[0], bounds[1], self.tokenizer
                         )
-                        in_range_prob = probs[b, t, lo_id:hi_id + 1].sum().item()
+                        in_range_prob = probs[b, t, lo_id:hi_id + 1].sum()
                         counts[3] += 1
-                        violations[3] += max(0, 1.0 - in_range_prob)
+                        violation_terms[3] = violation_terms[3] + F.relu(
+                            1.0 - in_range_prob
+                        )
                     comp_idx += 1
 
-        # Normalize violations
-        violation_rates = violations / counts.clamp(min=1.0)
+        # Normalize violations (keep in computation graph)
+        violation_rates = torch.stack([
+            violation_terms[i] / max(counts[i].item(), 1.0)
+            for i in range(4)
+        ])
 
         # Lagrangian loss: sum of lambda_i * violation_i
         loss = (self.lambdas * violation_rates).sum()

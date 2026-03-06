@@ -851,7 +851,7 @@ correctness.
 
 \begin{table}[t]
 \centering
-\caption{Constrained decoding results (random-init model, 160 samples
+\caption{Constrained decoding results (random-init model, 50 samples
 across 16 topologies). Constrained decoding achieves 100\% structural
 validity by construction and is faster than unconstrained sampling.}
 \label{tab:constrained}
@@ -859,10 +859,10 @@ validity by construction and is faster than unconstrained sampling.}
 \toprule
 Level & Struct\,\% & Comp\,\% & Avg Comp & Time \\
 \midrule
-\textsc{None}     &  0.0\% &  0.0\% & --- & 280\,ms \\
-\textsc{Grammar}  & 100\%  & 23.1\% & 4.2 & 138\,ms \\
-\textsc{Topology} & 100\%  & 100\%  & --- & 27\,ms  \\
-\textsc{Full}     & 100\%  & 100\%  & --- & 25\,ms  \\
+\textsc{None}     &  0.0\% &  0.0\% & ---  & 269\,ms \\
+\textsc{Grammar}  & 100\%  &  0.0\% & 18.6 & 125\,ms \\
+\textsc{Topology} & 100\%  & 100\%  & 4.3  & 27\,ms  \\
+\textsc{Full}     & 100\%  & 100\%  & 4.3  & 25\,ms  \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -876,14 +876,15 @@ providing a \emph{formal guarantee} that no structurally invalid circuit
 can be generated.
 
 \textbf{Topology constraints ensure component correctness.} At the
-\textsc{Grammar} level, only 23.1\% of circuits have the correct
-component types for their topology, since the grammar enforces
-alternation but not topology-specific component selection. Adding
-\textsc{Topology} constraints raises component correctness to 100\%.
+\textsc{Grammar} level, component type correctness is 0\% with a
+random-init model, since the grammar enforces alternation but not
+topology-specific component selection (the model randomly picks among
+all component tokens). Adding \textsc{Topology} constraints raises
+component correctness to 100\%.
 
 \textbf{Constrained decoding is faster.} Counter-intuitively,
 constrained decoding is faster than unconstrained: 25\,ms
-(\textsc{Full}) vs.\ 280\,ms (\textsc{None}). The reason is that
+(\textsc{Full}) vs.\ 269\,ms (\textsc{None}). The reason is that
 unconstrained random models generate long, meandering sequences before
 (possibly never) emitting \texttt{END}, while topology constraints
 force the correct number of components and terminate promptly.

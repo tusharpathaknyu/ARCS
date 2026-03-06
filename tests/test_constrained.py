@@ -723,3 +723,40 @@ class TestValidityGuarantee:
 
         rate = n_valid / n_total
         assert rate == 1.0, f"Validity rate {rate:.1%} < 100% ({n_valid}/{n_total})"
+
+    def test_100_samples_full_constraint(self, tokenizer, small_model):
+        """Generate 100 circuits with FULL constraints — all must be valid."""
+        from arcs.evaluate import decode_generated_sequence
+
+        gen = ConstrainedGenerator(small_model, tokenizer, ConstraintLevel.FULL)
+        topologies = list(COMPONENT_TO_PARAM.keys())
+        n_valid = 0
+        n_total = 0
+
+        rng = torch.Generator().manual_seed(99)
+        for i in range(100):
+            topo = topologies[i % len(topologies)]
+            topo_key = f"TOPO_{topo.upper()}"
+            _topo_to_token = {
+                "sallen_key_lowpass": "TOPO_SALLEN_KEY_LP",
+                "sallen_key_highpass": "TOPO_SALLEN_KEY_HP",
+                "sallen_key_bandpass": "TOPO_SALLEN_KEY_BP",
+            }
+            topo_key = _topo_to_token.get(topo, topo_key)
+
+            prefix_ids = [
+                tokenizer.start_id,
+                tokenizer.name_to_id.get(topo_key, tokenizer.start_id),
+                tokenizer.sep_id,
+                tokenizer.sep_id,
+            ]
+            prefix = torch.tensor([prefix_ids])
+            output = gen.generate(prefix, topology=topo, temperature=1.0)
+            decoded = decode_generated_sequence(output[0].tolist(), tokenizer)
+
+            n_total += 1
+            if decoded.valid_structure:
+                n_valid += 1
+
+        rate = n_valid / n_total
+        assert rate == 1.0, f"FULL validity rate {rate:.1%} < 100% ({n_valid}/{n_total})"
