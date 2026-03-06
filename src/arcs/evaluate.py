@@ -32,6 +32,7 @@ from arcs.model import ARCSModel, ARCSConfig
 from arcs.model_enhanced import load_model
 from arcs.tokenizer import CircuitTokenizer, TokenType
 from arcs.train import generate_from_specs
+from arcs.constrained import ConstrainedGenerator, ConstraintLevel
 from arcs.simulate import (
     simulate_decoded_circuit,
     compute_reward,
@@ -382,25 +383,34 @@ def generate_and_evaluate(
     conditioned: bool = True,
     simulate: bool = False,
     tier: int | None = None,
+    constraint_level: ConstraintLevel = ConstraintLevel.NONE,
 ) -> EvalResults:
     """Generate circuits and evaluate them.
 
     Args:
-        model:       Trained ARCS model
-        tokenizer:   CircuitTokenizer
-        device:      torch device
-        n_samples:   Number of circuits to generate
-        temperature: Sampling temperature
-        top_k:       Top-k filtering
-        conditioned: If True, generate with spec conditioning
-        simulate:    If True, run SPICE simulation on generated circuits
-        tier:        Filter to tier (1=power, 2=signal, None=all)
+        model:            Trained ARCS model
+        tokenizer:        CircuitTokenizer
+        device:           torch device
+        n_samples:        Number of circuits to generate
+        temperature:      Sampling temperature
+        top_k:            Top-k filtering
+        conditioned:      If True, generate with spec conditioning
+        simulate:         If True, run SPICE simulation on generated circuits
+        tier:             Filter to tier (1=power, 2=signal, None=all)
+        constraint_level: ConstraintLevel.NONE (baseline) through FULL
 
     Returns:
         EvalResults with aggregate metrics (including simulation if enabled)
     """
     model.eval()
     circuits: list[DecodedCircuit] = []
+
+    # Build constrained generator if needed
+    constrained_gen = None
+    if constraint_level > ConstraintLevel.NONE:
+        constrained_gen = ConstrainedGenerator(
+            model, tokenizer, level=constraint_level
+        )
 
     # Select test specs based on tier
     if tier == 1:
@@ -440,13 +450,22 @@ def generate_and_evaluate(
             # Unconditional: just START
             prefix = torch.tensor([[tokenizer.start_id]], device=device)
 
-        output = model.generate(
-            prefix,
-            max_new_tokens=80,
-            temperature=temperature,
-            top_k=top_k,
-            tokenizer=tokenizer,
-        )
+        if constrained_gen is not None:
+            output = constrained_gen.generate(
+                prefix,
+                topology=topo if conditioned else None,
+                max_new_tokens=80,
+                temperature=temperature,
+                top_k=top_k,
+            )
+        else:
+            output = model.generate(
+                prefix,
+                max_new_tokens=80,
+                temperature=temperature,
+                top_k=top_k,
+                tokenizer=tokenizer,
+            )
         decoded = decode_generated_sequence(output[0].tolist(), tokenizer)
         circuits.append(decoded)
 
@@ -500,6 +519,8 @@ def main():
                         help="Run SPICE simulation on generated circuits")
     parser.add_argument("--tier", type=int, default=None, choices=[1, 2],
                         help="Filter to tier (1=power, 2=signal, None=all)")
+    parser.add_argument("--constrained", type=int, default=0, choices=[0, 1, 2, 3],
+                        help="Constraint level: 0=none, 1=grammar, 2=topology, 3=full")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--output", type=str, default=None,
                         help="Save results JSON to this path")
@@ -527,7 +548,9 @@ def main():
     mode = "unconditioned" if args.unconditioned else "conditioned"
     tier_str = f"tier {args.tier}" if args.tier else "all tiers"
     sim_str = "+SPICE" if args.simulate else "structure-only"
-    print(f"\nGenerating {args.n_samples} circuits ({mode}, {tier_str}, {sim_str})...")
+    clevel = ConstraintLevel(args.constrained)
+    constraint_str = f", constrained={clevel.name}" if clevel > ConstraintLevel.NONE else ""
+    print(f"\nGenerating {args.n_samples} circuits ({mode}, {tier_str}, {sim_str}{constraint_str})...")
     t0 = time.time()
     results = generate_and_evaluate(
         model, tokenizer, device,
@@ -537,6 +560,7 @@ def main():
         conditioned=not args.unconditioned,
         simulate=args.simulate,
         tier=args.tier,
+        constraint_level=clevel,
     )
     dt = time.time() - t0
 

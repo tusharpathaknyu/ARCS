@@ -203,6 +203,74 @@ predict everything from scratch using only the target specification.
 
 ---
 
+## Constrained Decoding (Phase 8)
+
+**100% structural validity by construction** — without RL, without post-hoc filtering.
+
+Constrained decoding applies a grammar-based token mask at each autoregressive step, restricting the model's output distribution to only structurally valid next tokens. This guarantees correct circuit structure regardless of model quality.
+
+### Three Constraint Levels
+
+| Level | What It Enforces | Validity |
+|-------|-----------------|----------|
+| **GRAMMAR** | Correct COMP→VAL alternation + END termination | 100% structural |
+| **TOPOLOGY** | + correct component types and counts per topology | 100% + component correct |
+| **FULL** | + value tokens within physically valid ranges per parameter | 100% + physically valid |
+
+### How It Works
+
+At each decode step after the conditioning prefix (START→TOPO→SEP→specs→SEP), the constraint mask:
+
+1. **Component positions**: Masks all tokens except valid COMP_* types still needed for the topology
+2. **Value positions**: Masks all tokens except VAL_* tokens (optionally restricted to valid parameter ranges)
+3. **Completion**: Forces END after all expected components are placed
+
+```python
+from arcs.constrained import ConstrainedGenerator, ConstraintLevel
+
+gen = ConstrainedGenerator(model, tokenizer, level=ConstraintLevel.FULL)
+output = gen.generate(prefix, topology="buck")
+# Guaranteed: 4 components (INDUCTOR, CAPACITOR, RESISTOR, MOSFET_N) + END
+```
+
+### Comparison Results (random-init model, 50 samples)
+
+| Level | Valid% | CompOK% | Avg Components | Time (ms) |
+|-------|--------|---------|----------------|-----------|
+| NONE | 0.0% | 0.0% | 0.0 | 280 |
+| GRAMMAR | 100.0% | 0.0% | 20.6 | 138 |
+| TOPOLOGY | 100.0% | 100.0% | 4.3 | 27 |
+| FULL | 100.0% | 100.0% | 4.3 | 25 |
+
+Constrained decoding is also **faster** — fewer tokens generated (no wasted invalid sequences), and the mask eliminates computation on impossible branches.
+
+### Evaluation with Constraints
+
+```bash
+# Evaluate with constrained decoding (level 2 = TOPOLOGY)
+PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/best_model.pt --constrained 2
+
+# Compare all levels
+PYTHONPATH=src python scripts/compare_constrained.py --checkpoint checkpoints/best_model.pt
+
+# With SPICE simulation
+PYTHONPATH=src python scripts/compare_constrained.py --checkpoint checkpoints/best_model.pt --simulate
+```
+
+### Lagrangian Constraint Loss (Training)
+
+For supervised training, a differentiable Lagrangian constraint loss penalizes violations with adaptive multipliers:
+
+```python
+from arcs.constrained import LagrangianConstraintLoss
+
+loss_fn = LagrangianConstraintLoss(tokenizer)
+constraint_loss, stats = loss_fn(logits, targets, input_ids, topologies)
+total_loss = ce_loss + constraint_loss
+```
+
+---
+
 ## Demo
 
 ```bash
