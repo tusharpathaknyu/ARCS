@@ -11,6 +11,10 @@
 \usepackage{algorithmic}
 \usepackage{multirow}
 \usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds,patterns}
 
 \title{ARCS: Autoregressive Circuit Synthesis with\\
 Topology-Aware Graph Attention and Spec Conditioning}
@@ -78,7 +82,7 @@ AutoCircuit-RL~\cite{autocircuitrl} fine-tune large language models
 predict characters, not circuit components, leading to syntax errors in
 generated netlists and no semantic understanding of component values.
 
-\textbf{This work.} We propose ARCS, which addresses all three gaps
+\textbf{This work.} We propose ARCS (Figure~\ref{fig:overview}), which addresses all three gaps
 simultaneously:
 \begin{enumerate}
     \item \textbf{Native component tokens}: Each token represents a
@@ -107,6 +111,65 @@ $>$10,000$\times$ lower than conventional search. We additionally show
 that ARCS-generated designs can seed search methods (warm-start GA),
 reducing simulation budgets by 49\% while retaining 96\% of the
 optimality achieved by cold-start search.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[>=Stealth, node distance=0.6cm,
+  block/.style={draw, rounded corners, minimum height=0.9cm,
+    minimum width=1.6cm, align=center, font=\small},
+  data/.style={block, fill=blue!10},
+  model/.style={block, fill=orange!15},
+  process/.style={block, fill=green!10},
+  result/.style={block, fill=red!10},
+  arr/.style={->, thick, color=black!70},
+  lbl/.style={font=\scriptsize, color=black!60}
+]
+% Row 1: Training pipeline
+\node[data] (templates) {SPICE\\Templates\\(16 topos)};
+\node[process, right=of templates] (datagen) {Data Gen\\53k circuits};
+\node[data, right=of datagen] (dataset) {Tokenized\\Dataset\\161k seqs};
+\node[model, right=of dataset] (sl) {Supervised\\Pre-train\\(100 epochs)};
+\node[model, right=of sl] (rl) {REINFORCE\\+ SPICE\\(5k steps)};
+\node[result, right=of rl] (ckpt) {Trained\\Checkpoint};
+
+\draw[arr] (templates) -- (datagen);
+\draw[arr] (datagen) -- (dataset);
+\draw[arr] (dataset) -- (sl);
+\draw[arr] (sl) -- (rl);
+\draw[arr] (rl) -- (ckpt);
+
+% Feedback loop from RL to SPICE
+\node[process, below=0.5cm of rl] (spice) {ngspice\\Simulator};
+\draw[arr] (rl) -- (spice);
+\draw[arr] (spice) -- node[lbl,right,xshift=2pt]{reward} (rl);
+
+% Row 2: Inference pipeline
+\node[data, below=1.6cm of templates] (spec) {Target\\Spec\\$\mathbf{s},\tau$};
+\node[model, right=of spec] (encode) {Tokenize\\Spec Prefix};
+\node[model, right=of encode] (decode) {Autoregressive\\Decoding};
+\node[process, right=of decode] (constrain) {Grammar\\Constraint\\Mask};
+\node[result, right=of constrain] (circuit) {Valid\\Circuit\\($\sim$20\,ms)};
+\node[process, right=of circuit] (verify) {SPICE\\Verify};
+
+\draw[arr] (spec) -- (encode);
+\draw[arr] (encode) -- (decode);
+\draw[arr] (constrain) -- node[lbl,above]{mask} (decode);
+\draw[arr] (decode) -- (circuit);
+\draw[arr] (circuit) -- (verify);
+\draw[arr] (ckpt) -- (decode);
+
+% Labels
+\node[lbl, above=0.1cm of datagen] {\textbf{Training Pipeline}};
+\node[lbl, above=0.1cm of decode] {\textbf{Inference Pipeline}};
+\end{tikzpicture}
+\caption{ARCS system overview. \textbf{Top}: Training pipeline---SPICE
+templates generate data, supervised pre-training learns the sequence
+distribution, and REINFORCE with SPICE-in-the-loop refines value quality.
+\textbf{Bottom}: Inference pipeline---a target specification is tokenized,
+the trained model autoregressively generates component tokens with
+grammar-constrained masking, producing a valid circuit in $\sim$20\,ms.}
+\label{fig:overview}
+\end{figure*}
 
 % ==========================================================================
 \section{Related Work}
@@ -147,7 +210,7 @@ co-optimization but is not generative for new topologies.
 \centering
 \caption{Comparison of generative circuit design methods.}
 \label{tab:related}
-\begin{tabular}{@{}lccccccc@{}}
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
 & Values & Specs & Graph & Valid & Speed & Data \\
 \midrule
@@ -364,6 +427,37 @@ over the decoder state with two alternating phases:
 or the \texttt{END} token) and \texttt{EXPECT\_VAL} (the next token
 must be a value token). The state machine transitions deterministically
 based on the last emitted token.
+Figure~\ref{fig:fsm} illustrates the state transitions.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[>=Stealth, node distance=2.4cm,
+  state/.style={draw, circle, minimum size=1.4cm, align=center,
+    font=\small, thick},
+  every edge/.style={draw, thick, ->, >=Stealth}
+]
+\node[state, fill=blue!12] (ec) {\texttt{EXPECT}\\\texttt{COMP}};
+\node[state, fill=orange!15, right=of ec] (ev) {\texttt{EXPECT}\\\texttt{VAL}};
+\node[state, fill=green!15, below=1.5cm of $(ec)!0.5!(ev)$] (end) {\texttt{END}};
+
+\draw[->] (ec) to[bend left=25] node[above, font=\scriptsize] {emit component} (ev);
+\draw[->] (ev) to[bend left=25] node[below, font=\scriptsize] {emit value} (ec);
+\draw[->] (ec) -- node[left, font=\scriptsize, xshift=-2pt] {emit \texttt{END}} (end);
+
+% Mask annotations
+\node[font=\scriptsize, color=blue!70, below=0.05cm of ec, yshift=-0.6cm, align=center]
+  {mask: component\\\& \texttt{END} only};
+\node[font=\scriptsize, color=orange!70, above=0.05cm of ev, yshift=0.3cm, align=center]
+  {mask: value\\tokens only};
+\end{tikzpicture}
+\caption{Grammar state machine for constrained decoding. At each
+autoregressive step, the current state determines which token types
+are valid, and a mask zeroes out all others before sampling.
+\textsc{Topology}-level constraints further restrict the allowed
+component types; \textsc{Full} constraints additionally restrict
+value ranges.}
+\label{fig:fsm}
+\end{figure}
 
 \textbf{Constraint levels.} We define three levels of increasing
 strictness:
@@ -499,6 +593,43 @@ better simulation validity (71.9\% vs.\ 61.9\%). This suggests that
 the graph inductive bias improves the model's understanding of
 circuit constraints in ways not captured by token-level cross-entropy.
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar,
+  bar width=12pt,
+  width=\columnwidth,
+  height=4.8cm,
+  ylabel={Simulation Validity (\%)},
+  symbolic x coords={Baseline,Two-Head,GraphTrans,GT+RL,GT+Constr},
+  xtick=data,
+  x tick label style={font=\scriptsize, rotate=20, anchor=east},
+  ymin=0, ymax=110,
+  ytick={0,20,40,60,80,100},
+  nodes near coords,
+  nodes near coords style={font=\tiny},
+  every node near coord/.append style={anchor=south},
+  enlarge x limits=0.15,
+  legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize},
+  grid=major,
+  grid style={dashed, gray!30},
+]
+\addplot[fill=blue!30] coordinates
+  {(Baseline,45.6) (Two-Head,61.9) (GraphTrans,71.9) (GT+RL,55.0) (GT+Constr,100)};
+\addplot[fill=orange!40] coordinates
+  {(Baseline,89.4) (Two-Head,94.4) (GraphTrans,94.4) (GT+RL,100) (GT+Constr,100)};
+\legend{Sim Valid, Structural}
+\end{axis}
+\end{tikzpicture}
+\caption{Simulation and structural validity across model variants.
+Architectural improvements (Baseline$\to$Graph Transformer) yield the
+largest sim-validity gains. RL achieves 100\% structural validity but
+hurts sim-validity. Grammar-constrained decoding (GT+Constr) achieves
+100\% on both metrics.}
+\label{fig:validity}
+\end{figure}
+
 \subsection{Main Comparison}
 
 \begin{table}[t]
@@ -614,7 +745,8 @@ Forward       & 70\%  & 20\% & SK Bandpass    & 60\% & 70\% \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:pertopo} reveals a clear performance hierarchy.
+Table~\ref{tab:pertopo} reveals a clear performance hierarchy
+(see also Figure~\ref{fig:pertopo}).
 \textbf{Amplifiers} (inverting, non-inverting, instrumentation,
 differential) achieve 90--100\% validity under both SL and RL.
 These have simple structures (two resistors around an op-amp) that
@@ -630,6 +762,46 @@ Notably, RL \emph{improves} Wien bridge from 0\% to 70\% and
 Sallen-Key filters from 50--60\% to 60--70\%, while degrading
 power converters. This suggests that RL reward shaping should be
 topology-aware in future work.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar,
+  bar width=5pt,
+  width=\columnwidth,
+  height=5.2cm,
+  ylabel={Sim Validity (\%)},
+  symbolic x coords={Buck,Boost,B-B,Cuk,SEPIC,Fly,Fwd,
+    InvA,NInvA,InstA,DiffA,SKLP,SKHP,SKBP,Wien,Colp},
+  xtick=data,
+  x tick label style={font=\tiny, rotate=55, anchor=east},
+  ymin=0, ymax=110,
+  ytick={0,25,50,75,100},
+  enlarge x limits=0.04,
+  legend style={at={(0.98,0.98)}, anchor=north east, font=\tiny,
+    legend columns=2},
+  grid=major,
+  grid style={dashed, gray!20},
+]
+\addplot[fill=blue!35] coordinates
+  {(Buck,100) (Boost,90) (B-B,80) (Cuk,60) (SEPIC,60) (Fly,40) (Fwd,70)
+   (InvA,90) (NInvA,100) (InstA,100) (DiffA,100)
+   (SKLP,50) (SKHP,70) (SKBP,60) (Wien,0) (Colp,80)};
+\addplot[fill=red!35] coordinates
+  {(Buck,10) (Boost,0) (B-B,50) (Cuk,40) (SEPIC,70) (Fly,10) (Fwd,20)
+   (InvA,100) (NInvA,100) (InstA,100) (DiffA,100)
+   (SKLP,70) (SKHP,60) (SKBP,70) (Wien,70) (Colp,10)};
+\legend{SL, RL}
+\end{axis}
+\end{tikzpicture}
+\caption{Per-topology simulation validity for Graph Transformer under
+supervised learning (SL) vs.\ REINFORCE (RL). Amplifiers achieve
+near-perfect validity under both regimes. RL improves filters and Wien
+bridge but degrades power converters, revealing a reward distribution
+mismatch.}
+\label{fig:pertopo}
+\end{figure}
 
 \subsection{Warm-Start Experiment}
 \label{sec:warm-start}
