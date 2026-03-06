@@ -37,7 +37,7 @@ import torch.nn.functional as F
 class ARCSConfig:
     """Model hyperparameters."""
 
-    vocab_size: int = 675        # CircuitTokenizer vocabulary
+    vocab_size: int = 686        # CircuitTokenizer vocabulary
     max_seq_len: int = 128       # Maximum token sequence length
     d_model: int = 256           # Embedding / hidden dimension
     n_heads: int = 4             # Number of attention heads

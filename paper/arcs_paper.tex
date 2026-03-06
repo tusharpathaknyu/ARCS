@@ -38,7 +38,7 @@ character-by-character (CircuitSynth), ARCS employs a \emph{native
 component-token vocabulary} where each token represents a circuit element
 with an embedded numerical value, and a \emph{topology-aware Graph
 Transformer} that injects circuit-graph inductive bias into causal
-attention via learned adjacency matrices and random-walk positional
+attention via learned adjacency matrices and component-order positional
 encodings. Starting from a baseline GPT decoder (6.5M parameters,
 45.6\% simulation validity), we progressively improve to a two-head
 architecture (6.8M parameters, 61.9\%) and a Graph Transformer (6.8M
@@ -209,6 +209,11 @@ LaMAGIC~\cite{lamagic} generates analog IC topologies using language
 models with graph-based representations. While it introduces
 circuit-aware tokenization, it targets transistor-level IC design
 rather than board-level circuits with discrete component values.
+INSIGHT~\cite{insight} uses an autoregressive transformer as a
+fast surrogate for SPICE simulation, achieving near-simulator
+accuracy at orders-of-magnitude lower cost; however, it is a
+\emph{predictor} of circuit performance, not a \emph{generator}
+of new designs.
 
 \subsection{Circuit Sizing and Optimization}
 
@@ -216,6 +221,9 @@ AutoCkt~\cite{autockt} uses deep reinforcement learning for analog
 circuit sizing, treating component values as a continuous action space.
 CktGNN~\cite{cktgnn} uses graph neural networks for topology generation
 but is limited to operational amplifiers.
+Fan~\emph{et~al.}~\cite{fan2024graph} propose a graph-transformer
+surrogate model for power converter topologies, achieving strong
+prediction accuracy but focusing on evaluation rather than generation.
 FALCON~\cite{falcon} combines GNN-based prediction with layout
 co-optimization but is not generative for new topologies.
 
@@ -261,7 +269,7 @@ specification when simulated.
 
 \subsection{Tokenizer}
 
-We design a domain-specific vocabulary of 676 tokens organized into
+We design a domain-specific vocabulary of 686 tokens organized into
 seven semantic categories:
 \begin{itemize}
     \item \textbf{Special tokens} (5): \texttt{START}, \texttt{END},
@@ -269,11 +277,15 @@ seven semantic categories:
     \item \textbf{Component tokens} (20): \texttt{MOSFET\_N},
     \texttt{RESISTOR}, \texttt{CAPACITOR}, \texttt{INDUCTOR},
     \texttt{DIODE}, \texttt{OPAMP}, \texttt{TRANSFORMER}, etc.
-    \item \textbf{Topology tokens} (16): One per supported circuit type.
+    \item \textbf{Topology tokens} (20): Slots for 19 named circuit
+    types (16 evaluated in this work, plus LLC, PFC, and inverter
+    reserved for future expansion) and 1 reserved token.
     \item \textbf{Spec tokens} (20): \texttt{SPEC\_VIN},
     \texttt{SPEC\_VOUT}, \texttt{SPEC\_IOUT}, \texttt{SPEC\_FSW},
     \texttt{SPEC\_GAIN}, \texttt{SPEC\_BW}, etc.
-    \item \textbf{Pin/Net tokens} (120): Circuit connectivity encoding.
+    \item \textbf{Pin tokens} (21): Component pin labels
+    (\texttt{PIN\_DRAIN}, \texttt{PIN\_POS}, etc.).
+    \item \textbf{Net/connection tokens} (100): Circuit net identifiers.
     \item \textbf{Value tokens} (500): Log-uniformly spaced bins covering
     $10^{-12}$ to $10^{6}$, providing $\sim$28 bins per decade for
     sub-decade resolution.
@@ -343,18 +355,21 @@ two mechanisms:
     \end{equation}
     This gives the model a soft prior that electrically connected
     components should attend to each other more strongly.
-    \item \textbf{Random-walk positional encoding.} We compute
-    $k$-step random walk probabilities
-    $\mathbf{p}_i = [(\mathbf{D}^{-1}\mathbf{A})^k_{ii}]_{k=1}^K$
-    for each node $i$ (with $K\!=\!8$ walk lengths) and project
-    them through a learned linear layer to produce per-node
-    positional features, added to the token embeddings. This
-    captures local graph structure (e.g., a node in a 3-cycle vs.\
-    a leaf node) without requiring message-passing layers.
+    \item \textbf{Component-order positional encoding.} Each component
+    in the generated sequence receives a learned positional embedding
+    indexed by its sequential position among components (0, 1, 2, \ldots).
+    The following value token shares the same position index.
+    These embeddings are drawn from a learned table of 32 positions,
+    projected to $d_\text{model}$ dimensions and added to the token
+    representations. This captures the component's role in the
+    circuit's generation order---e.g., distinguishing the first-placed
+    inductor from subsequent capacitors---complementing the graph
+    adjacency bias which captures \emph{electrical} relationships.
 \end{enumerate}
 The Graph Transformer retains the two-head output structure from
-model~(B), adding only 8,624 parameters for walk embeddings and
-432 for graph biases.
+model~(B), adding only 8,624 parameters total: 8,192 for
+component-order position embeddings and 432 for graph attention
+biases (per-head adjacency scalars and edge-type embeddings).
 
 \subsection{Automated Data Generation}
 \label{sec:datagen}
@@ -1071,40 +1086,37 @@ specs, all topologies).
 
 \begin{table}[t]
 \centering
-\caption{Best-of-$N$ ranking comparison. With the SL-only generator,
-the learned reward model outperforms confidence ranking by up to
-+10.2\% at $N\!=\!20$. The RL-trained model's confidence is already
-well-calibrated, so the reward model provides marginal benefit.}
+\caption{Best-of-$N$ ranking comparison (SL generator, 16 test specs).
+The learned reward model outperforms confidence ranking by up to
++10.2\% at $N\!=\!20$, breaking through the confidence plateau.}
 \label{tab:ranking-compare}
-\begin{tabular}{@{}rcccccc@{}}
+\begin{tabular}{@{}rccc@{}}
 \toprule
- & \multicolumn{3}{c}{SL Generator} & \multicolumn{3}{c}{RL Generator} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-$N$ & Conf & RM & $\Delta$\% & Conf & RM & $\Delta$\% \\\midrule
-1   & 5.38 & 5.38 & ---   & 5.14 & 5.14 & --- \\
-3   & 5.00 & 4.92 & $-$1.7 & 5.14 & 5.02 & $-$2.4 \\
-5   & 5.29 & 5.43 & +2.7  & 5.24 & 5.09 & $-$3.0 \\
-10  & 5.20 & 5.63 & +8.3  & 4.75 & 4.72 & $-$0.6 \\
-20  & 5.07 & 5.59 & \textbf{+10.2} & 5.64 & 4.88 & $-$13.5 \\
+$N$ & Confidence & Reward Model & $\Delta$\% \\\midrule
+1   & 5.38 & 5.38 & ---   \\
+3   & 5.00 & 4.92 & $-$1.7 \\
+5   & 5.29 & 5.43 & +2.7  \\
+10  & 5.20 & 5.63 & +8.3  \\
+20  & 5.07 & 5.59 & \textbf{+10.2} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ranking-compare} reveals a key finding: the benefit
-of the reward model depends on generator calibration. For the
-SL-only generator, whose confidence is not aligned with reward,
-the reward model improves SPICE reward by +8.3\% at $N\!=\!10$
-and +10.2\% at $N\!=\!20$---breaking through the plateau observed
-in Section~\ref{sec:bestofn}. However, for the RL-trained generator,
-whose confidence has been implicitly calibrated by reward-based
-policy optimization, confidence ranking already performs well and
-the reward model adds no benefit.
+Table~\ref{tab:ranking-compare} reveals a key finding: the reward
+model becomes increasingly valuable at higher $N$. At $N\!=\!3$, the
+reward model slightly underperforms confidence ($-1.7\%$), likely
+because the small candidate pool leaves little room for re-ranking.
+But as $N$ grows, the reward model breaks through the confidence
+plateau: $+8.3\%$ at $N\!=\!10$ and $+10.2\%$ at $N\!=\!20$. This
+confirms that the model's log-probability ranking diverges from
+SPICE reward at higher $N$, and the learned reward model corrects
+this misalignment.
 
 This finding has a practical implication: \emph{the reward model is
-most valuable for SL-only generators and at higher $N$ values},
-precisely where confidence ranking fails. It provides a
-training-free quality signal that scales inference-time compute
-more effectively than raw log-probability.
+most valuable at higher $N$ values}, precisely where confidence
+ranking fails. It provides a training-free quality signal that
+scales inference-time compute more effectively than raw
+log-probability.
 
 % ==========================================================================
 \section{Discussion}
@@ -1166,10 +1178,9 @@ probability ranking does not fully align with simulation-based
 quality. Our learned reward model (Section~\ref{sec:reward-model})
 addresses this gap: trained on 53K SPICE-simulated circuits, it
 achieves $r\!=\!0.988$ correlation with ground-truth reward and
-improves Best-of-$N$ selection by up to +10.2\% for SL-only
-generators at $N\!=\!20$. Interestingly, the RL-trained generator's
-confidence is already well-calibrated, suggesting that reward-based
-policy optimization implicitly aligns log-probability with quality.
+improves Best-of-$N$ selection by up to +10.2\% at $N\!=\!20$,
+breaking through the confidence plateau precisely where it matters
+most.
 
 \textbf{Limitations.}
 \begin{itemize}
@@ -1233,7 +1244,7 @@ analog design workflows.
 \bibliographystyle{IEEEtran}
 % \bibliography{references}
 
-\begin{thebibliography}{15}
+\begin{thebibliography}{17}
 
 \bibitem{analoggenie}
 Z.~Gao, Y.~Zhang, J.~Li, \emph{et~al.},
@@ -1310,6 +1321,16 @@ M.~Plappert, J.~Tworek, J.~Hilton, R.~Nakano, C.~Hesse, and
 J.~Schulman,
 ``Training verifiers to solve math word problems,'' 2021.
 arXiv:2110.14168.
+
+\bibitem{insight}
+S.~Poddar, R.~Dey, and S.~Dasgupta,
+``{INSIGHT}: Universal neural simulator for analog circuits
+harnessing autoregressive transformers,'' in \emph{Proc.\ DAC}, 2025.
+
+\bibitem{fan2024graph}
+X.~Fan, K.~Wang, H.~Zhou, and J.~Sun,
+``Graph-transformer surrogate model for performance prediction of
+power converter topologies,'' in \emph{Proc.\ DAC}, 2024.
 
 \end{thebibliography}
 

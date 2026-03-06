@@ -56,14 +56,14 @@ class Token:
 class CircuitTokenizer:
     """Tokenizer with native circuit vocabulary.
 
-    Vocabulary structure:
-        [0-4]       Special tokens: PAD, START, END, SEP, INVALID
-        [5-24]      Component type tokens
-        [25-34]     Topology tokens
-        [35-54]     Spec tokens
-        [55-74]     Pin tokens
-        [75-174]    Net/connection tokens (100 nets)
-        [175-674]   Value tokens (500 bins, log-discretized)
+    Vocabulary structure (686 tokens):
+        [0-4]       Special tokens: PAD, START, END, SEP, INVALID (5)
+        [5-24]      Component type tokens (16 named + 4 reserved = 20)
+        [25-44]     Topology tokens (19 named + 1 reserved = 20)
+        [45-64]     Spec tokens (20)
+        [65-85]     Pin tokens (21)
+        [86-185]    Net/connection tokens (100)
+        [186-685]   Value tokens (500 bins, log-discretized)
     """
 
     # Value discretization: log-scale bins covering 1e-12 to 1e6
