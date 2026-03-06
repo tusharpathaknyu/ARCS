@@ -28,6 +28,7 @@ from __future__ import annotations
 import math
 from typing import Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -40,6 +41,72 @@ from arcs.model import (
     TransformerBlock,
 )
 from arcs.tokenizer import CircuitTokenizer, TokenType
+
+# ---------------------------------------------------------------------------
+# Random-Walk Positional Encoding (RWPE) — precomputed per topology
+# ---------------------------------------------------------------------------
+
+K_WALK = 8  # number of random-walk steps (paper §3.3)
+
+
+def _compute_rwpe_for_topology(
+    adj_pairs: list[tuple[int, int]],
+    n_nodes: int,
+) -> np.ndarray:
+    """Compute K-dimensional RWPE features for a topology graph.
+
+    For each node i, RWPE_i = [T^1_{ii}, T^2_{ii}, ..., T^K_{ii}]
+    where T = D^{-1}A is the random-walk transition matrix.
+
+    Args:
+        adj_pairs: list of (i, j) edges
+        n_nodes: number of nodes in the graph
+
+    Returns:
+        (n_nodes, K_WALK) array of return probabilities
+    """
+    A = np.zeros((n_nodes, n_nodes), dtype=np.float64)
+    for i, j in adj_pairs:
+        if i < n_nodes and j < n_nodes:
+            A[i, j] = 1.0
+            A[j, i] = 1.0
+
+    # Degree-normalised transition matrix: T = D^{-1} A
+    degrees = A.sum(axis=1)
+    D_inv = np.where(degrees > 0, 1.0 / degrees, 0.0)
+    T = A * D_inv[:, np.newaxis]  # T[i,j] = A[i,j] / degree(i)
+
+    # Compute T^k and extract diagonal (return probability after k steps)
+    rwpe = np.zeros((n_nodes, K_WALK), dtype=np.float32)
+    Tk = T.copy()
+    for k in range(K_WALK):
+        rwpe[:, k] = np.diag(Tk)
+        if k < K_WALK - 1:
+            Tk = Tk @ T
+
+    return rwpe
+
+
+def _precompute_all_rwpe(
+    topology_adjacency: dict[str, list[tuple[int, int]]],
+) -> dict[str, torch.Tensor]:
+    """Precompute RWPE features for all topologies.
+
+    Returns:
+        dict mapping topology name -> (n_components, K_WALK) tensor
+    """
+    result: dict[str, torch.Tensor] = {}
+    for topo_name, adj_pairs in topology_adjacency.items():
+        if not adj_pairs:
+            continue
+        n_nodes = max(max(i, j) for i, j in adj_pairs) + 1
+        rwpe_np = _compute_rwpe_for_topology(adj_pairs, n_nodes)
+        result[topo_name] = torch.from_numpy(rwpe_np)
+    return result
+
+
+# Module-level cache — computed once at import time
+TOPOLOGY_RWPE: dict[str, torch.Tensor] = {}  # populated after TOPOLOGY_ADJACENCY
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +180,9 @@ TOPOLOGY_ADJACENCY: dict[str, list[tuple[int, int]]] = {
     # Tank: L <-> C1 <-> C2; Bias divider: Rb1 <-> Rb2; BJT: Re, Rc
     "colpitts": [(0, 1), (0, 2), (1, 2), (3, 4), (4, 5), (4, 6)],
 }
+
+# Precompute RWPE features for all topologies at import time
+TOPOLOGY_RWPE = _precompute_all_rwpe(TOPOLOGY_ADJACENCY)
 
 
 # Component type IDs for edge-type embedding
@@ -507,7 +577,7 @@ class GraphTransformerARCSModel(nn.Module):
     the model an explicit inductive bias about which components interact.
 
     Architecture:
-        Token embeddings + position + type + walk_position
+        Token embeddings + position + type + RWPE
         N x GraphTransformerBlock (graph-biased attention + SwiGLU FFN)
         Two-head output (structure + value)
     """
@@ -522,8 +592,13 @@ class GraphTransformerARCSModel(nn.Module):
         self.type_emb = nn.Embedding(config.n_token_types, config.d_model)
         self.emb_drop = nn.Dropout(config.dropout)
 
-        # Walk position: meaningful for Eulerian-augmented sequences
-        self.walk_pos_emb = nn.Embedding(32, config.d_model)
+        # Random-Walk Positional Encoding (RWPE) projection
+        # Maps K_WALK-dim return-probability features to d_model via 2-layer MLP
+        self.rwpe_proj = nn.Sequential(
+            nn.Linear(K_WALK, config.d_model // 4, bias=True),
+            nn.GELU(),
+            nn.Linear(config.d_model // 4, config.d_model, bias=True),
+        )
 
         # --- Graph Transformer blocks ---
         self.blocks = nn.ModuleList(
@@ -570,20 +645,21 @@ class GraphTransformerARCSModel(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute topology-aware graph features from token sequences.
 
-        Uses TOPOLOGY_ADJACENCY to build correct component-level adjacency
-        based on the actual circuit topology, not heuristic sequence position.
+        Uses TOPOLOGY_ADJACENCY for adjacency and TOPOLOGY_RWPE for
+        random-walk positional encodings (return probabilities at
+        K=1..8 walk lengths via (D^{-1}A)^k diagonal).
 
         Returns:
-            graph_adj:  (B, T, T) float -- 1.0 where components are circuit-adjacent
-            edge_types: (B, T, T) long  -- component type pair indices
-            walk_pos:   (B, T) long     -- walk position (component index)
+            graph_adj:      (B, T, T) float -- 1.0 where components are circuit-adjacent
+            edge_types:     (B, T, T) long  -- component type pair indices
+            rwpe_features:  (B, T, K_WALK) float -- RWPE return probabilities
         """
         B, T = input_ids.shape
         device = input_ids.device
 
         graph_adj = torch.zeros(B, T, T, device=device)
         edge_types = torch.zeros(B, T, T, dtype=torch.long, device=device)
-        walk_pos = torch.zeros(B, T, dtype=torch.long, device=device)
+        rwpe_features = torch.zeros(B, T, K_WALK, device=device)
 
         # Build lookups
         comp_ids: set[int] = set()
@@ -606,21 +682,26 @@ class GraphTransformerARCSModel(nn.Module):
             # Find component positions and types
             comp_positions: list[int] = []
             comp_names: list[str] = []
-            wp = 0
 
             for i, tid in enumerate(ids):
                 if tid in comp_ids:
                     comp_positions.append(i)
                     comp_names.append(comp_id_to_name[tid])
-                    walk_pos[b, i] = min(wp, 31)
-                    wp += 1
-                    # Mark following value token with same walk position
-                    if i + 1 < T:
-                        walk_pos[b, i + 1] = min(wp - 1, 31)
 
             n_comp = len(comp_positions)
             if n_comp == 0:
                 continue
+
+            # Look up precomputed RWPE for this topology
+            topo_rwpe = TOPOLOGY_RWPE.get(topo)  # (n_nodes, K_WALK) or None
+            if topo_rwpe is not None:
+                topo_rwpe = topo_rwpe.to(device)
+                for ci, pos in enumerate(comp_positions):
+                    if ci < topo_rwpe.shape[0]:
+                        rwpe_features[b, pos] = topo_rwpe[ci]
+                        # Value token (pos+1) shares the same RWPE
+                        if pos + 1 < T:
+                            rwpe_features[b, pos + 1] = topo_rwpe[ci]
 
             # Build adjacency from topology graph
             adj_pairs = TOPOLOGY_ADJACENCY.get(topo, []) if topo else []
@@ -651,7 +732,7 @@ class GraphTransformerARCSModel(nn.Module):
                     pair_idx = (min(type_i, type_j) + max(type_i, type_j)) % 16
                     edge_types[b, pi, pj] = max(pair_idx, 1)
 
-        return graph_adj, edge_types, walk_pos
+        return graph_adj, edge_types, rwpe_features
 
     def forward(
         self,
@@ -662,7 +743,7 @@ class GraphTransformerARCSModel(nn.Module):
         value_weight: float = 5.0,
         graph_adj: Optional[torch.Tensor] = None,
         edge_types: Optional[torch.Tensor] = None,
-        walk_pos: Optional[torch.Tensor] = None,
+        rwpe_features: Optional[torch.Tensor] = None,
         tokenizer: Optional[CircuitTokenizer] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Forward pass with graph-aware attention.
@@ -673,7 +754,7 @@ class GraphTransformerARCSModel(nn.Module):
         assert T <= self.config.max_seq_len
 
         if graph_adj is None and tokenizer is not None:
-            graph_adj, edge_types, walk_pos = self.compute_graph_features(
+            graph_adj, edge_types, rwpe_features = self.compute_graph_features(
                 input_ids, tokenizer
             )
 
@@ -681,8 +762,8 @@ class GraphTransformerARCSModel(nn.Module):
         x = self.tok_emb(input_ids) + self.pos_emb(positions)
         if token_types is not None:
             x = x + self.type_emb(token_types)
-        if walk_pos is not None:
-            x = x + self.walk_pos_emb(walk_pos.clamp(0, 31))
+        if rwpe_features is not None:
+            x = x + self.rwpe_proj(rwpe_features)
         x = self.emb_drop(x)
 
         for block in self.blocks:
@@ -756,9 +837,9 @@ class GraphTransformerARCSModel(nn.Module):
 
             # Compute graph features for current sequence
             if tokenizer is not None:
-                g_adj, e_types, w_pos = self.compute_graph_features(s, tokenizer)
+                g_adj, e_types, rwpe_f = self.compute_graph_features(s, tokenizer)
             else:
-                g_adj = e_types = w_pos = None
+                g_adj = e_types = rwpe_f = None
 
             # Full forward through embedding + blocks
             B_s, T_s = s.shape
@@ -766,8 +847,8 @@ class GraphTransformerARCSModel(nn.Module):
             x = self.tok_emb(s) + self.pos_emb(positions)
             if t is not None:
                 x = x + self.type_emb(t)
-            if w_pos is not None:
-                x = x + self.walk_pos_emb(w_pos.clamp(0, 31))
+            if rwpe_f is not None:
+                x = x + self.rwpe_proj(rwpe_f)
             x = self.emb_drop(x)
 
             for block in self.blocks:
@@ -823,7 +904,7 @@ class GraphTransformerARCSModel(nn.Module):
     def count_parameters_by_group(self) -> dict[str, int]:
         groups = {
             "embeddings": 0,
-            "walk_pos_emb": 0,
+            "rwpe_proj": 0,
             "attention": 0,
             "graph_bias": 0,
             "ffn": 0,
@@ -834,8 +915,8 @@ class GraphTransformerARCSModel(nn.Module):
         }
         for name, p in self.named_parameters():
             n = p.numel()
-            if "walk_pos_emb" in name:
-                groups["walk_pos_emb"] += n
+            if "rwpe_proj" in name:
+                groups["rwpe_proj"] += n
             elif "adj_bias" in name or "edge_type_bias" in name:
                 groups["graph_bias"] += n
             elif "emb" in name:
@@ -897,7 +978,7 @@ def load_model(
     mt = ckpt.get("model_type", model_type)
     if mt is None:
         state_keys = set(ckpt.get("model_state_dict", {}).keys())
-        if "walk_pos_emb.weight" in state_keys:
+        if "rwpe_proj.0.weight" in state_keys or "walk_pos_emb.weight" in state_keys:
             mt = "graph_transformer"
         elif "value_head.weight" in state_keys:
             mt = "two_head"

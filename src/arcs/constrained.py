@@ -508,14 +508,14 @@ class ConstrainedGenerator:
 
         if model_type == "GraphTransformerARCSModel":
             # Graph Transformer: needs graph features
-            g_adj, e_types, w_pos = model.compute_graph_features(s, self.tokenizer)
+            g_adj, e_types, rwpe_f = model.compute_graph_features(s, self.tokenizer)
             B, T = s.shape
             positions = torch.arange(T, device=s.device)
             x = model.tok_emb(s) + model.pos_emb(positions)
             if t is not None:
                 x = x + model.type_emb(t)
-            if w_pos is not None:
-                x = x + model.walk_pos_emb(w_pos.clamp(0, 31))
+            if rwpe_f is not None:
+                x = x + model.rwpe_proj(rwpe_f)
             x = model.emb_drop(x)
             for block in model.blocks:
                 x = block(x, graph_adj=g_adj, edge_types=e_types)
@@ -626,12 +626,12 @@ def constrained_sample_with_logprobs(
         if model_type in ("TwoHeadARCSModel", "GraphTransformerARCSModel"):
             # Forward through backbone
             if model_type == "GraphTransformerARCSModel":
-                g_adj, e_types, w_pos = model.compute_graph_features(s, tokenizer)
+                g_adj, e_types, rwpe_f = model.compute_graph_features(s, tokenizer)
                 B, T = s.shape
                 positions = torch.arange(T, device=s.device)
                 x = model.tok_emb(s) + model.pos_emb(positions)
-                if w_pos is not None:
-                    x = x + model.walk_pos_emb(w_pos.clamp(0, 31))
+                if rwpe_f is not None:
+                    x = x + model.rwpe_proj(rwpe_f)
                 x = model.emb_drop(x)
                 for block in model.blocks:
                     x = block(x, graph_adj=g_adj, edge_types=e_types)

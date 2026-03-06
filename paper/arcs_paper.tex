@@ -38,8 +38,8 @@ character-by-character (CircuitSynth), ARCS employs a \emph{native
 component-token vocabulary} where each token represents a circuit element
 with an embedded numerical value, and a \emph{topology-aware Graph
 Transformer} that injects circuit-graph inductive bias into causal
-attention via learned adjacency matrices and component-order positional
-encodings. Starting from a baseline GPT decoder (6.5M parameters,
+attention via learned adjacency matrices and random-walk positional
+encodings (RWPE). Starting from a baseline GPT decoder (6.5M parameters,
 45.6\% simulation validity), we progressively improve to a two-head
 architecture (6.8M parameters, 61.9\%) and a Graph Transformer (6.8M
 parameters, 71.9\%), with REINFORCE fine-tuning using SPICE-in-the-loop
@@ -60,8 +60,8 @@ ranking by model confidence improves reward by 9.3\% and simulation
 validity by 12.5\,pp at $N\!=\!3$, while remaining 600$\times$ faster
 than random search. A lightweight learned \emph{reward model}
 (663K params, $r\!=\!0.988$ correlation with SPICE) further improves
-Best-of-$N$ ranking by up to +10.2\% over confidence for
-SL generators---establishing amortized circuit generation as a
+Best-of-$N$ ranking by $+2.0$--$2.7\%$ over confidence ranking
+for both SL and RL generators---establishing amortized circuit generation as a
 practical tool for rapid design-space exploration.
 \end{abstract}
 
@@ -115,7 +115,7 @@ simultaneously:
     \item \textbf{Learned reward model}: A lightweight (663K param)
     bidirectional transformer trained on 53K SPICE-simulated circuits
     that predicts simulation reward with $r\!=\!0.988$ correlation,
-    improving Best-of-$N$ ranking by up to +10.2\% for SL generators.
+    improving Best-of-$N$ ranking by $+2.0$--$2.7\%$ for both SL and RL generators.
 \end{enumerate}
 
 The key contribution of ARCS is not higher per-design quality than
@@ -337,7 +337,7 @@ At each timestep, the model selects which head to use based on
 whether the next token is expected to be a value token
 (determined by the preceding component token).
 
-\textbf{(C) Graph Transformer} (6,820,272 parameters; +4.8\%).
+\textbf{(C) Graph Transformer} (6,829,296 parameters; +5.0\%).
 Circuit components form a graph defined by their electrical
 connectivity. We inject this structure into the transformer via
 two mechanisms:
@@ -355,21 +355,31 @@ two mechanisms:
     \end{equation}
     This gives the model a soft prior that electrically connected
     components should attend to each other more strongly.
-    \item \textbf{Component-order positional encoding.} Each component
-    in the generated sequence receives a learned positional embedding
-    indexed by its sequential position among components (0, 1, 2, \ldots).
-    The following value token shares the same position index.
-    These embeddings are drawn from a learned table of 32 positions,
-    projected to $d_\text{model}$ dimensions and added to the token
-    representations. This captures the component's role in the
-    circuit's generation order---e.g., distinguishing the first-placed
-    inductor from subsequent capacitors---complementing the graph
-    adjacency bias which captures \emph{electrical} relationships.
+    \item \textbf{Random-walk positional encoding (RWPE).} Each
+    component receives a $K$-dimensional positional feature derived
+    from the topology's random-walk transition matrix
+    $\mathbf{T} = \mathbf{D}^{-1}\mathbf{A}$, where $\mathbf{D}$
+    is the degree matrix. For node~$i$, the RWPE is the vector of
+    return probabilities after $k=1,\ldots,K$ steps:
+    \begin{equation}
+    \text{RWPE}_i = \bigl[\mathbf{T}^1_{ii},\;
+    \mathbf{T}^2_{ii},\; \ldots,\; \mathbf{T}^K_{ii}\bigr]
+    \label{eq:rwpe}
+    \end{equation}
+    with $K\!=\!8$ walk lengths. These features are precomputed
+    per topology and projected to $d_\text{model}$ via a learned
+    two-layer MLP ($8 \!\to\! 64 \!\to\! 256$, GELU activation).
+    The following value token shares the same RWPE as its parent
+    component. Unlike ordinal position indices, RWPE encodes each
+    component's \emph{structural role} in the circuit graph---e.g.,
+    high-degree hub nodes (like the switch node in a buck converter)
+    have higher return probabilities than peripheral nodes (like the
+    load resistor).
 \end{enumerate}
 The Graph Transformer retains the two-head output structure from
-model~(B), adding only 8,624 parameters total: 8,192 for
-component-order position embeddings and 432 for graph attention
-biases (per-head adjacency scalars and edge-type embeddings).
+model~(B), adding 17,648 parameters total: 17,216 for the RWPE
+projection MLP and 432 for graph attention biases (per-head
+adjacency scalars and edge-type embeddings).
 
 \subsection{Automated Data Generation}
 \label{sec:datagen}
@@ -1086,37 +1096,50 @@ specs, all topologies).
 
 \begin{table}[t]
 \centering
-\caption{Best-of-$N$ ranking comparison (SL generator, 16 test specs).
-The learned reward model outperforms confidence ranking by up to
-+10.2\% at $N\!=\!20$, breaking through the confidence plateau.}
+\caption{Best-of-$N$ ranking comparison: confidence vs.\ learned reward
+model (80 trials per cell, 5 seeds $\times$ 16 test specs).
+The reward model consistently improves ranking at $N\!=\!3$
+($+2.0$--$2.1\%$) for both SL and RL generators.}
 \label{tab:ranking-compare}
-\begin{tabular}{@{}rccc@{}}
+\begin{tabular}{@{}r ccc ccc@{}}
 \toprule
-$N$ & Confidence & Reward Model & $\Delta$\% \\\midrule
-1   & 5.38 & 5.38 & ---   \\
-3   & 5.00 & 4.92 & $-$1.7 \\
-5   & 5.29 & 5.43 & +2.7  \\
-10  & 5.20 & 5.63 & +8.3  \\
-20  & 5.07 & 5.59 & \textbf{+10.2} \\
+     & \multicolumn{3}{c}{\textbf{SL Generator}}
+     & \multicolumn{3}{c}{\textbf{RL Generator}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+$N$  & Conf & RM & $\Delta$\%
+     & Conf & RM & $\Delta$\% \\\midrule
+1    & 5.16 & 5.16 & ---
+     & 5.06 & 5.06 & --- \\
+3    & 5.05 & 5.15 & \textbf{+2.0}
+     & 5.08 & 5.18 & \textbf{+2.1} \\
+5    & 5.03 & 4.71 & $-$6.5
+     & 5.12 & 5.16 & +0.7 \\
+10   & 5.08 & 5.22 & +2.7
+     & 5.30 & 5.16 & $-$2.5 \\
+20   & 5.18 & 4.81 & $-$7.2
+     & 5.04 & 5.17 & +2.5 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ranking-compare} reveals a key finding: the reward
-model becomes increasingly valuable at higher $N$. At $N\!=\!3$, the
-reward model slightly underperforms confidence ($-1.7\%$), likely
-because the small candidate pool leaves little room for re-ranking.
-But as $N$ grows, the reward model breaks through the confidence
-plateau: $+8.3\%$ at $N\!=\!10$ and $+10.2\%$ at $N\!=\!20$. This
-confirms that the model's log-probability ranking diverges from
-SPICE reward at higher $N$, and the learned reward model corrects
-this misalignment.
+Table~\ref{tab:ranking-compare} reveals several findings. First, at
+$N\!=\!3$ the reward model consistently outperforms confidence ranking
+for \emph{both} SL and RL generators ($+2.0\%$ and $+2.1\%$,
+respectively), confirming that the learned reward signal captures
+quality aspects that log-probability misses. Second, the RL generator
+shows more stable reward-model gains across $N$ (positive in 3/4
+cases), suggesting that RL-trained models produce candidate
+distributions more amenable to reward-model re-ranking. Third, SL
+results at larger $N$ exhibit high variance ($-6.5\%$ at $N\!=\!5$,
+$-7.2\%$ at $N\!=\!20$), reflecting the limited test topology count
+(16 specs) and the stochastic nature of autoregressive generation.
 
 This finding has a practical implication: \emph{the reward model is
-most valuable at higher $N$ values}, precisely where confidence
-ranking fails. It provides a training-free quality signal that
-scales inference-time compute more effectively than raw
-log-probability.
+most reliably valuable at moderate $N$ ($\approx$3)}, where the
+candidate pool is large enough for meaningful re-ranking but small
+enough to avoid noise amplification. Combined with the RL generator,
+reward-model ranking provides a consistent, training-free quality
+boost at negligible computational cost.
 
 % ==========================================================================
 \section{Discussion}

@@ -191,7 +191,7 @@ class TestGraphTransformerModel:
     def test_parameter_groups(self, config):
         model = GraphTransformerARCSModel(config)
         groups = model.count_parameters_by_group()
-        assert groups["walk_pos_emb"] > 0
+        assert groups["rwpe_proj"] > 0
         assert groups["graph_bias"] > 0
         assert groups["value_proj"] > 0
 
@@ -222,18 +222,22 @@ class TestGraphTransformerModel:
     def test_compute_graph_features(self, config, tokenizer, buck_ids):
         """Graph features should reflect buck topology adjacency."""
         ids = torch.tensor([buck_ids])
-        g_adj, e_types, w_pos = GraphTransformerARCSModel.compute_graph_features(
+        g_adj, e_types, rwpe_features = GraphTransformerARCSModel.compute_graph_features(
             ids, tokenizer
         )
         assert g_adj.shape == (1, len(buck_ids), len(buck_ids))
         assert e_types.shape == (1, len(buck_ids), len(buck_ids))
-        assert w_pos.shape == (1, len(buck_ids))
+        # RWPE features: (B, T, K_WALK=8)
+        from arcs.model_enhanced import K_WALK
+        assert rwpe_features.shape == (1, len(buck_ids), K_WALK)
 
         # Buck has 4 components — should have adjacency entries
         assert g_adj.sum() > 0, "No adjacency detected for buck topology"
 
-        # Walk position should mark component positions
-        assert w_pos.max() > 0, "No walk positions set"
+        # RWPE should have non-zero entries at component positions
+        assert rwpe_features.abs().sum() > 0, "No RWPE features set"
+        # Return probabilities at k=2 should distinguish degree-2 and degree-1 nodes
+        # (buck: nodes 0,1 have degree 2; nodes 2,3 have degree 1)
 
     def test_adjacency_matches_buck_topology(self, config, tokenizer, buck_ids):
         """Verify adjacency matches TOPOLOGY_ADJACENCY['buck']."""
@@ -352,12 +356,12 @@ class TestGraphFeaturesEdgeCases:
     def test_empty_sequence(self, config, tokenizer):
         """Sequence with no components should produce zero graph features."""
         ids = torch.tensor([[tokenizer.start_id, tokenizer.end_id]])
-        g_adj, e_types, w_pos = GraphTransformerARCSModel.compute_graph_features(
+        g_adj, e_types, rwpe_f = GraphTransformerARCSModel.compute_graph_features(
             ids, tokenizer
         )
         assert g_adj.sum() == 0
         assert e_types.sum() == 0
-        assert w_pos.sum() == 0
+        assert rwpe_f.sum() == 0
 
     def test_unknown_topology(self, config, tokenizer):
         """Sequence without valid TOPO_X should still work (no adjacency bias)."""
@@ -370,13 +374,13 @@ class TestGraphFeaturesEdgeCases:
             tokenizer.end_id,
         ]
         ids = torch.tensor([ids_list])
-        g_adj, e_types, w_pos = GraphTransformerARCSModel.compute_graph_features(
+        g_adj, e_types, rwpe_f = GraphTransformerARCSModel.compute_graph_features(
             ids, tokenizer
         )
         # No topology -> no adjacency from TOPOLOGY_ADJACENCY
         assert g_adj.sum() == 0
-        # But walk positions should still be set for components
-        assert w_pos.max() > 0
+        # No topology -> no RWPE features (they come from precomputed tables)
+        assert rwpe_f.abs().sum() == 0
 
     def test_batch_of_different_topologies(self, config, tokenizer):
         """Graph features should handle batches with different topologies."""
@@ -401,7 +405,7 @@ class TestGraphFeaturesEdgeCases:
         inv_ids += [tokenizer.pad_id] * (max_len - len(inv_ids))
 
         ids = torch.tensor([buck_ids, inv_ids])
-        g_adj, e_types, w_pos = GraphTransformerARCSModel.compute_graph_features(
+        g_adj, e_types, rwpe_f = GraphTransformerARCSModel.compute_graph_features(
             ids, tokenizer
         )
         assert g_adj.shape == (2, max_len, max_len)
