@@ -281,6 +281,8 @@ def main():
                         help="Model architecture: baseline, two_head, or graph_transformer")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="auto")
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Path to checkpoint .pt file to resume training from")
     args = parser.parse_args()
 
     # --- Seed ---
@@ -369,18 +371,47 @@ def main():
     with open(output_dir / "model_type.txt", "w") as f:
         f.write(model_type)
 
-    # --- Training loop ---
+    # --- Resume from checkpoint ---
+    start_epoch = 1
     best_val_loss = float("inf")
     history: list[dict] = []
 
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.exists():
+            print(f"ERROR: Resume checkpoint not found: {resume_path}")
+            return
+        print(f"\nResuming from: {resume_path}")
+        ckpt = torch.load(resume_path, map_location=device, weights_only=False)
+        model.load_state_dict(ckpt['model_state_dict'])
+        if 'optimizer_state_dict' in ckpt:
+            optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+        start_epoch = ckpt.get('epoch', 0) + 1
+        best_val_loss = ckpt.get('val_loss', float('inf'))
+        # Advance scheduler to match resumed position
+        resumed_steps = len(train_loader) * (start_epoch - 1)
+        for _ in range(resumed_steps):
+            scheduler.step()
+        print(f"  Resumed at epoch {start_epoch}, best val_loss={best_val_loss:.4f}")
+        print(f"  Scheduler advanced to step {resumed_steps}")
+        # Load existing history if available
+        history_path = output_dir / "history.json"
+        if history_path.exists():
+            with open(history_path) as f:
+                history = json.load(f)
+            history = [h for h in history if h['epoch'] < start_epoch]
+            print(f"  Loaded {len(history)} history entries")
+
+    # --- Training loop ---
     print(f"\n{'=' * 60}")
-    print(f"Training ARCS ({args.config}) for {args.epochs} epochs")
+    print(f"Training ARCS ({args.config}) for epochs {start_epoch}..{args.epochs}")
     print(f"  Value weight: {args.value_weight}×")
     print(f"  Warmup: {args.warmup_epochs} epochs ({warmup_steps} steps)")
     print(f"  Total steps: {total_steps}")
+    print(f"  Best val loss so far: {best_val_loss:.4f}")
     print(f"{'=' * 60}\n")
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
 
         train_metrics = train_epoch(

@@ -104,24 +104,33 @@ Spec tokens:       SPEC_VIN, SPEC_VOUT, SPEC_IOUT, SPEC_FSW, SPEC_GAIN, ...
 Special tokens:    START, END, PAD, SEP, INVALID
 ```
 
-### Model: GPT-style Decoder (6.5M params) — `baseline`
+### Model: GPT-style Decoder (6,504,960 params) — `baseline`
 - d_model=256, n_layers=6, n_heads=4, d_ff=1024
 - SwiGLU activation, RMSNorm (more modern than AnalogGenie's ReLU + LayerNorm)
 - Token-type embeddings (spec vs. component vs. value)
 - Weight-tied LM head
 
-### Model: Two-Head Architecture — `two_head`
+### Model: Two-Head Architecture (6,811,648 params) — `two_head`
 - Shared transformer backbone, separate **structure head** (weight-tied) and **value head** (independent MLP with SiLU + residual)
 - Value mask routes loss: structure tokens train the structure head, value tokens train the value head
 - During generation, component-type tokens are sampled from the structure head; value tokens from the value head
 - Motivation: structure prediction and value regression have different loss landscapes — decoupling them allows independent capacity
 
-### Model: Graph Transformer — `graph_transformer`
-- Topology-aware causal attention: learned `adj_bias` (per-head scalar for circuit-adjacent pairs) + `edge_type_bias` (component-pair type embeddings)
+### Model: Graph Transformer — `graph_transformer` (6,829,296 params)
+- Topology-aware causal attention: learned `adj_bias` (per-head scalar for circuit-adjacent pairs) + `edge_type_bias` (component-pair type embeddings, 17 edge-type buckets)
 - Hardcoded `TOPOLOGY_ADJACENCY` tables for all 16 topologies define which components share circuit nets, derived from actual SPICE schematics
-- Walk position embeddings (32 positions) encode component order within the circuit body
+- **Random-Walk Positional Encoding (RWPE)**: K=8 walk lengths encode graph structure. For each topology, computes the transition matrix $T = D^{-1}A$ and extracts return probabilities $[T^1_{ii}, T^2_{ii}, \ldots, T^8_{ii}]$ per node. Projected via 2-layer MLP (8→64→256, GELU) and added to token embeddings. Precomputed at import time for all 16 topologies.
 - Two-head output (structure + value) inherited from `TwoHeadARCSModel`
-- Motivation: AnalogGenie encodes adjacency implicitly via pin-level Eulerian walks; ARCS uses component-level tokens, so adjacency must be **injected as structural attention bias**
+- Motivation: AnalogGenie encodes adjacency implicitly via pin-level Eulerian walks; ARCS uses component-level tokens, so adjacency must be **injected as structural attention bias**. RWPE gives each node a unique structural fingerprint — hub nodes (degree-2) have different return-probability profiles than leaf nodes (degree-1).
+
+### Learned Reward Model (663K params)
+- Bidirectional transformer encoder (d_model=128, 4 heads, 2 layers) → mean-pool → 2-layer MLP → scalar reward
+- Trained on 53K circuits with SPICE-computed rewards; used for Best-of-N ranking at inference
+
+### Best-of-N Inference Scaling
+- Generate N candidate circuits, rank by reward model score, return the best
+- Tests N ∈ {1, 3, 5, 10, 20, 50} — quality scales log-linearly with N
+- Achieves +2.0–2.7% sim_valid improvement at N=3 for both SL and RL generators
 
 Select model type via `--model-type {baseline,two_head,graph_transformer}` in training, RL, evaluation, and demo scripts.
 
@@ -142,8 +151,8 @@ Select model type via `--model-type {baseline,two_head,graph_transformer}` in tr
 | ARCS Baseline (SL) | 6.5M | 1 | 66.2% | 45.6% | 3.38/8.0 | ~0.02s |
 | ARCS Baseline + RL | 6.5M | 1 | 71.2% | 55.0% | 3.64/8.0 | ~0.02s |
 | ARCS Two-Head (SL) | 6.8M | 1 | 79.4% | 61.9% | 4.23/8.0 | ~0.02s |
-| **ARCS Graph Transformer (SL)** | **6.8M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
-| ARCS Graph Transformer + RL | 6.8M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
+| **ARCS Graph Transformer (SL)** | **6.83M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
+| ARCS Graph Transformer + RL | 6.83M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
 
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
 20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **2,941-13,560x
@@ -190,8 +199,8 @@ predict everything from scratch using only the target specification.
 | **Spec conditioning** | No | Yes |
 | **Inference speed** | Minutes (GA sizing) | ~20ms |
 | **Data source** | IEEE papers (manual) | Automated SPICE |
-| **Model size** | 11.8M params | 6.8M params |
-| **Architecture** | Standard GPT decoder | Graph Transformer with topology-aware attention |
+| **Model size** | 11.8M params | 6.83M params |
+| **Architecture** | Standard GPT decoder | Graph Transformer with RWPE + topology-aware attention |
 | **SPICE integration** | Post-hoc only | In-the-loop RL |
 | **Venue** | ICLR 2025 Spotlight | In progress |
 
@@ -346,17 +355,37 @@ Example output:
 - [x] Graph transformer: topology-aware causal attention with adjacency bias for all 16 topologies
 - [x] Model factory: `create_model` / `load_model` with automatic type detection from checkpoints
 - [x] Unified `--model-type` flag across train, RL, evaluate, and demo scripts
-- [x] 30 new tests for enhanced architectures (96 total)
+- [x] 273 tests across 14 test files
 
 ### Phase 6: Enhanced Model Training & Evaluation (complete)
 - [x] Two-Head training: 100 epochs, best val_loss=0.954 (vs baseline 1.237)
-- [x] Graph Transformer training: 100 epochs, best val_loss=0.990
+- [x] Graph Transformer training: 100 epochs, best val_loss=0.990 (pre-RWPE)
 - [x] Architecture comparison: Graph Transformer wins (sim_valid=71.9% vs 61.9% vs 45.6%)
 - [x] RL fine-tuning of Graph Transformer: 5000 steps, best eval reward=7.468/8.0
 - [x] Auto-detection of model type from checkpoint state dict keys
 
-### Phase 7: Paper (next)
-- [ ] Write paper targeting DAC / ICCAD / NeurIPS workshop
+### Phase 7: Paper (complete)
+- [x] ICCAD 2026 paper written: *ARCS: Autoregressive Circuit Synthesis with Topology-Aware Graph Attention and Spec Conditioning*
+- [x] Full experimental evaluation: 3 architectures, 2 baselines (RS + GA), ablation studies
+- [x] Honest comparison with AnalogGenie (ICLR 2025)
+
+### Phase 8: RWPE Implementation (complete)
+- [x] Replaced fake walk position embeddings with real Random-Walk Positional Encoding (K=8)
+- [x] Precomputed RWPE for all 16 topologies with transition matrix powers
+- [x] 2-layer MLP projection (8→64→256, GELU), +17.2K params
+- [x] Updated paper §3.3, abstract, intro to match implementation
+
+### Phase 9: RWPE Retraining & Evaluation (complete)
+- [x] Retrained Graph Transformer with RWPE: 100 epochs, best val_loss=0.8718 (epoch 80)
+- [x] Significant improvement over pre-RWPE (0.990 → 0.8718)
+- [x] Structural accuracy: 91.1%, Value accuracy: 72.4%
+- [x] RL ranking comparison: +2.0% SL, +2.1% RL at N=3 (Table 9 in paper)
+- [x] Added --resume flag to training script with optimizer state loading
+
+### Phase 10: Visualization & Documentation (complete)
+- [x] Training curves dashboard: 6-panel plot (loss, perplexity, accuracy, LR, gen gap, time)
+- [x] Algorithm architecture diagrams: 5 publication-quality figures (pipeline, transformer block, RWPE, constrained FSM, tokenization)
+- [x] Full algorithm explanation document (`docs/ARCS_Algorithm_Explained.md`)
 
 ---
 
@@ -370,9 +399,9 @@ cd ARCS
 # Environment
 python -m venv .venv
 source .venv/bin/activate
-pip install torch numpy
+pip install -e .   # installs torch, numpy, networkx, pandas, matplotlib, tqdm, pyyaml, pyspice
 
-# Requires ngspice
+# Requires ngspice for SPICE simulation
 brew install ngspice  # macOS
 # apt install ngspice  # Linux
 
@@ -385,12 +414,48 @@ PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/arcs_graph_trans
 # Compare all architectures
 PYTHONPATH=src python scripts/compare_architectures.py --n-samples 160 -v
 
+# Best-of-N inference scaling
+PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
+
+# Training with resume support
+PYTHONPATH=src python -m arcs.train --data data/combined --config small --model-type graph_transformer --epochs 100 --resume checkpoints/arcs_graph_transformer/best_model.pt
+
 # Ablation studies
 PYTHONPATH=src python scripts/run_ablations.py --n-samples 160
 
 # Baselines
 PYTHONPATH=src python -m arcs.baselines --method ga --n-repeats 10
+
+# Run all 273 tests
+PYTHONPATH=src python -m pytest tests/ -v
 ```
+
+---
+
+## Visualizations
+
+Generated figures live in `results/`:
+
+- **`results/training_curves.png`** — 6-panel dashboard: loss curves, perplexity, accuracy breakdown (structure vs. value), learning rate schedule, generalization gap, time per epoch
+- **`results/algorithm_figures/`** — 5 publication-quality architecture diagrams:
+  - `1_pipeline.png` — End-to-end system flow
+  - `2_transformer_block.png` — GraphTransformer internal architecture
+  - `3_rwpe.png` — RWPE computation walkthrough (Buck converter example)
+  - `4_constrained_gen.png` — Grammar FSM + 3 constraint levels
+  - `5_tokenization.png` — Log-scale value discretization + vocabulary layout
+
+Regenerate:
+```bash
+PYTHONPATH=src python scripts/visualize_training.py
+PYTHONPATH=src python scripts/visualize_algorithm.py
+```
+
+---
+
+## Documentation
+
+- **[`docs/ARCS_Algorithm_Explained.md`](docs/ARCS_Algorithm_Explained.md)** — Comprehensive algorithm explanation with full glossary of ML and circuit design terms, step-by-step walkthrough of tokenization, RWPE, attention, constrained generation, and a complete Buck converter example
+- **[`paper/arcs_paper.tex`](paper/arcs_paper.tex)** — ICCAD 2026 submission
 
 ---
 
