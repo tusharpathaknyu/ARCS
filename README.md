@@ -134,7 +134,7 @@ Special tokens:    START, END, PAD, SEP, INVALID
 
 Select model type via `--model-type {baseline,two_head,graph_transformer}` in training, RL, evaluation, and demo scripts.
 
-### ValidCircuitGen: Constrained VAE (Direction 5) — `~8.5M params`
+### ValidCircuitGen: Constrained VAE (Direction 5) — `~4.0M params`
 
 A fundamentally different architecture from the autoregressive models above. ValidCircuitGen (VCG) is a Variational Autoencoder that generates **entire circuit graphs in one shot** in continuous space, with differentiable constraint projection guaranteeing structural validity by construction.
 
@@ -163,6 +163,14 @@ Even if the VAE produces a poor initial output, the projection step uses gradien
 - Autoregressive ARCS: Sequential token generation with grammar-based masking → 100% structural validity
 - ValidCircuitGen: One-shot graph generation with constraint projection → validity by construction
 - Both achieve near-100% structural validity through different mechanisms
+
+**Training Results** (100 epochs, 32,281 valid circuits, MPS/Apple Silicon):
+- Train loss: 0.90, Val loss: 0.91
+- Type reconstruction accuracy: 100%, Adjacency accuracy: 100%
+- Value error: 0.083 log10 (~20% relative), Latent space smoothness: 0.992
+- **100% structural validity** on 13/16 topologies (81.2% overall)
+- 3 challenging topologies fail on connectivity only (colpitts, instrumentation_amp, wien_bridge)
+- Validity identical with and without constraint projection — the model itself learned valid generation
 
 ```bash
 # Train VCG
@@ -199,6 +207,9 @@ PYTHONPATH=src python scripts/evaluate_vcg.py \
 | ARCS Two-Head (SL) | 6.8M | 1 | 79.4% | 61.9% | 4.23/8.0 | ~0.02s |
 | **ARCS Graph Transformer (SL)** | **6.83M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
 | ARCS Graph Transformer + RL | 6.83M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
+| ValidCircuitGen (VCG) | 4.0M | 1 | N/A† | 81.2%‡ | N/A† | ~0.01s |
+
+†VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 13/16 topologies.
 
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
 20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **2,941-13,560x
@@ -434,7 +445,7 @@ Example output:
 - [x] Full algorithm explanation document (`docs/ARCS_Algorithm_Explained.md`)
 
 ### Phase 11: ValidCircuitGen — Direction 5 (complete)
-- [x] Constrained VAE architecture: GNN encoder + MLP decoder + constraint projection (~8.5M params)
+- [x] Constrained VAE architecture: GNN encoder + MLP decoder + constraint projection (~4.0M params)
 - [x] 5 differentiable circuit constraints: floating nodes, device completeness, short circuits, connectivity, value bounds
 - [x] Lagrangian training with dual ascent on adaptive multipliers
 - [x] Spec-conditioned generation via cross-attention SpecEncoder
@@ -443,6 +454,17 @@ Example output:
 - [x] Full training script with KL annealing, cosine LR, WandB logging
 - [x] Evaluation pipeline: validity, reconstruction, latent space smoothness, projection ablation
 - [x] 47 tests across 14 test classes
+
+### Phase 12: VCG Training & Evaluation (complete)
+- [x] Fixed critical NaN bug: all-zero spec_mask → softmax over all -inf in cross-attention
+- [x] Fixed MPS eigvalsh: CPU fallback for graph connectivity constraint (eigvalsh not on MPS)
+- [x] Added 2 NaN regression tests (49 total tests, all passing)
+- [x] Trained 100 epochs on 32,281 valid circuits (MPS, ~71s/epoch)
+- [x] Best val_loss: 0.91, train_loss: 0.90
+- [x] 100% type accuracy, 100% adjacency accuracy, 0.083 log10 value error
+- [x] 100% structural validity on 13/16 topologies (81.2% overall)
+- [x] Latent space smoothness: 0.992 ± 0.009
+- [x] Projection not needed: model itself learns valid generation
 
 ---
 

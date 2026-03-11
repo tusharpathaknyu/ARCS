@@ -1,0 +1,165 @@
+{
+  "vcg_params": 3989553,
+  "vcg_config": {
+    "latent_dim": 64,
+    "max_nodes": 12,
+    "n_node_types": 16,
+    "n_topologies": 17,
+    "d_model": 256,
+    "n_encoder_layers": 4,
+    "n_heads": 4,
+    "d_ff": 512,
+    "dropout": 0.1,
+    "n_decoder_layers": 3,
+    "decoder_hidden": 512,
+    "n_spec_types": 10,
+    "max_specs": 8,
+    "n_projection_steps": 20,
+    "projection_lr": 0.1,
+    "n_constraints": 5,
+    "beta_kl": 0.1,
+    "initial_lambda": 0.1
+  },
+  "validity": {
+    "n_generated": 496,
+    "validity_rate": 0.8125,
+    "constraint_rates": {
+      "no_floating_nodes": 1.0,
+      "device_completeness": 1.0,
+      "no_short_circuits": 1.0,
+      "graph_connected": 0.8125,
+      "values_in_bounds": 1.0
+    },
+    "per_topology": {
+      "boost": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 30.625866305443548
+      },
+      "buck": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 6.354193533620526
+      },
+      "buck_boost": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 2.8843187516735442
+      },
+      "colpitts": {
+        "n_generated": 31,
+        "n_valid": 0,
+        "validity_rate": 0.0,
+        "avg_gen_time_ms": 17.667516585319273
+      },
+      "cuk": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 5.973900518109722
+      },
+      "differential_amp": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 5.93144662918583
+      },
+      "flyback": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 7.327425864435011
+      },
+      "forward": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 5.154132843017578
+      },
+      "instrumentation_amp": {
+        "n_generated": 31,
+        "n_valid": 0,
+        "validity_rate": 0.0,
+        "avg_gen_time_ms": 17.76789849804294
+      },
+      "inverting_amp": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 8.172681254725303
+      },
+      "noninverting_amp": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 6.521132684523059
+      },
+      "sallen_key_bandpass": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 10.976583726944463
+      },
+      "sallen_key_highpass": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 5.502262423115392
+      },
+      "sallen_key_lowpass": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 7.513030882804624
+      },
+      "sepic": {
+        "n_generated": 31,
+        "n_valid": 31,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 5.08647580300608
+      },
+      "wien_bridge": {
+        "n_generated": 31,
+        "n_valid": 0,
+        "validity_rate": 0.0,
+        "avg_gen_time_ms": 17.56273546526509
+      }
+    },
+    "avg_gen_time_ms": 10.063850110576999,
+    "n_unique_node_types": 5,
+    "node_type_distribution": {
+      "INDUCTOR": 341,
+      "CAPACITOR": 558,
+      "RESISTOR": 961,
+      "MOSFET_N": 217,
+      "TRANSFORMER": 62
+    },
+    "projection_enabled": true
+  },
+  "reconstruction": {
+    "n_evaluated": 500,
+    "type_accuracy": 1.0,
+    "adjacency_accuracy": 1.0,
+    "avg_value_error_log10": 0.08261881203949452,
+    "avg_kl": 4.236026113271714
+  },
+  "latent_space": {
+    "n_pairs": 20,
+    "avg_smoothness": 0.9920055487459452,
+    "std_smoothness": 0.00896508900686723
+  },
+  "projection_impact": {
+    "with_projection": {
+      "validity_rate": 0.8125,
+      "avg_gen_time_ms": 18.24029783407847
+    },
+    "without_projection": {
+      "validity_rate": 0.8125,
+      "avg_gen_time_ms": 3.041322032610575
+    },
+    "projection_improvement": 0.0
+  }
+}

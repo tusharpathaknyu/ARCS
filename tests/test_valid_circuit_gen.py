@@ -460,6 +460,38 @@ class TestSpecEncoder:
         out = enc(spec_types, spec_values, spec_mask)
         assert out.shape == (B, config.d_model)
 
+    def test_all_zero_spec_mask_no_nan(self, config):
+        """All-zero spec_mask must NOT produce NaN (regression test)."""
+        enc = SpecEncoder(config)
+        B, S = 4, config.max_specs
+        spec_types = torch.zeros(B, S, dtype=torch.long)
+        spec_values = torch.zeros(B, S)
+        spec_mask = torch.zeros(B, S)  # all masked → previously caused NaN
+        out = enc(spec_types, spec_values, spec_mask)
+        assert out.shape == (B, config.d_model)
+        assert not torch.isnan(out).any(), "SpecEncoder produced NaN for all-zero spec_mask"
+        assert (out == 0.0).all(), "All-masked samples should get zero embeddings"
+
+    def test_mixed_masked_batch(self, config):
+        """Batch where some samples have specs and some don't."""
+        enc = SpecEncoder(config)
+        B, S = 4, config.max_specs
+        spec_types = torch.randint(0, config.n_spec_types, (B, S))
+        spec_values = torch.randn(B, S)
+        spec_mask = torch.zeros(B, S)
+        spec_mask[0, :3] = 1.0   # sample 0 has 3 specs
+        spec_mask[2, :1] = 1.0   # sample 2 has 1 spec
+        # samples 1, 3 have NO specs → all-zero mask
+        out = enc(spec_types, spec_values, spec_mask)
+        assert out.shape == (B, config.d_model)
+        assert not torch.isnan(out).any(), "Mixed batch produced NaN"
+        # Samples with no specs should be zero
+        assert (out[1] == 0.0).all()
+        assert (out[3] == 0.0).all()
+        # Samples with specs should be non-zero (almost certainly)
+        assert out[0].abs().sum() > 0
+        assert out[2].abs().sum() > 0
+
 
 class TestVCGEncoder:
     def test_output_shape(self, config, sample_batch):

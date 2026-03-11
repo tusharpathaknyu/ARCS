@@ -28,7 +28,7 @@ Architecture
     Projection:  20-step Adam optimizer on constraint violations
     Training:    Reconstruction + β-KL + Lagrangian constraints
 
-Parameters: ~8.5M
+Parameters: ~4.0M
 """
 
 from __future__ import annotations
@@ -533,8 +533,10 @@ class CircuitConstraints(nn.Module):
             L = torch.diag(degree) - A_sub
 
             try:
-                eigenvalues = torch.linalg.eigvalsh(L)
-                fiedler = eigenvalues[1]  # 2nd smallest
+                # eigvalsh not implemented on MPS — move to CPU if needed
+                L_compute = L.cpu() if L.device.type == "mps" else L
+                eigenvalues = torch.linalg.eigvalsh(L_compute)
+                fiedler = eigenvalues[1].to(L.device)  # 2nd smallest
                 violations[b] = F.relu(0.01 - fiedler)
             except RuntimeError:
                 violations[b] = 1.0  # failed → assume disconnected
@@ -741,7 +743,22 @@ class SpecEncoder(nn.Module):
 
         query = self.query.expand(B, -1, -1)
         key_padding_mask = ~spec_mask.bool()
+
+        # Guard against all-masked specs (no specs available → NaN in softmax)
+        all_masked = key_padding_mask.all(dim=-1)  # (B,)
+        if all_masked.any():
+            # For fully-masked samples, unmask first position to prevent NaN
+            # The value is arbitrary since there's no real spec info;
+            # the type_embed(0) + value_proj(0) provides a neutral default.
+            safe_mask = key_padding_mask.clone()
+            safe_mask[all_masked, 0] = False
+            key_padding_mask = safe_mask
+
         out, _ = self.cross_attn(query, x, x, key_padding_mask=key_padding_mask)
+
+        # Zero out embeddings for samples that had no specs at all
+        if all_masked.any():
+            out[all_masked] = 0.0
 
         return out.squeeze(1)  # (B, d_model)
 

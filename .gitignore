@@ -44,3 +44,4 @@ checkpoints/
 *.pth
 *.ckpt
 wandb/
+.claude/worktrees/

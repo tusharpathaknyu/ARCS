@@ -84,9 +84,10 @@ def evaluate_validity(
     """
     model.eval()
 
-    # Collect unique topologies
+    # Collect unique topologies (sample throughout dataset for diversity)
     topo_items: dict[int, dict] = {}
-    for i in range(min(len(dataset), 1000)):
+    step = max(1, len(dataset) // 1000)
+    for i in range(0, len(dataset), step):
         item = dataset[i]
         topo_idx = item["topology_idx"].item()
         if topo_idx not in topo_items:
