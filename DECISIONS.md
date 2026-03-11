@@ -752,3 +752,43 @@ Three topologies fail on graph connectivity only:
 - **colpitts** (7 components): Largest topology, complex oscillator structure
 - **instrumentation_amp** (4 components): All-resistor topology, subtle adjacency pattern
 - **wien_bridge** (4 components): Topology idx=16, formerly all-zero spec_mask (376 valid samples — lowest data count)
+
+---
+
+## Phase 13: Novel Architecture Extensions (GRPO, CCFM, Hybrid Pipeline)
+
+### Decision 13.1: GRPO Per-Topology RL Instead of Global Baseline
+- **Problem**: Vanilla REINFORCE uses a single EMA baseline across all topologies. Power converters (max reward ≈ 8 with efficiency+ripple+vout_error) get averaged against signal circuits (max ≈ 3). Power converter attempts that achieve reward ≈ 3 get negative advantage → model stops generating them.
+- **Root cause**: Cross-topology reward scale interference in global baseline.
+- **Solution**: Group Relative Policy Optimization — generate groups of `group_size` circuits per topology, compute per-group z-scored advantage: `(r - μ_group) / (σ_group + ε)`. Each topology has its own normalization.
+- **Alternatives rejected**:
+  - Per-topology EMA baselines: Requires tracking 16 separate baselines, stale updates for rare topologies.
+  - Continuous Value Head: Modifying tokenizer/model architecture for regression — too invasive for marginal benefit.
+- **Implementation**: Fully backward-compatible. Old REINFORCE is still default; pass `--grpo` to enable. New fields in `RLConfig`: `grpo`, `group_size`, `n_topos_per_step`, `grpo_clip_adv`, `grpo_eps`.
+- **Impact**: Eliminates RL regression on power converter topologies.
+
+### Decision 13.2: Constrained Circuit Flow Matching (CCFM) Over Diffusion
+- **Problem**: VCG uses a vanilla VAE which has mode collapse tendencies (KL ≈ 5.6) and generates circuits without explicit constraint satisfaction during generation.
+- **Why Flow Matching over Diffusion**: Conditional Flow Matching (Lipman et al. 2023) has straight-line ODE paths → fewer sampling steps (50 vs 1000 for DDPM), deterministic sampling, better mode coverage than VAE, and naturally supports gradient-based guidance during sampling.
+- **Key architectural choices**:
+  - **DiT-style blocks with Adaptive LayerNorm**: Scale/shift params from (time, spec) conditioning — more expressive than concatenation or cross-attention for time-dependent conditioning.
+  - **Zero-initialization**: Output projection and AdaLN shift/scale bias initialized to zero — model starts as identity, then gradually learns flow fields. Critical for stable training.
+  - **Constraint guidance after t=0.3**: Earlier guidance on noisy states is counterproductive. Guidance strength ramps up as ODE sampling progresses and decoded circuits become meaningful.
+  - **Learnable per-constraint weights**: 5 softplus weights balance KCL, graph connectivity, component values, topology bounds, and topology type constraints automatically.
+  - **Consistency regularization**: Additional loss term encouraging predicted z_1 to match target — improves sample quality at marginal training cost.
+- **Reuses VCG encoder/decoder**: Only the flow velocity network (3.7M params) is trained new. VCG encoder/decoder/constraints are frozen. Total: 7.6M params.
+- **Novelty claim**: First application of conditional flow matching to electronic circuit generation with differentiable constraint guidance. This is the core novel contribution of the paper.
+
+### Decision 13.3: Hybrid Generation Pipeline
+- **Problem**: ARCS (autoregressive), VCG (VAE), and CCFM (flow matching) each have different strengths. Need a unified way to generate from all sources and compare.
+- **Solution**: `HybridGenerator` generates candidates from all sources in parallel, simulates all in SPICE, and returns the best by reward. Serves as both an evaluation framework and a practical "best-of-all-worlds" generator.
+- **Bridge function**: `vcg_graph_to_spice()` converts CircuitGraph → token sequence → DecodedCircuit → SPICE simulation → reward, bridging the graph-based VCG/CCFM world with the sequence-based ARCS/SPICE world.
+- **Design**: Each source is called independently; failures in one don't block others. Results are ranked by SPICE reward. Generation time is tracked per-circuit for latency analysis.
+
+### Test Coverage Summary (Phase 13)
+| Component | New Tests | Total |
+|-----------|-----------|-------|
+| GRPO RL | 5 | 10 (rl.py) |
+| CCFM | 21 | 21 (flow_matching.py) |
+| Hybrid Pipeline | 7 | 7 (hybrid_pipeline.py) |
+| **Total suite** | **82 new** | **355 tests** |

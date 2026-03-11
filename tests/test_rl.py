@@ -7,6 +7,7 @@ from arcs.rl import (
     simulate_decoded_circuit,
     compute_reward,
     sample_training_specs,
+    sample_specs_for_topology,
     sample_with_logprobs,
     RLConfig,
     ARCSRLTrainer,
@@ -157,10 +158,130 @@ def test_rl_trainer_init():
     print("  PASSED")
 
 
+# -----------------------------------------------------------------------
+# GRPO tests
+# -----------------------------------------------------------------------
+
+def test_sample_specs_for_topology():
+    """sample_specs_for_topology produces prefix for a given topology."""
+    tokenizer = CircuitTokenizer()
+    device = torch.device("cpu")
+
+    topo, specs, prefix = sample_specs_for_topology("buck", tokenizer, device)
+    assert topo == "buck"
+    assert "vin" in specs and "vout" in specs
+    assert prefix.ndim == 2 and prefix.size(0) == 1
+
+    # Specs should be perturbed from base ±20%
+    from arcs.templates import OPERATING_CONDITIONS
+    base_vin = OPERATING_CONDITIONS["buck"]["vin"]
+    assert 0.8 * base_vin <= specs["vin"] <= 1.2 * base_vin
+
+
+def test_grpo_config():
+    """RLConfig with GRPO fields."""
+    cfg = RLConfig(grpo=True, group_size=6, n_topos_per_step=2)
+    assert cfg.grpo is True
+    assert cfg.group_size == 6
+    assert cfg.n_topos_per_step == 2
+    assert cfg.grpo_clip_adv == 5.0
+    assert cfg.grpo_eps == 1e-4
+
+
+def test_grpo_trainer_step():
+    """ARCSRLTrainer.train_step_grpo runs without error."""
+    tokenizer = CircuitTokenizer()
+    device = torch.device("cpu")
+    config = ARCSConfig.small()
+
+    model = ARCSModel(config).to(device)
+    ref_model = ARCSModel(config).to(device)
+    ref_model.load_state_dict(model.state_dict())
+
+    rl_config = RLConfig(
+        grpo=True,
+        group_size=2,           # small for speed
+        n_topos_per_step=2,     # 2 topos × 2 per group = 4 episodes
+        n_steps=1,
+        log_interval=1,
+        eval_interval=1,
+        n_eval_samples=2,
+    )
+    trainer = ARCSRLTrainer(
+        model=model, ref_model=ref_model, tokenizer=tokenizer,
+        config=rl_config, device=device, output_dir="/tmp/arcs_grpo_test",
+    )
+
+    stats = trainer.train_step_grpo()
+    assert "reward_mean" in stats
+    assert "n_topologies" in stats
+    assert stats["n_topologies"] == 2
+    assert isinstance(stats["loss"], float)
+    print(f"  GRPO step: reward={stats['reward_mean']:.3f}, "
+          f"topos={stats['n_topologies']}, loss={stats['loss']:.4f}")
+
+
+def test_grpo_advantage_normalization():
+    """Verify group-relative advantage z-scoring."""
+    import numpy as np
+    # Simulate a group of rewards and check advantage computation
+    rewards = [1.0, 3.0, 2.0, 4.0]
+    grp = np.array(rewards)
+    grp_mean = grp.mean()  # 2.5
+    grp_std = grp.std()    # ~1.118
+    eps = 1e-4
+
+    advantages = [(r - grp_mean) / (grp_std + eps) for r in rewards]
+    # Should be z-scored: mean ≈ 0, std ≈ 1
+    assert abs(np.mean(advantages)) < 0.01
+    assert abs(np.std(advantages) - 1.0) < 0.01
+
+    # Identical rewards → all advantages ≈ 0 (protected by eps)
+    uniform = [2.0, 2.0, 2.0, 2.0]
+    grp_u = np.array(uniform)
+    advs_u = [(r - grp_u.mean()) / (grp_u.std() + eps) for r in uniform]
+    assert all(abs(a) < 0.01 for a in advs_u)
+
+
+def test_grpo_train_dispatches():
+    """train() dispatches to GRPO when config.grpo is True."""
+    tokenizer = CircuitTokenizer()
+    device = torch.device("cpu")
+    config = ARCSConfig.small()
+
+    model = ARCSModel(config).to(device)
+    ref_model = ARCSModel(config).to(device)
+    ref_model.load_state_dict(model.state_dict())
+
+    rl_config = RLConfig(
+        grpo=True,
+        group_size=1,
+        n_topos_per_step=1,
+        n_steps=1,
+        log_interval=1,
+        eval_interval=1,
+        n_eval_samples=1,
+        save_interval=9999,
+    )
+    trainer = ARCSRLTrainer(
+        model=model, ref_model=ref_model, tokenizer=tokenizer,
+        config=rl_config, device=device, output_dir="/tmp/arcs_grpo_dispatch",
+    )
+
+    results = trainer.train()
+    assert "best_reward" in results
+    print(f"  GRPO train dispatch OK: best_reward={results['best_reward']:.3f}")
+
+
 if __name__ == "__main__":
     test_components_to_params()
     test_decode_and_simulate()
     test_sample_specs()
     test_model_generation()
     test_rl_trainer_init()
+    test_sample_specs_for_topology()
+    test_grpo_config()
+    test_grpo_trainer_step()
+    test_grpo_advantage_normalization()
+    test_grpo_train_dispatches()
     print("\n=== ALL TESTS PASSED ===")

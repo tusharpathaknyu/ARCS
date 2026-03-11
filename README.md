@@ -188,9 +188,56 @@ PYTHONPATH=src python scripts/evaluate_vcg.py \
     --data data/combined --n-samples 160 -v
 ```
 
+### Constrained Circuit Flow Matching (CCFM) — `~7.6M params`
+
+A novel generative model that replaces VCG's VAE with Conditional Flow Matching (Lipman et al. 2023), augmented with differentiable constraint guidance during ODE sampling. **To our knowledge, this is the first application of flow matching to electronic circuit generation.**
+
+**Architecture:**
+```
+┌────────────┐      ┌───────────────────┐      ┌──────────────┐
+│ z_0 ~ N(0,I)│ ──→ │ FlowVelocityNet   │ ──→ │ z_1 (circuit) │
+└────────────┘      │ 4-layer DiT       │      └──────┬───────┘
+                    │ + AdaptiveLayerNorm│             │
+┌────────────┐      │ + constraint      │      ┌──────▼───────┐
+│ Spec cond. │ ──→ │   guidance ∇c     │      │ VCGDecoder   │
+│ (cross-attn)│     └───────────────────┘      │ → circuit    │
+└────────────┘                                  └──────────────┘
+```
+
+**Key innovations:**
+- **DiT-style transformer blocks**: Adaptive Layer Norm conditioned on (time, spec) — scale/shift params predicted from conditioning, zero-initialized for stable training
+- **Constraint-guided sampling**: During ODE integration, velocity is steered away from constraint violations: $v_{\\text{guided}} = v_\\theta(z_t, t, c) - \\lambda \\cdot \\nabla_z \\sum_i w_i \\cdot c_i(\\text{decode}(z_t))$
+- **Learnable guidance weights**: Per-constraint softplus weights automatically balance constraint importance
+- **Consistency regularization**: Additional loss term encouraging predicted $z_1$ endpoints to match targets
+- **Reuses VCG infrastructure**: Encoder/decoder/constraints from VCG are frozen; only the flow network (3.7M params) is trained
+
+**Training**: $L = \\mathbb{E}_{t,z_0,z_1} \\| v_\\theta(z_t, t, c) - (z_1 - z_0) \\|^2 + 0.1 \\cdot L_{\\text{consistency}}$
+
+**Sampling**: 50-step Euler integration from noise to circuit, with constraint guidance after $t=0.3$
+
+```bash
+# Train CCFM (reuses VCG encoder/decoder, trains flow network)
+PYTHONPATH=src python scripts/train_ccfm.py \
+    --data data/combined --vcg-checkpoint checkpoints/vcg/best_model.pt
+```
+
+### GRPO: Group Relative Policy Optimization
+
+Fixes the RL regression problem where power converters lose performance. Instead of a single global reward baseline, GRPO generates **groups** of circuits per topology and computes z-scored advantages within each group:
+
+$$\\text{advantage}_i = \\frac{r_i - \\mu_{\\text{group}}}{\\sigma_{\\text{group}} + \\epsilon}$$
+
+This prevents cross-topology interference: power converters (max reward ≈ 8) and signal circuits (max reward ≈ 3) each have their own normalization.
+
+```bash
+# RL with GRPO (recommended over vanilla REINFORCE)
+PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
+    --grpo --group-size 4 --n-topos-per-step 3
+```
+
 ### Training Pipeline
 1. **Supervised pre-training**: Next-token prediction on all circuit sequences, 5x value-token loss weight
-2. **RL fine-tuning**: REINFORCE with KL penalty + baseline, reward from SPICE simulation
+2. **RL fine-tuning**: REINFORCE or GRPO with KL penalty, reward from SPICE simulation
 
 ---
 
@@ -465,6 +512,26 @@ Example output:
 - [x] 100% structural validity on 13/16 topologies (81.2% overall)
 - [x] Latent space smoothness: 0.992 ± 0.009
 - [x] Projection not needed: model itself learns valid generation
+
+### Phase 13: Novel Architecture Improvements (complete)
+- [x] **GRPO Per-Topology RL** — Group Relative Policy Optimization replacing global-baseline REINFORCE
+  - Per-topology z-scored advantages: advantage = (r - μ_group) / (σ_group + ε)
+  - Fixes RL regression where power converters (max reward ~8) got negative advantage against easy signal circuits
+  - CLI: `--grpo --group-size 4 --n-topos-per-step 3`
+  - 5 new tests (10 total RL tests), backward compatible with existing REINFORCE mode
+- [x] **Constrained Circuit Flow Matching (CCFM)** — Novel generative model (3.7M flow network + 4M VCG)
+  - Conditional flow matching replaces VAE's KL-constrained latent space with optimal-transport paths
+  - DiT-style transformer blocks with adaptive layer norm for time + spec conditioning
+  - Constraint-guided ODE sampling: velocity projected toward feasible circuit set during integration
+  - Sinusoidal time embedding + per-constraint learnable guidance weights
+  - 21 new tests covering components, integration, theory (flow paths, loss convergence)
+- [x] **Hybrid Generation Pipeline** — Multi-source circuit generation with SPICE-based ranking
+  - VCG→SPICE bridge: CircuitGraph → token sequence → DecodedCircuit → simulation → reward
+  - CCFM→SPICE bridge: same pipeline with flow-matching-generated circuits
+  - `HybridGenerator`: generates from ARCS + VCG + CCFM, ranks by simulated reward
+  - `evaluate_generator()`: standardized evaluation benchmark for any circuit generator
+  - 7 new tests
+- [x] 355 total tests passing (82 new tests added)
 
 ---
 

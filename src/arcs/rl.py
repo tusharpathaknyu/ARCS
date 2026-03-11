@@ -504,6 +504,45 @@ def sample_training_specs(
     return topo, specs, prefix
 
 
+def sample_specs_for_topology(
+    topology: str,
+    tokenizer: CircuitTokenizer,
+    device: torch.device,
+) -> tuple[str, dict[str, float], torch.Tensor]:
+    """Sample specs for a *specific* topology (used by GRPO).
+
+    Like ``sample_training_specs`` but takes an explicit topology name
+    instead of sampling uniformly.
+    """
+    conditions = dict(OPERATING_CONDITIONS[topology])
+
+    specs: dict[str, float] = {}
+    for key, val in conditions.items():
+        if key == "fsw":
+            specs[key] = val  # keep switching frequency fixed
+        else:
+            factor = np.random.uniform(0.8, 1.2)
+            specs[key] = val * factor
+
+    # Build prefix tokens
+    prefix_ids = [tokenizer.name_to_id["START"]]
+    topo_key = f"TOPO_{topology.upper()}"
+    if topo_key in tokenizer.name_to_id:
+        prefix_ids.append(tokenizer.name_to_id[topo_key])
+    prefix_ids.append(tokenizer.sep_id)
+
+    for spec_name in ["vin", "vout", "iout", "fsw"]:
+        if spec_name in specs:
+            spec_key = f"SPEC_{spec_name.upper()}"
+            if spec_key in tokenizer.name_to_id:
+                prefix_ids.append(tokenizer.name_to_id[spec_key])
+                prefix_ids.append(tokenizer.encode_value(abs(specs[spec_name])))
+    prefix_ids.append(tokenizer.sep_id)
+
+    prefix = torch.tensor([prefix_ids], device=device)
+    return topology, specs, prefix
+
+
 # ---------------------------------------------------------------------------
 # REINFORCE Trainer
 # ---------------------------------------------------------------------------
@@ -532,6 +571,12 @@ class RLConfig:
     kl_target: float = 0.5           # target KL divergence (adaptive coeff)
     adaptive_kl: bool = False        # enable adaptive KL coefficient
     validity_early_stop: float = 0.0 # stop if struct_valid drops below this (0 = disabled)
+    # v3: GRPO (Group Relative Policy Optimization)
+    grpo: bool = False               # enable GRPO mode
+    group_size: int = 4              # circuits per topology per step
+    n_topos_per_step: int = 3        # topologies sampled per GRPO step
+    grpo_clip_adv: float = 5.0       # clip advantage magnitude
+    grpo_eps: float = 1e-4           # std normalization epsilon
 
 
 class ARCSRLTrainer:
@@ -722,6 +767,204 @@ class ARCSRLTrainer:
 
         return stats
 
+    # ------------------------------------------------------------------
+    # GRPO: Group Relative Policy Optimization
+    # ------------------------------------------------------------------
+
+    def train_step_grpo(self) -> dict[str, float]:
+        """GRPO training step with per-topology advantage normalization.
+
+        Unlike vanilla REINFORCE which uses a single global EMA baseline,
+        GRPO generates a *group* of circuits for each sampled topology and
+        computes advantage = (r - μ_group) / (σ_group + ε).  This prevents
+        cross-topology reward-scale interference (e.g. power converters
+        with max reward ~8 vs signal circuits with max ~3).
+
+        Per step:
+            1. Sample ``n_topos_per_step`` topologies (without replacement).
+            2. For each topology generate ``group_size`` circuits.
+            3. Compute per-group z-scored advantages.
+            4. REINFORCE loss aggregated across all groups.
+
+        Effective batch = n_topos_per_step × group_size.
+        """
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        all_rewards: list[float] = []
+        all_kls: list[float] = []
+        all_entropies: list[float] = []
+        all_infos: list[dict] = []
+        total_loss = torch.tensor(0.0, device=self.device)
+        n_episodes = 0
+
+        # ------ sample topologies for this step ------
+        topologies = list(OPERATING_CONDITIONS.keys())
+        n_to_sample = min(self.config.n_topos_per_step, len(topologies))
+        selected_topos = list(
+            np.random.choice(topologies, size=n_to_sample, replace=False)
+        )
+
+        for topo in selected_topos:
+            # ---- generate a group of circuits for this topology ----
+            group_rewards: list[float] = []
+            group_episodes: list[
+                tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+            ] = []  # (log_probs, kl, entropy)
+            group_infos: list[dict] = []
+
+            for _ in range(self.config.group_size):
+                _, specs, prefix = sample_specs_for_topology(
+                    topo, self.tokenizer, self.device
+                )
+                prefix_len = prefix.size(1)
+
+                # Generate WITH gradients
+                gen_tokens, log_probs, entropy = self._generate_with_grad(
+                    prefix
+                )
+
+                # Decode & simulate (no grad needed)
+                all_ids = prefix[0].tolist() + gen_tokens.tolist()
+                decoded = decode_generated_sequence(all_ids, self.tokenizer)
+                outcome = simulate_decoded_circuit(decoded, self.runner)
+                reward = compute_reward(
+                    decoded, outcome, specs, self.config.struct_bonus
+                )
+
+                # KL from ref model
+                full_seq = torch.cat(
+                    [prefix, gen_tokens.unsqueeze(0)], dim=1
+                )
+                with torch.no_grad():
+                    ref_logits, _ = self._model_forward(
+                        self.ref_model, full_seq
+                    )
+                pol_logits, _ = self._model_forward(self.model, full_seq)
+
+                ref_lp = F.log_softmax(
+                    ref_logits[0, prefix_len - 1 : -1, :], dim=-1
+                )
+                pol_lp = F.log_softmax(
+                    pol_logits[0, prefix_len - 1 : -1, :], dim=-1
+                )
+                kl = (ref_lp.exp() * (ref_lp - pol_lp)).sum(-1).mean()
+
+                group_rewards.append(reward)
+                group_episodes.append((log_probs, kl, entropy))
+
+                info: dict = {
+                    "topology": topo,
+                    "valid_structure": decoded.valid_structure,
+                    "sim_success": outcome.success,
+                    "sim_valid": outcome.valid,
+                    "n_components": len(decoded.components),
+                    "reward": reward,
+                }
+                if outcome.success:
+                    info["efficiency"] = outcome.metrics.get("efficiency", 0)
+                    info["vout_error"] = outcome.metrics.get(
+                        "vout_error_pct", 100
+                    )
+                    info["ripple"] = outcome.metrics.get("ripple_ratio", 1.0)
+                group_infos.append(info)
+
+            # ---- compute group-relative advantages ----
+            grp = np.array(group_rewards)
+            grp_mean = grp.mean()
+            grp_std = grp.std()
+
+            for i, (log_probs, kl, entropy) in enumerate(group_episodes):
+                adv = (group_rewards[i] - grp_mean) / (
+                    grp_std + self.config.grpo_eps
+                )
+                adv = float(
+                    np.clip(
+                        adv,
+                        -self.config.grpo_clip_adv,
+                        self.config.grpo_clip_adv,
+                    )
+                )
+
+                if log_probs.numel() > 0:
+                    pg_loss = -(adv * log_probs.mean())
+                else:
+                    pg_loss = torch.tensor(0.0, device=self.device)
+
+                episode_loss = (
+                    pg_loss
+                    + self.config.kl_coeff * kl
+                    - self.config.entropy_coeff * entropy.mean()
+                )
+                total_loss = total_loss + episode_loss
+                n_episodes += 1
+
+            all_rewards.extend(group_rewards)
+            all_kls.extend([ep[1].item() for ep in group_episodes])
+            all_entropies.extend(
+                [ep[2].mean().item() for ep in group_episodes]
+            )
+            all_infos.extend(group_infos)
+
+        # ---- backprop ----
+        if n_episodes > 0:
+            total_loss = total_loss / n_episodes
+
+        if not torch.isfinite(total_loss):
+            logger.warning("Non-finite GRPO loss, skipping gradient update")
+            self.optimizer.zero_grad()
+        else:
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), self.config.max_grad_norm
+            )
+            self.optimizer.step()
+
+        # Update baseline (for logging & backward compat)
+        mean_reward = float(np.mean(all_rewards)) if all_rewards else 0.0
+        self.baseline = (
+            self.config.reward_baseline_decay * self.baseline
+            + (1 - self.config.reward_baseline_decay) * mean_reward
+        )
+
+        # Per-topology reward breakdown
+        topo_rewards: dict[str, list[float]] = defaultdict(list)
+        for info in all_infos:
+            topo_rewards[info["topology"]].append(info["reward"])
+
+        stats: dict[str, float | int | dict] = {
+            "reward_mean": mean_reward,
+            "reward_std": float(np.std(all_rewards)) if all_rewards else 0.0,
+            "kl_mean": (
+                float(np.mean(all_kls)) if all_kls else 0.0
+            ),
+            "entropy_mean": (
+                float(np.mean(all_entropies)) if all_entropies else 0.0
+            ),
+            "loss": total_loss.item(),
+            "baseline": self.baseline,
+            "sim_success_rate": (
+                float(np.mean([i["sim_success"] for i in all_infos]))
+                if all_infos
+                else 0.0
+            ),
+            "valid_structure_rate": (
+                float(np.mean([i["valid_structure"] for i in all_infos]))
+                if all_infos
+                else 0.0
+            ),
+            "sim_valid_rate": (
+                float(
+                    np.mean([i.get("sim_valid", False) for i in all_infos])
+                )
+                if all_infos
+                else 0.0
+            ),
+            "n_topologies": len(selected_topos),
+        }
+
+        return stats
+
     def _generate_with_grad(
         self,
         prefix: torch.Tensor,
@@ -908,9 +1151,15 @@ class ARCSRLTrainer:
 
     def train(self) -> dict:
         """Full RL training loop with adaptive KL & validity early stopping."""
+        mode = "GRPO" if self.config.grpo else "REINFORCE"
+        eff_batch = (
+            f"{self.config.n_topos_per_step}×{self.config.group_size}"
+            if self.config.grpo
+            else str(self.config.batch_size)
+        )
         logger.info(
-            f"Starting RL training: {self.config.n_steps} steps, "
-            f"batch={self.config.batch_size}, lr={self.config.lr}, "
+            f"Starting RL training ({mode}): {self.config.n_steps} steps, "
+            f"batch={eff_batch}, lr={self.config.lr}, "
             f"kl={self.config.kl_coeff}, struct_bonus={self.config.struct_bonus}, "
             f"adaptive_kl={self.config.adaptive_kl}, temp={self.config.temperature}"
         )
@@ -925,7 +1174,10 @@ class ARCSRLTrainer:
 
         for step in range(1, self.config.n_steps + 1):
             self.global_step = step
-            stats = self.train_step()
+            if self.config.grpo:
+                stats = self.train_step_grpo()
+            else:
+                stats = self.train_step()
 
             # Record history
             for k, v in stats.items():
@@ -1049,6 +1301,15 @@ def main():
                         help="Enable adaptive KL coefficient")
     parser.add_argument("--validity-early-stop", type=float, default=0.0,
                         help="Stop if struct_valid drops below this (0=disabled)")
+    # GRPO options
+    parser.add_argument("--grpo", action="store_true",
+                        help="Enable Group Relative Policy Optimization")
+    parser.add_argument("--group-size", type=int, default=4,
+                        help="GRPO: circuits per topology per step")
+    parser.add_argument("--n-topos-per-step", type=int, default=3,
+                        help="GRPO: topologies sampled per step")
+    parser.add_argument("--grpo-clip-adv", type=float, default=5.0,
+                        help="GRPO: clip advantage magnitude")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -1110,6 +1371,10 @@ def main():
         kl_target=args.kl_target,
         adaptive_kl=args.adaptive_kl,
         validity_early_stop=args.validity_early_stop,
+        grpo=args.grpo,
+        group_size=args.group_size,
+        n_topos_per_step=args.n_topos_per_step,
+        grpo_clip_adv=args.grpo_clip_adv,
     )
 
     # Train
