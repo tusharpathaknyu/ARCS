@@ -644,6 +644,50 @@ Reward progression through training:
 
 ---
 
+## Direction 5: ValidCircuitGen Design Decisions (Phase 11)
+
+### Design Decision D21: VAE Architecture vs. Autoregressive
+- **Problem**: Autoregressive models generate circuits token-by-token; constrained decoding handles structural validity but can only enforce local (per-step) constraints. Global properties like graph connectivity require look-ahead.
+- **Decision**: Implement a complementary VAE-based architecture (ValidCircuitGen) alongside the existing autoregressive models.
+- **Why**: VAEs generate entire graphs in one shot (continuous space), enabling global constraint projection before discretization. This provides formal validity guarantees for any constraint expressible as a differentiable function.
+- **Trade-off**: VAEs suffer from the continuous→discrete gap (post-softmax argmax can introduce errors), but the projection step mitigates this by steering the soft graph toward the feasible set before discretization.
+
+### Design Decision D22: Bidirectional Graph Transformer Encoder
+- **Problem**: Encoding circuits requires understanding bidirectional relationships (not just causal left-to-right).
+- **Decision**: Use a bidirectional (non-causal) Graph Transformer with adjacency bias and RWPE, reusing infrastructure from the existing `graph_transformer` model.
+- **Specifics**: 4-layer encoder with per-head adjacency bias scalars, K=8 RWPE from `TOPOLOGY_RWPE`, mean-pooling over active nodes → latent (mu, logvar).
+- **Why**: The encoder sees the full circuit simultaneously (unlike the causal autoregressive decoder), so bidirectional attention is natural and more powerful.
+
+### Design Decision D23: 5 Differentiable Constraint Functions
+- **Problem**: Multiple structural requirements must be simultaneously satisfied for a valid circuit.
+- **Decision**: Implement 5 differentiable constraint functions operating on soft (continuous) graph representations: (1) no floating nodes, (2) device pin completeness, (3) no short circuits, (4) graph connectivity via Fiedler value, (5) value bounds.
+- **Why**: Differentiable constraints enable gradient-based projection (20-step Adam on logits) and Lagrangian training with adaptive multipliers. Each constraint returns a per-sample scalar ≥ 0 (zero = satisfied).
+- **Graph connectivity**: Uses algebraic connectivity (2nd eigenvalue of Laplacian). Although computing eigenvalues in a loop is slow, it provides a true connectivity signal — approximations (like multi-hop message passing) can miss disconnected components.
+
+### Design Decision D24: Constraint Projection via Gradient Descent on Logits
+- **Problem**: VAE decoder output is a soft graph — discretization may violate constraints.
+- **Decision**: Before discretization, optimize the logit-space parameters (pre-softmax node logits, pre-sigmoid edge logits, value parameters) for 20 Adam steps to minimize total constraint violation.
+- **Why**: Working in logit space preserves differentiability. The projection finds the closest feasible soft graph, then argmax/threshold produces the discrete circuit. If total violation < ε after projection, validity is guaranteed to ε tolerance.
+- **Tracked best**: Keep the best-violation state across steps, not just the final state, to handle non-monotone convergence.
+
+### Design Decision D25: Lagrangian Training with Dual Ascent
+- **Problem**: Balancing reconstruction quality, KL divergence, and 5 constraint penalties requires careful tuning of hyperparameters.
+- **Decision**: Use Lagrangian relaxation: L = L_recon + β·L_KL + Σλ_i·c_i, where λ_i are learned log-space multipliers updated via dual ascent.
+- **Specifics**: Model params minimize L; multipliers maximize λ·violations (gradient ascent with lr=0.01). Multipliers clamped to [0.01, 100.0] to prevent explosion.
+- **Why**: Automatically increases penalty for frequently violated constraints, steering the model toward validity without manual tuning. The minimax formulation converges to a saddle point where constraints are approximately satisfied.
+
+### Design Decision D26: Separate VCGConfig (Not in MODEL_TYPES)
+- **Problem**: VCG uses fundamentally different hyperparameters (latent_dim, max_nodes, n_projection_steps) than autoregressive models (vocab_size, max_seq_len, n_layers).
+- **Decision**: VCG uses its own `VCGConfig` dataclass and is not registered in the `MODEL_TYPES` factory in `model_enhanced.py`.
+- **Why**: Shoe-horning VCG into `ARCSConfig` would create confusion. VCG has its own training script (`train_vcg.py`), evaluation script (`evaluate_vcg.py`), and checkpoint format, while sharing the data pipeline (`CircuitSample`, `COMPONENT_TO_PARAM`, `TOPOLOGY_ADJACENCY`).
+
+### Design Decision D27: 16 Extended Node Types
+- **Problem**: The tokenizer uses component tokens (COMP_RESISTOR, etc.) but VCG needs a node-type embedding for graph nodes.
+- **Decision**: Define 16 node types (NONE + 15 component types including passives, active devices, and sources) in `NODE_TYPE_TO_IDX`, covering all components across 16 topologies.
+- **Why**: Broader coverage than the 7 types in the original model. Includes TRANSFORMER, DIODE variants, SWITCH_IDEAL, and explicit source types — needed because VCG must handle the full topology portfolio without relying on sequential token ordering.
+
+---
+
 ## Next Steps (Priority Order)
 1. ~~Phase 1: Data generation~~ ✅
 2. ~~Phase 2: Model training~~ ✅ (100 epochs, best val_loss=1.279)
@@ -657,6 +701,13 @@ Reward progression through training:
    - ✅ Compare all 3 architectures on 160-spec SPICE evaluation
    - ✅ RL fine-tune Graph Transformer (5000 steps, best eval reward=7.468/8.0)
    - ✅ Post-RL 160-spec evaluation (sim_success=86.9%, struct_valid=100%)
-8. **Phase 7: Paper** ← NEXT
+8. ~~Phase 7: Paper~~ ✅
+9. ~~Phase 8-10: RWPE, Visualization, Documentation~~ ✅
+10. ~~**Phase 11: ValidCircuitGen (Direction 5)**~~ ✅
+    - ✅ Constrained VAE with formal validity guarantees (~8.5M params)
+    - ✅ 5 differentiable constraints, Lagrangian training, constraint projection
+    - ✅ Training, evaluation, and comparison scripts
+    - ✅ 47 tests across 14 test classes
+11. **Phase 12: Train & Evaluate VCG** ← NEXT
    - Architecture comparison table (5 models + 2 baselines × metrics)
    - Final paper targeting DAC / ICCAD / NeurIPS workshop

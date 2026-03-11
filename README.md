@@ -134,6 +134,52 @@ Special tokens:    START, END, PAD, SEP, INVALID
 
 Select model type via `--model-type {baseline,two_head,graph_transformer}` in training, RL, evaluation, and demo scripts.
 
+### ValidCircuitGen: Constrained VAE (Direction 5) — `~8.5M params`
+
+A fundamentally different architecture from the autoregressive models above. ValidCircuitGen (VCG) is a Variational Autoencoder that generates **entire circuit graphs in one shot** in continuous space, with differentiable constraint projection guaranteeing structural validity by construction.
+
+**Architecture:**
+```
+Encoder:     4-layer Bidirectional Graph Transformer (d_model=256, 4 heads)
+             + RWPE (K=8 walks) + Spec cross-attention → mu, logvar
+Decoder:     3-layer MLP backbone → soft_X (node types) + soft_A (adjacency) + soft_V (values)
+Projection:  20-step Adam optimizer on 5 differentiable constraints
+Training:    Reconstruction + β-KL + Lagrangian constraint penalties with dual ascent
+```
+
+**Five Differentiable Circuit Constraints:**
+| # | Constraint | What It Checks |
+|---|-----------|----------------|
+| C1 | No floating nodes | Every active node has degree ≥ 1 |
+| C2 | Device completeness | Multi-pin devices (MOSFET, BJT) have degree ≥ 2 |
+| C3 | No short circuits | No forbidden voltage-source edge patterns |
+| C4 | Graph connectivity | Single connected component (Fiedler value > 0) |
+| C5 | Value bounds | Component values within physical ranges |
+
+**Key Idea — Constraint Projection:**
+Even if the VAE produces a poor initial output, the projection step uses gradient descent (20 steps) to minimize constraint violations, steering the soft graph toward the feasible set. After projection, discretization (argmax + thresholding) produces the final circuit. If projection converges (violation < ε), validity is **guaranteed** to within ε tolerance.
+
+**Complementary to Autoregressive Models:**
+- Autoregressive ARCS: Sequential token generation with grammar-based masking → 100% structural validity
+- ValidCircuitGen: One-shot graph generation with constraint projection → validity by construction
+- Both achieve near-100% structural validity through different mechanisms
+
+```bash
+# Train VCG
+PYTHONPATH=src python scripts/train_vcg.py --data data/combined --epochs 100
+
+# Evaluate VCG
+PYTHONPATH=src python scripts/evaluate_vcg.py \
+    --vcg-checkpoint checkpoints/vcg/best_model.pt \
+    --data data/combined --n-samples 160
+
+# Compare VCG vs autoregressive ARCS
+PYTHONPATH=src python scripts/evaluate_vcg.py \
+    --vcg-checkpoint checkpoints/vcg/best_model.pt \
+    --arcs-checkpoint checkpoints/arcs_graph_transformer/best_model.pt \
+    --data data/combined --n-samples 160 -v
+```
+
 ### Training Pipeline
 1. **Supervised pre-training**: Next-token prediction on all circuit sequences, 5x value-token loss weight
 2. **RL fine-tuning**: REINFORCE with KL penalty + baseline, reward from SPICE simulation
@@ -386,6 +432,17 @@ Example output:
 - [x] Training curves dashboard: 6-panel plot (loss, perplexity, accuracy, LR, gen gap, time)
 - [x] Algorithm architecture diagrams: 5 publication-quality figures (pipeline, transformer block, RWPE, constrained FSM, tokenization)
 - [x] Full algorithm explanation document (`docs/ARCS_Algorithm_Explained.md`)
+
+### Phase 11: ValidCircuitGen — Direction 5 (complete)
+- [x] Constrained VAE architecture: GNN encoder + MLP decoder + constraint projection (~8.5M params)
+- [x] 5 differentiable circuit constraints: floating nodes, device completeness, short circuits, connectivity, value bounds
+- [x] Lagrangian training with dual ascent on adaptive multipliers
+- [x] Spec-conditioned generation via cross-attention SpecEncoder
+- [x] Bidirectional Graph Transformer encoder with RWPE and adjacency bias
+- [x] Constraint projection: 20-step Adam optimization on soft graph logits
+- [x] Full training script with KL annealing, cosine LR, WandB logging
+- [x] Evaluation pipeline: validity, reconstruction, latent space smoothness, projection ablation
+- [x] 47 tests across 14 test classes
 
 ---
 
