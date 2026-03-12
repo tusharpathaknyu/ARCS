@@ -532,6 +532,23 @@ Example output:
   - `evaluate_generator()`: standardized evaluation benchmark for any circuit generator
   - 7 new tests
 - [x] 355 total tests passing (82 new tests added)
+- [x] **Training & Evaluation completed:**
+  - CCFM: 100 epochs, final val_loss=0.1397 (from 0.68), ~25s/epoch on MPS
+  - GRPO: 500 steps, best reward=1.578 (from 0.22), ~7s/step with 12 SPICE sims
+  - **GRPO is best autoregressive model**: 75.0% sim_valid (vs 68.8% SL, 53.8% RL), reward 4.877
+
+**Phase 13 Evaluation Results:**
+
+| Model | Params | Struct% | SimOK% | SimValid% | Reward | Eff% | Verr% |
+|-------|--------|---------|--------|-----------|--------|------|-------|
+| ARCS-SL (GraphTransformer) | 6.8M | 86.2 | 80.0 | 68.8 | 4.425 | 63.4 | 32.5 |
+| ARCS-RL (REINFORCE) | 6.8M | 100.0 | 86.2 | 53.8 | 4.274 | 62.8 | 37.9 |
+| **ARCS-GRPO (Phase 13)** | **6.8M** | **93.8** | **86.2** | **75.0** | **4.877** | **75.5** | **29.3** |
+
+| Graph Model | Params | Structural Validity | Topologies at 100% |
+|-------------|--------|--------------------|--------------------|
+| VCG (VAE) | 4.0M | 81.2% | 13/16 |
+| CCFM (Flow Matching) | 7.6M | 81.2% | 13/16 |
 
 ---
 
