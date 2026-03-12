@@ -535,15 +535,17 @@ Example output:
 - [x] **Training & Evaluation completed:**
   - CCFM: 100 epochs, final val_loss=0.1397 (from 0.68), ~25s/epoch on MPS
   - GRPO: 500 steps, best reward=1.578 (from 0.22), ~7s/step with 12 SPICE sims
-  - **GRPO is best autoregressive model**: 75.0% sim_valid (vs 68.8% SL, 53.8% RL), reward 4.877
+  - Extended GRPO: 3000 additional steps (3500 total), best eval reward=5.235, 76.7% sim_valid
+  - **GRPO (500 steps) is best autoregressive model**: 73.8% sim_valid (vs 65.0% SL, 50.0% RL), reward 4.701
 
-**Phase 13 Evaluation Results:**
+**Evaluation Results (80 circuits, SPICE simulation):**
 
 | Model | Params | Struct% | SimOK% | SimValid% | Reward | Eff% | Verr% |
 |-------|--------|---------|--------|-----------|--------|------|-------|
-| ARCS-SL (GraphTransformer) | 6.8M | 86.2 | 80.0 | 68.8 | 4.425 | 63.4 | 32.5 |
-| ARCS-RL (REINFORCE) | 6.8M | 100.0 | 86.2 | 53.8 | 4.274 | 62.8 | 37.9 |
-| **ARCS-GRPO (Phase 13)** | **6.8M** | **93.8** | **86.2** | **75.0** | **4.877** | **75.5** | **29.3** |
+| ARCS-SL (GraphTransformer) | 6.8M | 86.2 | 77.5 | 65.0 | 4.229 | 60.7 | 24.9 |
+| ARCS-RL (REINFORCE) | 6.8M | 100.0 | 83.8 | 50.0 | 4.007 | 58.1 | 40.0 |
+| **ARCS-GRPO (500 steps)** | **6.8M** | **91.2** | **86.2** | **73.8** | **4.701** | **74.8** | **29.5** |
+| ARCS-GRPO (3500 steps) | 6.8M | 92.5 | 82.5 | 66.2 | 4.683 | 74.0 | 28.2 |
 
 | Graph Model | Params | Structural Validity | Topologies at 100% |
 |-------------|--------|--------------------|--------------------|

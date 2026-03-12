@@ -281,7 +281,8 @@ def main():
     arcs_models = [
         ("ARCS-SL (GraphTransformer)", "checkpoints/arcs_graph_transformer/best_model.pt"),
         ("ARCS-RL (REINFORCE)", "checkpoints/arcs_rl_graph_transformer/best_rl_model.pt"),
-        ("ARCS-GRPO (Phase 13)", "checkpoints/arcs_grpo/best_rl_model.pt"),
+        ("ARCS-GRPO (500 steps)", "checkpoints/arcs_grpo/best_rl_model.pt"),
+        ("ARCS-GRPO (3500 steps)", "checkpoints/arcs_grpo_extended/best_rl_model.pt"),
     ]
 
     # ── Graph models ──
