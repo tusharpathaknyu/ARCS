@@ -846,13 +846,37 @@ is essential for multi-topology RL.
 \textbf{Non-autoregressive alternatives.} VCG and CCFM both achieve
 100\% structural validity (16/16 topologies at 100\%) via
 graph-structured generation with differentiable constraints.
-While these models cannot be directly compared on SPICE reward
-(they generate graph representations rather than token sequences),
-they demonstrate that constraint-guided generation in continuous
-spaces is a viable complement to autoregressive approaches. The
-CCFM model's flow matching objective trains 4$\times$ faster than
-VCG's VAE objective (25\,s vs.\ 71\,s per epoch) while matching
-validity.
+Using the graph$\to$token$\to$SPICE bridge, both models also reach
+90.6\% simulation validity (58/64) in a 4-candidate-per-topology
+evaluation, demonstrating that constrained continuous-space generation
+can produce high-quality simulatable designs. The CCFM model's flow
+matching objective trains 4$\times$ faster than VCG's VAE objective
+(25\,s vs.\ 71\,s per epoch) while matching structural validity.
+
+\subsection{Hybrid Multi-Source Ranking}
+
+\begin{table}[t]
+\centering
+\caption{Hybrid evaluation with SPICE-based ranking across VCG and CCFM
+sources (4 candidates/source; 16 topologies). Hybrid picks the
+highest-reward candidate per topology and reaches 100\% sim-validity.}
+\label{tab:hybrid}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & Struct & SimSuccess & SimValid & Reward \\
+\midrule
+VCG-only    & 100\% & 100\% & 90.6\% & 5.30 \\
+CCFM-only   & 100\% & 100\% & 90.6\% & 5.02 \\
+\textbf{Hybrid (VCG+CCFM)} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} & \textbf{6.23} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:hybrid} shows that multi-source ranking is strongly
+complementary: each source occasionally dominates on different
+topologies, and selecting by SPICE reward closes the remaining
+sim-validity gap while improving average reward by +0.93 over VCG-only
+and +1.21 over CCFM-only.
 
 \subsection{Ablation Studies}
 
