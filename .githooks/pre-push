@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+python_bin="$repo_root/.venv/bin/python"
+
+if [[ ! -x "$python_bin" ]]; then
+  echo "[pre-push] Skipping Phase 16 consistency check (.venv python not found)."
+  echo "[pre-push] Run manually: python scripts/check_phase16_consistency.py"
+  exit 0
+fi
+
+echo "[pre-push] Running Phase 16 consistency check..."
+"$python_bin" "$repo_root/scripts/check_phase16_consistency.py"

@@ -608,6 +608,22 @@ PYTHONPATH=src python -m pytest tests/ -v
 
 ---
 
+## Consistency Automation
+
+Phase 16 metric consistency is now checked automatically in CI and can be enforced locally before push.
+
+```bash
+# Run checker manually
+python scripts/check_phase16_consistency.py
+
+# Install local pre-push hook (one-time per clone)
+bash scripts/install_git_hooks.sh
+```
+
+CI workflow: `.github/workflows/phase16-consistency.yml`
+
+---
+
 ## Visualizations
 
 Generated figures live in `results/`:
