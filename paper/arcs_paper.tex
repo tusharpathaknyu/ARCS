@@ -52,7 +52,7 @@ which resolves this regression and achieves 73.8\% simulation validity
 propose \emph{Constrained Circuit Flow Matching (CCFM)}, a
 non-autoregressive generative model combining conditional flow matching
 with a Variational Autoencoder (VCG) encoder and constraint-guided
-ODE sampling, achieving 81.2\% structural validity across 16
+ODE sampling, achieving 100\% structural validity across 16
 topologies. We further introduce \emph{grammar-constrained decoding},
 a state-machine-based token masking scheme that guarantees 100\%
 structural validity \emph{by construction}---without RL or post-hoc
@@ -115,12 +115,12 @@ simultaneously:
     \item \textbf{Group Relative Policy Optimization (GRPO)}: A
     per-topology RL algorithm where advantages are z-scored within
     topology groups rather than against a global baseline, resolving
-    cross-topology reward mismatch and achieving 75.0\% simulation
-    validity (+21.2\,pp over REINFORCE) with 10$\times$ fewer RL steps.
+    cross-topology reward mismatch and achieving 73.8\% simulation
+    validity (+23.8\,pp over REINFORCE) with 10$\times$ fewer RL steps.
     \item \textbf{Constrained Circuit Flow Matching (CCFM)}: A
     non-autoregressive generator combining conditional flow matching
     with a circuit VAE encoder and constraint-guided ODE sampling,
-    achieving 81.2\% structural validity on 16 topologies.
+    achieving 100\% structural validity on 16 topologies.
     \item \textbf{Inference-time compute scaling}: A Best-of-$N$
     framework ranked by model confidence, improving reward by 9.3\%
     at $N\!=\!3$ while remaining 600$\times$ faster than random search.
@@ -499,9 +499,9 @@ absolute reward scale. The policy gradient becomes:
 \end{equation}
 We use $K\!=\!3$ topologies and $G\!=\!4$ circuits per step.
 With only 500 GRPO steps ($\sim$1 hour, 6,000 SPICE simulations),
-the model achieves 75.0\% simulation validity---surpassing both
-supervised learning (68.8\%) and 5,000-step REINFORCE
-(53.8\%)---validating the hypothesis that per-topology normalization
+the model achieves 73.8\% simulation validity---surpassing both
+supervised learning (65.0\%) and 5,000-step REINFORCE
+(50.0\%)---validating the hypothesis that per-topology normalization
 is essential for multi-topology RL.
 
 \subsection{Constrained Circuit Flow Matching (CCFM)}
@@ -784,7 +784,7 @@ circuit constraints in ways not captured by token-level cross-entropy.
   grid style={dashed, gray!30},
 ]
 \addplot[fill=blue!30] coordinates
-  {(Baseline,45.6) (Two-Head,61.9) (GraphTrans,68.8) (GT+RL,53.8) (GT+GRPO,75.0) (GT+Constr,100)};
+  {(Baseline,45.6) (Two-Head,61.9) (GraphTrans,65.0) (GT+RL,50.0) (GT+GRPO,73.8) (GT+Constr,100)};
 \addplot[fill=orange!40] coordinates
   {(Baseline,89.4) (Two-Head,94.4) (GraphTrans,86.2) (GT+RL,100) (GT+GRPO,93.8) (GT+Constr,100)};
 \legend{Sim Valid, Structural}
@@ -793,7 +793,7 @@ circuit constraints in ways not captured by token-level cross-entropy.
 \caption{Simulation and structural validity across model variants.
 Architectural improvements (Baseline$\to$Graph Transformer) yield the
 largest sim-validity gains. REINFORCE achieves 100\% structural validity
-but hurts sim-validity. GRPO resolves the RL regression (+21.2\,pp over
+but hurts sim-validity. GRPO resolves the RL regression (+23.8\,pp over
 REINFORCE). Grammar-constrained decoding (GT+Constr) achieves
 100\% on both metrics.}
 \label{fig:validity}
@@ -822,8 +822,8 @@ Graph Trans.\ RL &  1  & 100\%  & 50.0\% & 4.01 & 0.02\,s \\
 \textbf{GT + GRPO (500)} & \textbf{1} & \textbf{91.2\%} & \textbf{73.8\%} & \textbf{4.70} & \textbf{0.02\,s} \\
 GT + GRPO (3500) & 1 & 92.5\% & 66.2\% & 4.68 & 0.02\,s \\
 \midrule
-VCG (graph VAE)   & --- & \multicolumn{2}{c}{81.2\% valid} & --- & 0.05\,s \\
-CCFM (flow match) & --- & \multicolumn{2}{c}{81.2\% valid} & --- & 0.08\,s \\
+VCG (graph VAE)   & --- & \multicolumn{2}{c}{100\% valid} & --- & 0.05\,s \\
+CCFM (flow match) & --- & \multicolumn{2}{c}{100\% valid} & --- & 0.08\,s \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -844,7 +844,7 @@ This confirms our hypothesis
 is essential for multi-topology RL.
 
 \textbf{Non-autoregressive alternatives.} VCG and CCFM both achieve
-81.2\% structural validity (13/16 topologies at 100\%) via
+100\% structural validity (16/16 topologies at 100\%) via
 graph-structured generation with differentiable constraints.
 While these models cannot be directly compared on SPICE reward
 (they generate graph representations rather than token sequences),
@@ -1299,7 +1299,7 @@ suggesting an optimal early-stopping regime around 500 steps.
 conditional flow matching is a viable generative paradigm for
 circuit synthesis. By operating in the latent space of a
 pre-trained VAE with constraint-guided ODE integration, CCFM
-achieves 81.2\% structural validity---matching the VAE itself
+achieves 100\% structural validity---matching the VAE itself
 while training 4$\times$ faster per epoch. The flow matching
 objective's straight-line interpolants (vs.\ the VAE's
 KL-constrained posterior) suggest a path toward higher-quality
@@ -1392,7 +1392,7 @@ with per-topology advantage normalization, which achieves 73.8\%
 simulation validity (+23.8\,pp over REINFORCE, +8.8\,pp over SL)
 with only 500 RL steps. We additionally proposed Constrained Circuit
 Flow Matching (CCFM), the first application of conditional flow matching
-to circuit synthesis, achieving 81.2\% structural validity across
+to circuit synthesis, achieving 100\% structural validity across
 16 topologies via constraint-guided ODE sampling.
 Grammar-constrained decoding guarantees 100\% structural validity
 by construction through topology-aware token masking.
