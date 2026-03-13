@@ -188,6 +188,29 @@ TOPOLOGY_EXPERT_TO_IDX = {
     topo: i for i, topo in enumerate(TOPOLOGY_EXPERT_NAMES)
 }
 
+TOPOLOGY_TO_FAMILY = {
+    "buck": "power",
+    "boost": "power",
+    "buck_boost": "power",
+    "cuk": "power",
+    "sepic": "power",
+    "flyback": "power",
+    "forward": "power",
+    "inverting_amp": "amp",
+    "noninverting_amp": "amp",
+    "instrumentation_amp": "amp",
+    "differential_amp": "amp",
+    "sallen_key_lowpass": "filter",
+    "sallen_key_highpass": "filter",
+    "sallen_key_bandpass": "filter",
+    "wien_bridge": "oscillator",
+    "colpitts": "oscillator",
+}
+TOPOLOGY_FAMILY_NAMES = sorted(set(TOPOLOGY_TO_FAMILY.values()))
+TOPOLOGY_FAMILY_TO_IDX = {
+    fam: i for i, fam in enumerate(TOPOLOGY_FAMILY_NAMES)
+}
+
 
 # Component type IDs for edge-type embedding
 _COMP_TYPE_TO_IDX = {
@@ -595,6 +618,12 @@ class GraphTransformerARCSModel(nn.Module):
         self.topology_value_head_alpha = float(
             getattr(config, "topology_value_head_alpha", 0.5)
         )
+        self.use_topology_family_moe = bool(
+            getattr(config, "use_topology_family_moe", False)
+        )
+        self.topology_family_moe_alpha = float(
+            getattr(config, "topology_family_moe_alpha", 0.3)
+        )
 
         # --- Embeddings ---
         self.tok_emb = nn.Embedding(config.vocab_size, config.d_model)
@@ -624,6 +653,15 @@ class GraphTransformerARCSModel(nn.Module):
             nn.Linear(config.d_model, config.d_model, bias=False),
         )
         self.value_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        if self.use_topology_family_moe:
+            self.topology_family_value_heads = nn.ModuleList(
+                [
+                    nn.Linear(config.d_model, config.vocab_size, bias=False)
+                    for _ in TOPOLOGY_FAMILY_NAMES
+                ]
+            )
+        else:
+            self.topology_family_value_heads = None
         if self.use_topology_value_heads:
             self.topology_value_heads = nn.ModuleList(
                 [
@@ -794,6 +832,20 @@ class GraphTransformerARCSModel(nn.Module):
         val_h = self.value_proj(x) + x
         val_logits = self.value_head(val_h)
 
+        if self.use_topology_family_moe and tokenizer is not None:
+            family_ids = self._extract_topology_family_ids(input_ids, tokenizer)
+            alpha_f = min(max(self.topology_family_moe_alpha, 0.0), 1.0)
+            for b in range(B):
+                family_id = int(family_ids[b].item())
+                if family_id >= 0:
+                    fam_logits = self.topology_family_value_heads[family_id](
+                        val_h[b : b + 1]
+                    )
+                    val_logits[b : b + 1] = (
+                        (1.0 - alpha_f) * val_logits[b : b + 1]
+                        + alpha_f * fam_logits
+                    )
+
         if self.use_topology_value_heads and tokenizer is not None:
             topo_ids = self._extract_topology_expert_ids(input_ids, tokenizer)
             alpha = min(max(self.topology_value_head_alpha, 0.0), 1.0)
@@ -864,6 +916,10 @@ class GraphTransformerARCSModel(nn.Module):
         if self.use_topology_value_heads and tokenizer is not None:
             topo_ids = self._extract_topology_expert_ids(seq, tokenizer)
             topo_expert_idx = int(topo_ids[0].item())
+        family_expert_idx = -1
+        if self.use_topology_family_moe and tokenizer is not None:
+            family_ids = self._extract_topology_family_ids(seq, tokenizer)
+            family_expert_idx = int(family_ids[0].item())
 
         for _ in range(max_new_tokens):
             if seq.shape[1] > self.config.max_seq_len:
@@ -899,6 +955,10 @@ class GraphTransformerARCSModel(nn.Module):
             if last_tok in comp_ids:
                 val_h = self.value_proj(h_last) + h_last
                 logits = self.value_head(val_h)
+                if family_expert_idx >= 0:
+                    alpha_f = min(max(self.topology_family_moe_alpha, 0.0), 1.0)
+                    family_logits = self.topology_family_value_heads[family_expert_idx](val_h)
+                    logits = (1.0 - alpha_f) * logits + alpha_f * family_logits
                 if topo_expert_idx >= 0:
                     alpha = min(max(self.topology_value_head_alpha, 0.0), 1.0)
                     expert_logits = self.topology_value_heads[topo_expert_idx](val_h)
@@ -955,6 +1015,7 @@ class GraphTransformerARCSModel(nn.Module):
             "structure_head": 0,
             "value_proj": 0,
             "value_head": 0,
+            "topology_family_value_heads": 0,
             "topology_value_heads": 0,
         }
         for name, p in self.named_parameters():
@@ -975,6 +1036,8 @@ class GraphTransformerARCSModel(nn.Module):
                 groups["value_proj"] += n
             elif "topology_value_heads" in name:
                 groups["topology_value_heads"] += n
+            elif "topology_family_value_heads" in name:
+                groups["topology_family_value_heads"] += n
             elif "value_head" in name:
                 groups["value_head"] += n
             elif "structure_head" in name:
@@ -996,6 +1059,24 @@ class GraphTransformerARCSModel(nn.Module):
         ids = []
         for topo in topos:
             ids.append(TOPOLOGY_EXPERT_TO_IDX.get(topo, -1))
+        return torch.tensor(ids, dtype=torch.long, device=input_ids.device)
+
+    @staticmethod
+    def _extract_topology_family_ids(
+        input_ids: torch.Tensor,
+        tokenizer: CircuitTokenizer,
+    ) -> torch.Tensor:
+        """Return topology family IDs per sequence; -1 means no family matched."""
+        topo_name_to_id: dict[str, int] = {}
+        for tok in tokenizer.tokens:
+            if tok.token_type == TokenType.TOPOLOGY:
+                topo_name_to_id[tok.name] = tok.id
+
+        topos = _extract_topology(input_ids, topo_name_to_id)
+        ids = []
+        for topo in topos:
+            family = TOPOLOGY_TO_FAMILY.get(topo) if topo is not None else None
+            ids.append(TOPOLOGY_FAMILY_TO_IDX.get(family, -1))
         return torch.tensor(ids, dtype=torch.long, device=input_ids.device)
 
 

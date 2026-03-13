@@ -283,6 +283,10 @@ def main():
                         help="Enable topology-aware value expert heads (graph_transformer)")
     parser.add_argument("--topology-value-head-alpha", type=float, default=0.5,
                         help="Residual mix weight for topology-specific value head")
+    parser.add_argument("--use-topology-family-moe", action="store_true",
+                        help="Enable topology-family MoE value experts (graph_transformer)")
+    parser.add_argument("--topology-family-moe-alpha", type=float, default=0.3,
+                        help="Residual mix weight for topology-family MoE value head")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--resume", type=str, default=None,
@@ -318,6 +322,8 @@ def main():
     config.vocab_size = tokenizer.vocab_size
     config.use_topology_value_heads = args.use_topology_value_heads
     config.topology_value_head_alpha = args.topology_value_head_alpha
+    config.use_topology_family_moe = args.use_topology_family_moe
+    config.topology_family_moe_alpha = args.topology_family_moe_alpha
     print(f"Model config: {args.config}")
 
     # --- Data ---

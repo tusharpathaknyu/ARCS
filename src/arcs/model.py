@@ -50,6 +50,8 @@ class ARCSConfig:
     # Optional topology-aware value routing (enhanced models)
     use_topology_value_heads: bool = False
     topology_value_head_alpha: float = 0.5
+    use_topology_family_moe: bool = False
+    topology_family_moe_alpha: float = 0.3
 
     @classmethod
     def small(cls) -> ARCSConfig:

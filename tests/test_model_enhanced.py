@@ -306,6 +306,32 @@ class TestGraphTransformerModel:
         output = model.generate(prefix, max_new_tokens=8, tokenizer=tokenizer)
         assert output.shape[1] > prefix.shape[1]
 
+    def test_topology_family_moe_enabled(self, config, tokenizer, buck_ids):
+        cfg = ARCSConfig.from_dict(config.to_dict())
+        cfg.use_topology_family_moe = True
+        cfg.topology_family_moe_alpha = 0.4
+        model = GraphTransformerARCSModel(cfg)
+
+        groups = model.count_parameters_by_group()
+        assert groups["topology_family_value_heads"] > 0
+
+        ids = torch.tensor([buck_ids[:-1]])
+        targets = torch.tensor([buck_ids[1:]])
+        logits, loss = model(ids, targets=targets, tokenizer=tokenizer)
+        assert logits.shape[-1] == cfg.vocab_size
+        assert loss is not None
+
+    def test_topology_family_moe_generate(self, config, tokenizer):
+        cfg = ARCSConfig.from_dict(config.to_dict())
+        cfg.use_topology_family_moe = True
+        cfg.topology_family_moe_alpha = 0.25
+        model = GraphTransformerARCSModel(cfg)
+        model.eval()
+
+        prefix = torch.tensor([[tokenizer.start_id, tokenizer.name_to_id["TOPO_BUCK"], tokenizer.sep_id]])
+        output = model.generate(prefix, max_new_tokens=8, tokenizer=tokenizer)
+        assert output.shape[1] > prefix.shape[1]
+
 
 class TestModelFactory:
     """Test create_model() and load_model() factory functions."""
