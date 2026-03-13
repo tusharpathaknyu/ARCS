@@ -592,6 +592,9 @@ PYTHONPATH=src python -m arcs.evaluate --checkpoint checkpoints/arcs_graph_trans
 # Compare all architectures
 PYTHONPATH=src python scripts/compare_architectures.py --n-samples 160 -v
 
+# Evaluate topology-aware ablations (baseline vs topology-head vs family-MoE)
+PYTHONPATH=src python scripts/evaluate_topology_ablation.py --n-samples 48
+
 # Best-of-N inference scaling
 PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
 
