@@ -47,6 +47,9 @@ class ARCSConfig:
     pad_id: int = 0              # PAD token ID
     n_token_types: int = 7       # TokenType categories
     weight_tying: bool = True    # Tie LM head ↔ token embedding
+    # Optional topology-aware value routing (enhanced models)
+    use_topology_value_heads: bool = False
+    topology_value_head_alpha: float = 0.5
 
     @classmethod
     def small(cls) -> ARCSConfig:

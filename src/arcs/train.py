@@ -279,6 +279,10 @@ def main():
     parser.add_argument("--model-type", type=str, default="baseline",
                         choices=["baseline", "two_head", "graph_transformer"],
                         help="Model architecture: baseline, two_head, or graph_transformer")
+    parser.add_argument("--use-topology-value-heads", action="store_true",
+                        help="Enable topology-aware value expert heads (graph_transformer)")
+    parser.add_argument("--topology-value-head-alpha", type=float, default=0.5,
+                        help="Residual mix weight for topology-specific value head")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--resume", type=str, default=None,
@@ -312,6 +316,8 @@ def main():
     }
     config = config_map[args.config]()
     config.vocab_size = tokenizer.vocab_size
+    config.use_topology_value_heads = args.use_topology_value_heads
+    config.topology_value_head_alpha = args.topology_value_head_alpha
     print(f"Model config: {args.config}")
 
     # --- Data ---

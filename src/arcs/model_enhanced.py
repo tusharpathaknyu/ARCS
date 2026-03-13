@@ -183,6 +183,10 @@ TOPOLOGY_ADJACENCY: dict[str, list[tuple[int, int]]] = {
 
 # Precompute RWPE features for all topologies at import time
 TOPOLOGY_RWPE = _precompute_all_rwpe(TOPOLOGY_ADJACENCY)
+TOPOLOGY_EXPERT_NAMES = sorted(TOPOLOGY_ADJACENCY.keys())
+TOPOLOGY_EXPERT_TO_IDX = {
+    topo: i for i, topo in enumerate(TOPOLOGY_EXPERT_NAMES)
+}
 
 
 # Component type IDs for edge-type embedding
@@ -585,6 +589,12 @@ class GraphTransformerARCSModel(nn.Module):
     def __init__(self, config: ARCSConfig):
         super().__init__()
         self.config = config
+        self.use_topology_value_heads = bool(
+            getattr(config, "use_topology_value_heads", False)
+        )
+        self.topology_value_head_alpha = float(
+            getattr(config, "topology_value_head_alpha", 0.5)
+        )
 
         # --- Embeddings ---
         self.tok_emb = nn.Embedding(config.vocab_size, config.d_model)
@@ -614,6 +624,15 @@ class GraphTransformerARCSModel(nn.Module):
             nn.Linear(config.d_model, config.d_model, bias=False),
         )
         self.value_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        if self.use_topology_value_heads:
+            self.topology_value_heads = nn.ModuleList(
+                [
+                    nn.Linear(config.d_model, config.vocab_size, bias=False)
+                    for _ in TOPOLOGY_EXPERT_NAMES
+                ]
+            )
+        else:
+            self.topology_value_heads = None
 
         if config.weight_tying:
             self.structure_head.weight = self.tok_emb.weight
@@ -775,6 +794,20 @@ class GraphTransformerARCSModel(nn.Module):
         val_h = self.value_proj(x) + x
         val_logits = self.value_head(val_h)
 
+        if self.use_topology_value_heads and tokenizer is not None:
+            topo_ids = self._extract_topology_expert_ids(input_ids, tokenizer)
+            alpha = min(max(self.topology_value_head_alpha, 0.0), 1.0)
+            for b in range(B):
+                expert_id = int(topo_ids[b].item())
+                if expert_id >= 0:
+                    expert_logits = self.topology_value_heads[expert_id](
+                        val_h[b : b + 1]
+                    )
+                    val_logits[b : b + 1] = (
+                        (1.0 - alpha) * val_logits[b : b + 1]
+                        + alpha * expert_logits
+                    )
+
         if value_mask is not None:
             vm = value_mask.unsqueeze(-1)
             logits = torch.where(vm, val_logits, struct_logits)
@@ -827,6 +860,11 @@ class GraphTransformerARCSModel(nn.Module):
                 if tok.token_type == TokenType.COMPONENT:
                     comp_ids.add(tok.id)
 
+        topo_expert_idx = -1
+        if self.use_topology_value_heads and tokenizer is not None:
+            topo_ids = self._extract_topology_expert_ids(seq, tokenizer)
+            topo_expert_idx = int(topo_ids[0].item())
+
         for _ in range(max_new_tokens):
             if seq.shape[1] > self.config.max_seq_len:
                 s = seq[:, -self.config.max_seq_len:]
@@ -859,7 +897,12 @@ class GraphTransformerARCSModel(nn.Module):
 
             last_tok = seq[0, -1].item()
             if last_tok in comp_ids:
-                logits = self.value_head(self.value_proj(h_last) + h_last)
+                val_h = self.value_proj(h_last) + h_last
+                logits = self.value_head(val_h)
+                if topo_expert_idx >= 0:
+                    alpha = min(max(self.topology_value_head_alpha, 0.0), 1.0)
+                    expert_logits = self.topology_value_heads[topo_expert_idx](val_h)
+                    logits = (1.0 - alpha) * logits + alpha * expert_logits
             else:
                 logits = self.structure_head(h_last)
 
@@ -912,6 +955,7 @@ class GraphTransformerARCSModel(nn.Module):
             "structure_head": 0,
             "value_proj": 0,
             "value_head": 0,
+            "topology_value_heads": 0,
         }
         for name, p in self.named_parameters():
             n = p.numel()
@@ -929,11 +973,30 @@ class GraphTransformerARCSModel(nn.Module):
                 groups["norm"] += n
             elif "value_proj" in name:
                 groups["value_proj"] += n
+            elif "topology_value_heads" in name:
+                groups["topology_value_heads"] += n
             elif "value_head" in name:
                 groups["value_head"] += n
             elif "structure_head" in name:
                 groups["structure_head"] += n
         return groups
+
+    @staticmethod
+    def _extract_topology_expert_ids(
+        input_ids: torch.Tensor,
+        tokenizer: CircuitTokenizer,
+    ) -> torch.Tensor:
+        """Return expert IDs per sequence; -1 means no topology matched."""
+        topo_name_to_id: dict[str, int] = {}
+        for tok in tokenizer.tokens:
+            if tok.token_type == TokenType.TOPOLOGY:
+                topo_name_to_id[tok.name] = tok.id
+
+        topos = _extract_topology(input_ids, topo_name_to_id)
+        ids = []
+        for topo in topos:
+            ids.append(TOPOLOGY_EXPERT_TO_IDX.get(topo, -1))
+        return torch.tensor(ids, dtype=torch.long, device=input_ids.device)
 
 
 # ---------------------------------------------------------------------------
