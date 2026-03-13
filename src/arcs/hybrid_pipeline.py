@@ -284,12 +284,64 @@ class HybridGenerator:
             device = torch.device("cpu")
         self.device = device
 
+    def _score_candidate_proxy(self, candidate: GeneratedCircuit) -> float:
+        """Cheap proxy score used to pre-rank candidates before SPICE.
+
+        Priority order:
+          1) learned reward model (if provided and graph available)
+          2) structural + template-consistency heuristic
+        """
+        if (
+            self.reward_model is not None
+            and candidate.graph is not None
+        ):
+            try:
+                token_ids = graph_to_token_sequence(candidate.graph, self.tokenizer)
+                inp = torch.tensor([token_ids], dtype=torch.long, device=self.device)
+                pred = self.reward_model.predict(inp)
+                return float(pred.squeeze().item())
+            except Exception:
+                pass
+
+        score = 0.0
+        decoded = candidate.decoded
+        if decoded is not None and decoded.valid_structure:
+            score += 1.0
+
+        expected = COMPONENT_TO_PARAM.get(candidate.topology, [])
+        expected_n = len(expected)
+        observed_n = len(decoded.components) if decoded is not None else 0
+        if expected_n > 0:
+            score += 1.0 - min(abs(observed_n - expected_n) / expected_n, 1.0)
+
+        if decoded is not None and decoded.specs:
+            n_specs = sum(1 for k in ["vin", "vout", "iout", "fsw"] if k in decoded.specs)
+            score += n_specs / 4.0
+
+        return float(score)
+
+    def _simulate_candidate(self, candidate: GeneratedCircuit) -> GeneratedCircuit:
+        """Simulate candidate in-place (if not simulated yet) and return it."""
+        if candidate.outcome is not None:
+            return candidate
+        if candidate.graph is None:
+            return candidate
+
+        decoded, outcome, reward = vcg_graph_to_spice(
+            candidate.graph, self.runner, self.tokenizer
+        )
+        candidate.decoded = decoded
+        candidate.outcome = outcome
+        candidate.reward = reward
+        return candidate
+
     def generate_from_vcg(
         self,
         topology: str,
         specs: dict[str, float],
         n_candidates: int = 8,
         temperature: float = 1.0,
+        simulate: bool = True,
     ) -> list[GeneratedCircuit]:
         """Generate circuits via VCG."""
         if self.vcg_model is None:
@@ -317,9 +369,15 @@ class HybridGenerator:
                 if repaired_validity["valid"]:
                     graph = repaired
                     validity = repaired_validity
-            decoded, outcome, reward = vcg_graph_to_spice(
-                graph, self.runner, self.tokenizer
-            )
+            if simulate:
+                decoded, outcome, reward = vcg_graph_to_spice(
+                    graph, self.runner, self.tokenizer
+                )
+            else:
+                token_ids = graph_to_token_sequence(graph, self.tokenizer)
+                decoded = decode_generated_sequence(token_ids, self.tokenizer)
+                outcome = None
+                reward = 0.0
             results.append(GeneratedCircuit(
                 source="vcg",
                 topology=topology,
@@ -340,6 +398,7 @@ class HybridGenerator:
         n_candidates: int = 8,
         temperature: float = 1.0,
         n_steps: int = 50,
+        simulate: bool = True,
     ) -> list[GeneratedCircuit]:
         """Generate circuits via CCFM (Constrained Flow Matching)."""
         if self.ccfm_model is None:
@@ -400,9 +459,15 @@ class HybridGenerator:
                 if repaired_validity["valid"]:
                     graph = repaired
                     validity = repaired_validity
-            decoded, outcome, reward = vcg_graph_to_spice(
-                graph, self.runner, self.tokenizer
-            )
+            if simulate:
+                decoded, outcome, reward = vcg_graph_to_spice(
+                    graph, self.runner, self.tokenizer
+                )
+            else:
+                token_ids = graph_to_token_sequence(graph, self.tokenizer)
+                decoded = decode_generated_sequence(token_ids, self.tokenizer)
+                outcome = None
+                reward = 0.0
             results.append(GeneratedCircuit(
                 source="ccfm",
                 topology=topology,
@@ -422,6 +487,7 @@ class HybridGenerator:
         specs: dict[str, float],
         n_candidates_per_source: int = 8,
         sources: Optional[list[str]] = None,
+        pre_rank_top_k: Optional[int] = None,
     ) -> GeneratedCircuit:
         """Generate from all available sources and return the best circuit.
 
@@ -445,14 +511,26 @@ class HybridGenerator:
 
         all_candidates: list[GeneratedCircuit] = []
 
+        use_prerank = pre_rank_top_k is not None and pre_rank_top_k > 0
+
         if "vcg" in sources:
             all_candidates.extend(
-                self.generate_from_vcg(topology, specs, n_candidates_per_source)
+                self.generate_from_vcg(
+                    topology,
+                    specs,
+                    n_candidates_per_source,
+                    simulate=not use_prerank,
+                )
             )
 
         if "ccfm" in sources:
             all_candidates.extend(
-                self.generate_from_ccfm(topology, specs, n_candidates_per_source)
+                self.generate_from_ccfm(
+                    topology,
+                    specs,
+                    n_candidates_per_source,
+                    simulate=not use_prerank,
+                )
             )
 
         if not all_candidates:
@@ -460,7 +538,15 @@ class HybridGenerator:
                 source="none", topology=topology, reward=0.0
             )
 
-        # Rank by reward
+        if use_prerank and len(all_candidates) > pre_rank_top_k:
+            for cand in all_candidates:
+                cand.reward = self._score_candidate_proxy(cand)
+
+            all_candidates.sort(key=lambda c: c.reward, reverse=True)
+            shortlisted = all_candidates[: pre_rank_top_k]
+            all_candidates = [self._simulate_candidate(c) for c in shortlisted]
+
+        # Rank by (true) reward
         all_candidates.sort(key=lambda c: c.reward, reverse=True)
         best = all_candidates[0]
 

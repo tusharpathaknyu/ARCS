@@ -577,6 +577,10 @@ class RLConfig:
     n_topos_per_step: int = 3        # topologies sampled per GRPO step
     grpo_clip_adv: float = 5.0       # clip advantage magnitude
     grpo_eps: float = 1e-4           # std normalization epsilon
+    # v4: topology-aware control
+    per_topology_eval_samples: int = 2          # samples per topology during per-topology eval
+    per_topology_early_stop_patience: int = 0   # number of eval rounds w/o macro sim-valid improvement (0=disabled)
+    per_topology_early_stop_delta: float = 0.0  # required macro sim-valid improvement to reset patience
 
 
 class ARCSRLTrainer:
@@ -625,6 +629,8 @@ class ARCSRLTrainer:
         # History
         self.history: dict[str, list] = defaultdict(list)
         self.global_step = 0
+        self.best_topology_macro_sim_valid = 0.0
+        self.topology_no_improve_count = 0
 
         # Whether model needs tokenizer for forward (graph transformer)
         self._is_graph_model = hasattr(self.model, 'compute_graph_features')
@@ -1121,6 +1127,96 @@ class ARCSRLTrainer:
             ),
         }
 
+    def evaluate_per_topology(
+        self,
+        n_per_topology: int | None = None,
+    ) -> dict[str, dict[str, float]]:
+        """Evaluate policy per topology for topology-aware control.
+
+        Returns a dict keyed by topology containing:
+            reward_mean, struct_valid_rate, sim_success_rate, sim_valid_rate
+        """
+        n = n_per_topology or self.config.per_topology_eval_samples
+        n = max(1, int(n))
+
+        self.model.eval()
+        results: dict[str, dict[str, float]] = {}
+
+        for topo in OPERATING_CONDITIONS.keys():
+            rewards: list[float] = []
+            struct_valids = 0
+            sim_successes = 0
+            sim_valids = 0
+
+            for _ in range(n):
+                _, specs, prefix = sample_specs_for_topology(
+                    topo, self.tokenizer, self.device
+                )
+
+                gen_tokens, _, _ = sample_with_logprobs(
+                    self.model,
+                    prefix,
+                    self.tokenizer,
+                    max_new_tokens=self.config.max_gen_tokens,
+                    temperature=self.config.temperature,
+                    top_k=self.config.top_k,
+                )
+
+                all_ids = prefix[0].tolist() + gen_tokens.tolist()
+                decoded = decode_generated_sequence(all_ids, self.tokenizer)
+
+                if decoded.valid_structure:
+                    struct_valids += 1
+                    outcome = simulate_decoded_circuit(decoded, self.runner)
+                    reward = compute_reward(decoded, outcome, specs, self.config.struct_bonus)
+                    if outcome.success:
+                        sim_successes += 1
+                        if outcome.valid:
+                            sim_valids += 1
+                else:
+                    reward = 0.0
+
+                rewards.append(reward)
+
+            results[topo] = {
+                "reward_mean": float(np.mean(rewards)) if rewards else 0.0,
+                "struct_valid_rate": struct_valids / n,
+                "sim_success_rate": sim_successes / n,
+                "sim_valid_rate": sim_valids / n,
+            }
+
+        return results
+
+    def _update_topology_early_stop_state(
+        self,
+        per_topology_eval: dict[str, dict[str, float]],
+    ) -> tuple[bool, float]:
+        """Update topology-aware patience state and return stop flag + macro sim-valid.
+
+        Macro sim-valid is the unweighted mean of per-topology sim-valid rates.
+        """
+        if not per_topology_eval:
+            return False, 0.0
+
+        macro_sim_valid = float(
+            np.mean([v["sim_valid_rate"] for v in per_topology_eval.values()])
+        )
+
+        if (
+            macro_sim_valid
+            > self.best_topology_macro_sim_valid + self.config.per_topology_early_stop_delta
+        ):
+            self.best_topology_macro_sim_valid = macro_sim_valid
+            self.topology_no_improve_count = 0
+        else:
+            self.topology_no_improve_count += 1
+
+        should_stop = (
+            self.config.per_topology_early_stop_patience > 0
+            and self.topology_no_improve_count >= self.config.per_topology_early_stop_patience
+        )
+        return should_stop, macro_sim_valid
+
     def save_checkpoint(self, path: str | Path | None = None) -> Path:
         """Save model + optimizer + training state."""
         if path is None:
@@ -1231,6 +1327,50 @@ class ARCSRLTrainer:
                         f"  New best reward: {best_reward:.3f}"
                     )
 
+                # Topology-aware evaluation / early stop
+                if self.config.per_topology_early_stop_patience > 0:
+                    topo_eval = self.evaluate_per_topology()
+                    macro_struct = float(
+                        np.mean([v["struct_valid_rate"] for v in topo_eval.values()])
+                    )
+                    macro_sim = float(
+                        np.mean([v["sim_valid_rate"] for v in topo_eval.values()])
+                    )
+                    worst_topo, worst_stats = min(
+                        topo_eval.items(),
+                        key=lambda kv: kv[1]["sim_valid_rate"],
+                    )
+                    logger.info(
+                        "  TOPO EVAL step %d: macro_struct=%.0f%% macro_sim_valid=%.0f%% "
+                        "worst=%s(%.0f%%)",
+                        step,
+                        100 * macro_struct,
+                        100 * macro_sim,
+                        worst_topo,
+                        100 * worst_stats["sim_valid_rate"],
+                    )
+
+                    self.history["eval_topology"].append({
+                        "step": step,
+                        "macro_struct_valid_rate": macro_struct,
+                        "macro_sim_valid_rate": macro_sim,
+                        "worst_topology": worst_topo,
+                        "worst_topology_sim_valid_rate": worst_stats["sim_valid_rate"],
+                        "per_topology": topo_eval,
+                    })
+
+                    should_stop_topo, macro_sim_valid = self._update_topology_early_stop_state(topo_eval)
+                    if should_stop_topo:
+                        logger.warning(
+                            "  EARLY STOP (topology-aware): macro_sim_valid %.0f%% did not improve "
+                            "for %d eval rounds (best=%.0f%%, delta=%.2f)",
+                            100 * macro_sim_valid,
+                            self.topology_no_improve_count,
+                            100 * self.best_topology_macro_sim_valid,
+                            self.config.per_topology_early_stop_delta,
+                        )
+                        break
+
                 # Validity early stopping
                 if (self.config.validity_early_stop > 0
                         and eval_results["eval_struct_valid_rate"] < self.config.validity_early_stop):
@@ -1310,6 +1450,12 @@ def main():
                         help="GRPO: topologies sampled per step")
     parser.add_argument("--grpo-clip-adv", type=float, default=5.0,
                         help="GRPO: clip advantage magnitude")
+    parser.add_argument("--per-topology-eval-samples", type=int, default=2,
+                        help="Per-topology eval samples each eval round")
+    parser.add_argument("--per-topology-early-stop-patience", type=int, default=0,
+                        help="Stop if macro per-topology sim-valid doesn't improve for N eval rounds (0=disabled)")
+    parser.add_argument("--per-topology-early-stop-delta", type=float, default=0.0,
+                        help="Minimum macro per-topology sim-valid improvement to reset patience")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -1375,6 +1521,9 @@ def main():
         group_size=args.group_size,
         n_topos_per_step=args.n_topos_per_step,
         grpo_clip_adv=args.grpo_clip_adv,
+        per_topology_eval_samples=args.per_topology_eval_samples,
+        per_topology_early_stop_patience=args.per_topology_early_stop_patience,
+        per_topology_early_stop_delta=args.per_topology_early_stop_delta,
     )
 
     # Train

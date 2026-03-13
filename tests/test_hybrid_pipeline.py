@@ -103,6 +103,49 @@ class TestHybridGenerator:
         assert all(c.source == "vcg" for c in circuits)
         assert all(c.topology == "buck" for c in circuits)
 
+    def test_generate_best_with_prerank_limits_simulations(self, monkeypatch):
+        """Pre-ranking should simulate only top-k shortlisted candidates."""
+        gen = HybridGenerator()
+
+        fake_candidates = [
+            GeneratedCircuit(source="vcg", topology="buck", gen_time_ms=float(i))
+            for i in range(5)
+        ]
+
+        monkeypatch.setattr(
+            gen,
+            "generate_from_vcg",
+            lambda topology, specs, n_candidates, simulate=True: list(fake_candidates),
+        )
+
+        score_map = {id(c): c.gen_time_ms for c in fake_candidates}
+        monkeypatch.setattr(
+            gen,
+            "_score_candidate_proxy",
+            lambda c: score_map[id(c)],
+        )
+
+        simulated_ids = []
+
+        def _fake_simulate(candidate):
+            simulated_ids.append(id(candidate))
+            candidate.reward = candidate.gen_time_ms
+            return candidate
+
+        monkeypatch.setattr(gen, "_simulate_candidate", _fake_simulate)
+
+        best = gen.generate_best(
+            "buck",
+            {"vin": 12.0, "vout": 5.0},
+            n_candidates_per_source=5,
+            sources=["vcg"],
+            pre_rank_top_k=2,
+        )
+
+        assert len(simulated_ids) == 2
+        # Highest proxy scores are gen_time_ms 4 and 3; best should be 4.
+        assert best.reward == 4.0
+
 
 class TestEvalResult:
     def test_summarize(self):

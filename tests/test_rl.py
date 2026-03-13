@@ -273,6 +273,54 @@ def test_grpo_train_dispatches():
     print(f"  GRPO train dispatch OK: best_reward={results['best_reward']:.3f}")
 
 
+def test_topology_early_stop_state_machine():
+    """Per-topology macro sim-valid patience triggers stop after no improvement."""
+    tokenizer = CircuitTokenizer()
+    device = torch.device("cpu")
+    config = ARCSConfig.small()
+
+    model = ARCSModel(config).to(device)
+    ref_model = ARCSModel(config).to(device)
+    ref_model.load_state_dict(model.state_dict())
+
+    rl_config = RLConfig(
+        n_steps=1,
+        batch_size=1,
+        per_topology_early_stop_patience=2,
+        per_topology_early_stop_delta=0.05,
+    )
+    trainer = ARCSRLTrainer(
+        model=model,
+        ref_model=ref_model,
+        tokenizer=tokenizer,
+        config=rl_config,
+        device=device,
+        output_dir="/tmp/arcs_topology_stop_test",
+    )
+
+    topo_eval_1 = {
+        "buck": {"sim_valid_rate": 0.50},
+        "boost": {"sim_valid_rate": 0.60},
+    }
+    should_stop, macro = trainer._update_topology_early_stop_state(topo_eval_1)
+    assert should_stop is False
+    assert abs(macro - 0.55) < 1e-6
+
+    topo_eval_2 = {
+        "buck": {"sim_valid_rate": 0.52},
+        "boost": {"sim_valid_rate": 0.58},
+    }
+    should_stop, _ = trainer._update_topology_early_stop_state(topo_eval_2)
+    assert should_stop is False
+
+    topo_eval_3 = {
+        "buck": {"sim_valid_rate": 0.51},
+        "boost": {"sim_valid_rate": 0.57},
+    }
+    should_stop, _ = trainer._update_topology_early_stop_state(topo_eval_3)
+    assert should_stop is True
+
+
 if __name__ == "__main__":
     test_components_to_params()
     test_decode_and_simulate()
