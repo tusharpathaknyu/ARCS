@@ -1,5 +1,7 @@
 # ARCS: Autoregressive Representation for Circuit Synthesis
 
+[![phase16-consistency](https://github.com/tusharpathaknyu/ARCS/actions/workflows/phase16-consistency.yml/badge.svg)](https://github.com/tusharpathaknyu/ARCS/actions/workflows/phase16-consistency.yml)
+
 > **"Components are words. Circuits are sentences."**
 
 A native autoregressive model that generates complete analog circuits — topology AND component values — conditioned on performance specifications in a single forward pass (~20ms). Unlike text-LLM approaches that predict characters and topology-only models (AnalogGenie) that require separate GA sizing, ARCS generates SPICE-simulatable designs directly from specs.
