@@ -888,6 +888,31 @@ class TestValidityChecker:
         assert not result["no_floating_nodes"]
         assert not result["valid"]
 
+    def test_disconnected_template_topology_is_valid(self):
+        """Topologies with multi-component reference graphs should not fail C4."""
+        graph = CircuitGraph(
+            topology="wien_bridge",
+            n_components=4,
+            node_types=torch.tensor([1, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
+            adjacency=torch.zeros(12, 12),
+            values=torch.tensor([-3.0, -6.0, -3.0, -3.0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            active_mask=torch.tensor([1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.float),
+            spec_types=torch.zeros(8, dtype=torch.long),
+            spec_values=torch.zeros(8),
+            spec_mask=torch.zeros(8),
+            value_bounds_min=torch.full((12,), LOG_VAL_MIN),
+            value_bounds_max=torch.full((12,), LOG_VAL_MAX),
+        )
+        # Expected template structure for wien_bridge is two connected components:
+        # (0-1) and (2-3)
+        graph.adjacency[0, 1] = graph.adjacency[1, 0] = 1.0
+        graph.adjacency[2, 3] = graph.adjacency[3, 2] = 1.0
+
+        result = check_circuit_validity(graph)
+        assert result["no_floating_nodes"]
+        assert result["graph_connected"]
+        assert result["valid"]
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Integration test

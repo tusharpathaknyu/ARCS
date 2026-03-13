@@ -19,6 +19,7 @@ from arcs.valid_circuit_gen import (
     TOPOLOGY_TO_IDX,
 )
 from arcs.tokenizer import CircuitTokenizer
+from arcs.simulate import ALL_TEST_SPECS
 
 
 class TestPrepareVCGInput:
@@ -122,6 +123,15 @@ class TestEvalResult:
         assert summary["n_generated"] == 20
         assert 0.8 <= summary["struct_valid_rate"] <= 0.9
         assert abs(summary["mean_reward"] - 3.75) < 0.01
+
+    def test_evaluate_generator_accepts_list_specs(self):
+        def generator_fn(topology, specs):
+            return [GeneratedCircuit(source="mock", topology=topology, reward=1.0)]
+
+        results = evaluate_generator(generator_fn, test_specs=ALL_TEST_SPECS, label="mock")
+        assert isinstance(results, dict)
+        assert "buck" in results
+        assert results["buck"].n_generated >= 1
 
 
 class TestGeneratedCircuit:

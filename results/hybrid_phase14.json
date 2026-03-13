@@ -1,0 +1,569 @@
+{
+  "device": "mps",
+  "n_candidates_per_source": 4,
+  "summary": {
+    "vcg": {
+      "n_topologies": 16,
+      "n_generated": 64,
+      "struct_valid_rate": 0.8125,
+      "sim_success_rate": 0.8125,
+      "sim_valid_rate": 0.703125,
+      "mean_reward": 3.8184150065691087,
+      "mean_gen_time_ms": 27.718976140022278
+    },
+    "ccfm": {
+      "n_topologies": 16,
+      "n_generated": 64,
+      "struct_valid_rate": 0.8125,
+      "sim_success_rate": 0.8125,
+      "sim_valid_rate": 0.734375,
+      "mean_reward": 3.713274380591682,
+      "mean_gen_time_ms": 146.30229771137238
+    },
+    "hybrid": {
+      "n_topologies": 16,
+      "n_generated": 16,
+      "struct_valid_rate": 0.8125,
+      "sim_success_rate": 0.8125,
+      "sim_valid_rate": 0.8125,
+      "mean_reward": 4.869958553239173,
+      "mean_gen_time_ms": 42.86738112568855
+    }
+  },
+  "per_topology": {
+    "vcg": {
+      "buck": {
+        "topology": "buck",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 3,
+        "mean_reward": 5.503213022534894,
+        "mean_efficiency": 0.8744220341411073,
+        "mean_vout_error": 32.15337905359894,
+        "gen_time_ms": 751.4920234680176
+      },
+      "boost": {
+        "topology": "boost",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 4.102389216708373,
+        "mean_efficiency": 0.26547224453578333,
+        "mean_vout_error": 8.561037039789165,
+        "gen_time_ms": 43.10297966003418
+      },
+      "buck_boost": {
+        "topology": "buck_boost",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 3,
+        "mean_reward": 3.6897433404752444,
+        "mean_efficiency": 0.45598096542154687,
+        "mean_vout_error": 27.25417679179418,
+        "gen_time_ms": 50.7357120513916
+      },
+      "cuk": {
+        "topology": "cuk",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 0,
+        "mean_reward": 4.477278816101801,
+        "mean_efficiency": 0.7862410493624525,
+        "mean_vout_error": 91.04467424837866,
+        "gen_time_ms": 53.02691459655762
+      },
+      "sepic": {
+        "topology": "sepic",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 3,
+        "mean_reward": 3.3911817812746534,
+        "mean_efficiency": 0.491472324715109,
+        "mean_vout_error": 38.324404382741065,
+        "gen_time_ms": 44.8610782623291
+      },
+      "flyback": {
+        "topology": "flyback",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 3.9199696202762633,
+        "mean_efficiency": 0.5326873848664373,
+        "mean_vout_error": 31.651467673534526,
+        "gen_time_ms": 30.62891960144043
+      },
+      "forward": {
+        "topology": "forward",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 3.234764657734515,
+        "mean_efficiency": 0.15399310202397734,
+        "mean_vout_error": 26.21959401513852,
+        "gen_time_ms": 46.247005462646484
+      },
+      "inverting_amp": {
+        "topology": "inverting_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 6.289000416666666,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 62.96706199645996
+      },
+      "noninverting_amp": {
+        "topology": "noninverting_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.602257,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 30.791044235229492
+      },
+      "instrumentation_amp": {
+        "topology": "instrumentation_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.285528308333333,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 137.24493980407715
+      },
+      "differential_amp": {
+        "topology": "differential_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.599313925,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 27.785062789916992
+      },
+      "sallen_key_lowpass": {
+        "topology": "sallen_key_lowpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 55.81378936767578
+      },
+      "sallen_key_highpass": {
+        "topology": "sallen_key_highpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 40.68303108215332
+      },
+      "sallen_key_bandpass": {
+        "topology": "sallen_key_bandpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 49.89004135131836
+      },
+      "wien_bridge": {
+        "topology": "wien_bridge",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 214.3409252166748
+      },
+      "colpitts": {
+        "topology": "colpitts",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 134.40394401550293
+      }
+    },
+    "ccfm": {
+      "buck": {
+        "topology": "buck",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.496119847499601,
+        "mean_efficiency": 0.7551980431275866,
+        "mean_vout_error": 14.234185359402996,
+        "gen_time_ms": 1454.4787406921387
+      },
+      "boost": {
+        "topology": "boost",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 4.180356916246535,
+        "mean_efficiency": 0.23514724337508705,
+        "mean_vout_error": 7.0666026314835335,
+        "gen_time_ms": 444.166898727417
+      },
+      "buck_boost": {
+        "topology": "buck_boost",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 2.4885070358759833,
+        "mean_efficiency": 0.16224969047580237,
+        "mean_vout_error": 14.560270011214719,
+        "gen_time_ms": 499.1919994354248
+      },
+      "cuk": {
+        "topology": "cuk",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 3,
+        "mean_reward": 3.502193930282724,
+        "mean_efficiency": 0.3643326333505281,
+        "mean_vout_error": 37.34441808566786,
+        "gen_time_ms": 514.9586200714111
+      },
+      "sepic": {
+        "topology": "sepic",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 2,
+        "mean_reward": 4.210748142864595,
+        "mean_efficiency": 0.574565405716428,
+        "mean_vout_error": 43.0812077385537,
+        "gen_time_ms": 485.6152534484863
+      },
+      "flyback": {
+        "topology": "flyback",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 2,
+        "mean_reward": 2.796955603949492,
+        "mean_efficiency": 0.16738329552487055,
+        "mean_vout_error": 46.58139055061826,
+        "gen_time_ms": 441.6368007659912
+      },
+      "forward": {
+        "topology": "forward",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 2.5778824127479734,
+        "mean_efficiency": 0.06532322121177175,
+        "mean_vout_error": 29.698153272327154,
+        "gen_time_ms": 468.97196769714355
+      },
+      "inverting_amp": {
+        "topology": "inverting_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 6.195895500000001,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 516.6499614715576
+      },
+      "noninverting_amp": {
+        "topology": "noninverting_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.664283583333333,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 477.0998954772949
+      },
+      "instrumentation_amp": {
+        "topology": "instrumentation_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.397452241666667,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 531.8989753723145
+      },
+      "differential_amp": {
+        "topology": "differential_amp",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.401994875000001,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 669.3551540374756
+      },
+      "sallen_key_lowpass": {
+        "topology": "sallen_key_lowpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 475.77404975891113
+      },
+      "sallen_key_highpass": {
+        "topology": "sallen_key_highpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 574.444055557251
+      },
+      "sallen_key_bandpass": {
+        "topology": "sallen_key_bandpass",
+        "n_generated": 4,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 516.1490440368652
+      },
+      "wien_bridge": {
+        "topology": "wien_bridge",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 5.5,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 564.659833908081
+      },
+      "colpitts": {
+        "topology": "colpitts",
+        "n_generated": 4,
+        "n_struct_valid": 4,
+        "n_sim_success": 4,
+        "n_sim_valid": 4,
+        "mean_reward": 6.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 728.2958030700684
+      }
+    },
+    "hybrid": {
+      "buck": {
+        "topology": "buck",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 3.746487593526434,
+        "mean_efficiency": 0.48579965678535275,
+        "mean_vout_error": 13.248608977257865,
+        "gen_time_ms": 129.43750619888306
+      },
+      "boost": {
+        "topology": "boost",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 7.633079909597409,
+        "mean_efficiency": 1.0,
+        "mean_vout_error": 1.030246602263168,
+        "gen_time_ms": 14.407217502593994
+      },
+      "buck_boost": {
+        "topology": "buck_boost",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 4.874580912176549,
+        "mean_efficiency": 0.9024598957713015,
+        "mean_vout_error": 9.097182997106936,
+        "gen_time_ms": 8.754730224609375
+      },
+      "cuk": {
+        "topology": "cuk",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 4.918645397292277,
+        "mean_efficiency": 0.8973971178512816,
+        "mean_vout_error": 6.6919021550804825,
+        "gen_time_ms": 22.940456867218018
+      },
+      "sepic": {
+        "topology": "sepic",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 6.064811142777644,
+        "mean_efficiency": 0.8724372727008519,
+        "mean_vout_error": 4.9253292332140495,
+        "gen_time_ms": 6.971955299377441
+      },
+      "flyback": {
+        "topology": "flyback",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 5.131185629640438,
+        "mean_efficiency": 0.4796227833387651,
+        "mean_vout_error": 5.377798779132275,
+        "gen_time_ms": 8.801281452178955
+      },
+      "forward": {
+        "topology": "forward",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 5.353219600149346,
+        "mean_efficiency": 0.02130794579296782,
+        "mean_vout_error": 0.2913397356521657,
+        "gen_time_ms": 7.094442844390869
+      },
+      "inverting_amp": {
+        "topology": "inverting_amp",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 7.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 14.89400863647461
+      },
+      "noninverting_amp": {
+        "topology": "noninverting_amp",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 5.667748333333334,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 7.788538932800293
+      },
+      "instrumentation_amp": {
+        "topology": "instrumentation_amp",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 6.529578333333333,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 187.45219707489014
+      },
+      "differential_amp": {
+        "topology": "differential_amp",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 7.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 6.276071071624756
+      },
+      "sallen_key_lowpass": {
+        "topology": "sallen_key_lowpass",
+        "n_generated": 1,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 5.98299503326416
+      },
+      "sallen_key_highpass": {
+        "topology": "sallen_key_highpass",
+        "n_generated": 1,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 11.043250560760498
+      },
+      "sallen_key_bandpass": {
+        "topology": "sallen_key_bandpass",
+        "n_generated": 1,
+        "n_struct_valid": 0,
+        "n_sim_success": 0,
+        "n_sim_valid": 0,
+        "mean_reward": 0.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 28.870224952697754
+      },
+      "wien_bridge": {
+        "topology": "wien_bridge",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 7.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 187.21574544906616
+      },
+      "colpitts": {
+        "topology": "colpitts",
+        "n_generated": 1,
+        "n_struct_valid": 1,
+        "n_sim_success": 1,
+        "n_sim_valid": 1,
+        "mean_reward": 7.0,
+        "mean_efficiency": 0.0,
+        "mean_vout_error": 100.0,
+        "gen_time_ms": 37.94747591018677
+      }
+    }
+  }
+}

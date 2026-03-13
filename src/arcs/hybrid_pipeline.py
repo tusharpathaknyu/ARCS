@@ -115,8 +115,11 @@ def vcg_graph_to_spice(
         reward = compute_reward(decoded, outcome)
     else:
         outcome = SimulationOutcome(
-            success=False, valid=False, metrics={}, raw_output="",
-            topology=graph.topology, sim_time=0.0,
+            success=False,
+            valid=False,
+            metrics={},
+            error="Invalid decoded structure",
+            sim_time=0.0,
         )
         reward = 0.0
 
@@ -459,6 +462,14 @@ def evaluate_generator(
     """
     if test_specs is None:
         test_specs = ALL_TEST_SPECS
+
+    # Normalize list-form specs [(topology, spec_dict), ...] into
+    # dict-form {topology: [spec_dict, ...]}.
+    if isinstance(test_specs, list):
+        grouped_specs: dict[str, list[dict[str, float]]] = defaultdict(list)
+        for topology, spec in test_specs:
+            grouped_specs[topology].append(spec)
+        test_specs = grouped_specs
 
     results: dict[str, EvalResult] = {}
 

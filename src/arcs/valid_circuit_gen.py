@@ -1474,6 +1474,31 @@ class LagrangianVAETrainer:
 # Validity checker (post-generation)
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _count_connected_components(adj: torch.Tensor) -> int:
+    """Count connected components in an undirected adjacency matrix."""
+    n = adj.shape[0]
+    if n <= 1:
+        return n
+
+    visited = [False] * n
+    n_components = 0
+
+    for start in range(n):
+        if visited[start]:
+            continue
+        n_components += 1
+        stack = [start]
+        visited[start] = True
+        while stack:
+            node = stack.pop()
+            neighbors = torch.where(adj[node] > 0.5)[0].tolist()
+            for nei in neighbors:
+                if not visited[nei]:
+                    visited[nei] = True
+                    stack.append(nei)
+
+    return n_components
+
 def check_circuit_validity(graph: CircuitGraph) -> dict[str, bool]:
     """Check if a generated CircuitGraph is structurally valid.
 
@@ -1495,15 +1520,28 @@ def check_circuit_validity(graph: CircuitGraph) -> dict[str, bool]:
     # C3: No short circuits (check for forbidden patterns)
     results["no_short_circuits"] = True  # simplified check
 
-    # C4: Graph connectivity
+    # C4: Graph connectivity (topology-aware)
+    # Some component-level topology abstractions (e.g., wien_bridge,
+    # instrumentation_amp, colpitts) are intentionally multi-component graphs.
+    # For those, allow the same number of connected components as the reference
+    # topology graph while still enforcing no floating nodes.
     if n <= 1:
         results["graph_connected"] = True
     else:
-        L = torch.diag(degrees) - adj
         try:
-            eigs = torch.linalg.eigvalsh(L)
-            fiedler = eigs[1].item()
-            results["graph_connected"] = fiedler > 0.001
+            actual_components = _count_connected_components(adj)
+
+            expected_components = 1
+            topo_edges = TOPOLOGY_ADJACENCY.get(graph.topology, [])
+            if topo_edges:
+                ref_adj = torch.zeros(n, n, device=adj.device, dtype=adj.dtype)
+                for i, j in topo_edges:
+                    if i < n and j < n:
+                        ref_adj[i, j] = 1.0
+                        ref_adj[j, i] = 1.0
+                expected_components = _count_connected_components(ref_adj)
+
+            results["graph_connected"] = actual_components <= expected_components
         except Exception:
             results["graph_connected"] = False
 
