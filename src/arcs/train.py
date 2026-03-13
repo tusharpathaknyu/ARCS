@@ -291,6 +291,10 @@ def main():
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--resume", type=str, default=None,
                         help="Path to checkpoint .pt file to resume training from")
+    parser.add_argument("--resume-weights-only", action="store_true",
+                        help="Load model weights from --resume but reset optimizer/scheduler and epoch")
+    parser.add_argument("--resume-allow-partial", action="store_true",
+                        help="Allow missing/unexpected keys when loading model weights from --resume")
     args = parser.parse_args()
 
     # --- Seed ---
@@ -395,24 +399,39 @@ def main():
             return
         print(f"\nResuming from: {resume_path}")
         ckpt = torch.load(resume_path, map_location=device, weights_only=False)
-        model.load_state_dict(ckpt['model_state_dict'])
-        if 'optimizer_state_dict' in ckpt:
-            optimizer.load_state_dict(ckpt['optimizer_state_dict'])
-        start_epoch = ckpt.get('epoch', 0) + 1
-        best_val_loss = ckpt.get('val_loss', float('inf'))
-        # Advance scheduler to match resumed position
-        resumed_steps = len(train_loader) * (start_epoch - 1)
-        for _ in range(resumed_steps):
-            scheduler.step()
-        print(f"  Resumed at epoch {start_epoch}, best val_loss={best_val_loss:.4f}")
-        print(f"  Scheduler advanced to step {resumed_steps}")
-        # Load existing history if available
-        history_path = output_dir / "history.json"
-        if history_path.exists():
-            with open(history_path) as f:
-                history = json.load(f)
-            history = [h for h in history if h['epoch'] < start_epoch]
-            print(f"  Loaded {len(history)} history entries")
+        load_result = model.load_state_dict(
+            ckpt['model_state_dict'],
+            strict=not args.resume_allow_partial,
+        )
+        if args.resume_allow_partial:
+            if load_result.missing_keys:
+                print(f"  Partial load: {len(load_result.missing_keys)} missing keys")
+            if load_result.unexpected_keys:
+                print(f"  Partial load: {len(load_result.unexpected_keys)} unexpected keys")
+
+        if args.resume_weights_only:
+            print("  Loaded checkpoint weights only (fresh optimizer/scheduler state)")
+        else:
+            if 'optimizer_state_dict' in ckpt:
+                try:
+                    optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+                except ValueError as exc:
+                    print(f"  WARNING: Could not restore optimizer state ({exc}); using fresh optimizer")
+            start_epoch = ckpt.get('epoch', 0) + 1
+            best_val_loss = ckpt.get('val_loss', float('inf'))
+            # Advance scheduler to match resumed position
+            resumed_steps = len(train_loader) * (start_epoch - 1)
+            for _ in range(resumed_steps):
+                scheduler.step()
+            print(f"  Resumed at epoch {start_epoch}, best val_loss={best_val_loss:.4f}")
+            print(f"  Scheduler advanced to step {resumed_steps}")
+            # Load existing history if available
+            history_path = output_dir / "history.json"
+            if history_path.exists():
+                with open(history_path) as f:
+                    history = json.load(f)
+                history = [h for h in history if h['epoch'] < start_epoch]
+                print(f"  Loaded {len(history)} history entries")
 
     # --- Training loop ---
     print(f"\n{'=' * 60}")

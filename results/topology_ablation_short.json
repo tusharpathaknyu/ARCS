@@ -1,0 +1,62 @@
+[
+  {
+    "name": "GraphTransformer Baseline",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 6829296,
+    "config": {
+      "use_topology_value_heads": false,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 13.0,
+    "valid_structure_rate": 0.75,
+    "sim_success_rate": 0.75,
+    "sim_valid_rate": 0.6041666666666666,
+    "mean_reward": 3.8897624222319767,
+    "mean_efficiency": 0.6276897165424962,
+    "mean_vout_error": 31.285776863467284
+  },
+  {
+    "name": "GraphTransformer + Topology Value Heads",
+    "checkpoint": "checkpoints/arcs_graph_transformer_topo_value/best_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 9639152,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 15.1,
+    "valid_structure_rate": 0.875,
+    "sim_success_rate": 0.7916666666666666,
+    "sim_valid_rate": 0.7291666666666666,
+    "mean_reward": 4.495174270811633,
+    "mean_efficiency": 0.7272205602985164,
+    "mean_vout_error": 17.57933453866576
+  },
+  {
+    "name": "GraphTransformer + Family MoE",
+    "checkpoint": "checkpoints/arcs_graph_transformer_family_moe/best_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 10341616,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": true,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 9.9,
+    "valid_structure_rate": 0.8333333333333334,
+    "sim_success_rate": 0.6875,
+    "sim_valid_rate": 0.6041666666666666,
+    "mean_reward": 4.030825206342128,
+    "mean_efficiency": 0.8045355906202913,
+    "mean_vout_error": 32.91775117121165
+  }
+]
