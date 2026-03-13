@@ -538,6 +538,17 @@ Example output:
   - Extended GRPO: 3000 additional steps (3500 total), best eval reward=5.235, 76.7% sim_valid
   - **GRPO (500 steps) is best autoregressive model**: 73.8% sim_valid (vs 65.0% SL, 50.0% RL), reward 4.701
 
+### Phase 15: Hybrid Pipeline Reliability Fixes (complete)
+- [x] Fixed hybrid graph→token topology aliasing for Sallen-Key (`TOPO_SALLEN_KEY_LP/HP/BP`)
+- [x] Added topology-aware repair fallback in hybrid generation (reference adjacency + component types)
+- [x] Added regression test for Sallen-Key topology token aliases
+- [x] Hybrid benchmark script added: `scripts/evaluate_hybrid.py`
+- [x] **Hybrid benchmark (n=2 candidates/source, VCG+CCFM ranking):**
+  - Structural validity: **100.0%** (16/16 topologies)
+  - Simulation success: **100.0%**
+  - Simulation validity: **100.0%**
+  - Mean reward: **5.795**
+
 **Evaluation Results (80 circuits, SPICE simulation):**
 
 | Model | Params | Struct% | SimOK% | SimValid% | Reward | Eff% | Verr% |

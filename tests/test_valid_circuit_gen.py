@@ -248,6 +248,27 @@ class TestCircuitGraph:
             assert graph.topology == topology
             assert graph.n_components == len(comp_list)
 
+    def test_sallen_key_token_aliases(self, tokenizer):
+        """Sallen-Key long topology names map to LP/HP/BP topology tokens."""
+        for topology, expected_token in [
+            ("sallen_key_lowpass", "TOPO_SALLEN_KEY_LP"),
+            ("sallen_key_highpass", "TOPO_SALLEN_KEY_HP"),
+            ("sallen_key_bandpass", "TOPO_SALLEN_KEY_BP"),
+        ]:
+            comp_list = COMPONENT_TO_PARAM[topology]
+            params = {pname: 1e-3 for _, pname in comp_list}
+            sample = CircuitSample(
+                topology=topology,
+                parameters=params,
+                operating_conditions={"cutoff_freq": 1000.0},
+                metrics={},
+                valid=True,
+                sim_time=0.01,
+            )
+            graph = circuit_sample_to_graph(sample, tokenizer, VCGConfig())
+            tokens = graph_to_token_sequence(graph, tokenizer)
+            assert tokenizer.name_to_id[expected_token] in tokens
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Constraint tests

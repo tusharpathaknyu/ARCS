@@ -43,6 +43,7 @@ from arcs.simulate import (
     simulate_decoded_circuit,
     compute_reward,
     SimulationOutcome,
+    COMPONENT_TO_PARAM,
     TIER1_TEST_SPECS,
     TIER2_TEST_SPECS,
     ALL_TEST_SPECS,
@@ -56,10 +57,12 @@ from arcs.valid_circuit_gen import (
     graph_to_token_sequence,
     check_circuit_validity,
     TOPOLOGY_TO_IDX,
+    NODE_TYPE_TO_IDX,
     IDX_TO_NODE_TYPE,
     SPEC_TO_IDX,
     SPEC_TYPES,
 )
+from arcs.model_enhanced import TOPOLOGY_ADJACENCY
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +84,39 @@ class GeneratedCircuit:
     reward: float = 0.0
     validity: Optional[dict] = None       # structural validity check
     gen_time_ms: float = 0.0
+
+
+def _apply_topology_skeleton(graph: CircuitGraph) -> CircuitGraph:
+    """Return a copy repaired to topology reference adjacency and node types."""
+    adj_pairs = TOPOLOGY_ADJACENCY.get(graph.topology)
+    comp_list = COMPONENT_TO_PARAM.get(graph.topology)
+    if not adj_pairs or not comp_list:
+        return graph
+
+    n = graph.n_components
+    new_adj = torch.zeros_like(graph.adjacency)
+    for i, j in adj_pairs:
+        if i < n and j < n:
+            new_adj[i, j] = 1.0
+            new_adj[j, i] = 1.0
+
+    new_types = graph.node_types.clone()
+    for i, (comp_type, _) in enumerate(comp_list[:n]):
+        new_types[i] = NODE_TYPE_TO_IDX.get(comp_type, new_types[i].item())
+
+    return CircuitGraph(
+        topology=graph.topology,
+        n_components=graph.n_components,
+        node_types=new_types,
+        adjacency=new_adj,
+        values=graph.values,
+        active_mask=graph.active_mask,
+        spec_types=graph.spec_types,
+        spec_values=graph.spec_values,
+        spec_mask=graph.spec_mask,
+        value_bounds_min=graph.value_bounds_min,
+        value_bounds_max=graph.value_bounds_max,
+    )
 
 
 def vcg_graph_to_spice(
@@ -275,6 +311,12 @@ class HybridGenerator:
         results = []
         for graph in graphs:
             validity = check_circuit_validity(graph)
+            if not validity["valid"]:
+                repaired = _apply_topology_skeleton(graph)
+                repaired_validity = check_circuit_validity(repaired)
+                if repaired_validity["valid"]:
+                    graph = repaired
+                    validity = repaired_validity
             decoded, outcome, reward = vcg_graph_to_spice(
                 graph, self.runner, self.tokenizer
             )
@@ -352,6 +394,12 @@ class HybridGenerator:
             )
 
             validity = check_circuit_validity(graph)
+            if not validity["valid"]:
+                repaired = _apply_topology_skeleton(graph)
+                repaired_validity = check_circuit_validity(repaired)
+                if repaired_validity["valid"]:
+                    graph = repaired
+                    validity = repaired_validity
             decoded, outcome, reward = vcg_graph_to_spice(
                 graph, self.runner, self.tokenizer
             )

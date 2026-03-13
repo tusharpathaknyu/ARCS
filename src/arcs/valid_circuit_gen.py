@@ -301,7 +301,12 @@ def graph_to_token_sequence(
     tokens = [tokenizer.start_id]
 
     # Topology
-    topo_key = f"TOPO_{graph.topology.upper()}"
+    _topo_to_token = {
+        "sallen_key_lowpass": "TOPO_SALLEN_KEY_LP",
+        "sallen_key_highpass": "TOPO_SALLEN_KEY_HP",
+        "sallen_key_bandpass": "TOPO_SALLEN_KEY_BP",
+    }
+    topo_key = _topo_to_token.get(graph.topology, f"TOPO_{graph.topology.upper()}")
     if topo_key in tokenizer.name_to_id:
         tokens.append(tokenizer.name_to_id[topo_key])
     tokens.append(tokenizer.sep_id)
