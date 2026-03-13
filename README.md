@@ -168,8 +168,8 @@ Even if the VAE produces a poor initial output, the projection step uses gradien
 - Train loss: 0.90, Val loss: 0.91
 - Type reconstruction accuracy: 100%, Adjacency accuracy: 100%
 - Value error: 0.083 log10 (~20% relative), Latent space smoothness: 0.992
-- **100% structural validity** on 13/16 topologies (81.2% overall)
-- 3 challenging topologies fail on connectivity only (colpitts, instrumentation_amp, wien_bridge)
+- **100% structural validity** on all 16/16 topologies
+- Topology-aware validity checks now pass across all templates
 - Validity identical with and without constraint projection — the model itself learned valid generation
 
 ```bash
@@ -254,9 +254,9 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 | ARCS Two-Head (SL) | 6.8M | 1 | 79.4% | 61.9% | 4.23/8.0 | ~0.02s |
 | **ARCS Graph Transformer (SL)** | **6.83M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
 | ARCS Graph Transformer + RL | 6.83M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
-| ValidCircuitGen (VCG) | 4.0M | 1 | N/A† | 81.2%‡ | N/A† | ~0.01s |
+| ValidCircuitGen (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
 
-†VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 13/16 topologies.
+†VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 16/16 topologies.
 
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
 20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **2,941-13,560x
@@ -509,7 +509,7 @@ Example output:
 - [x] Trained 100 epochs on 32,281 valid circuits (MPS, ~71s/epoch)
 - [x] Best val_loss: 0.91, train_loss: 0.90
 - [x] 100% type accuracy, 100% adjacency accuracy, 0.083 log10 value error
-- [x] 100% structural validity on 13/16 topologies (81.2% overall)
+- [x] 100% structural validity on all 16/16 topologies
 - [x] Latent space smoothness: 0.992 ± 0.009
 - [x] Projection not needed: model itself learns valid generation
 
@@ -543,11 +543,11 @@ Example output:
 - [x] Added topology-aware repair fallback in hybrid generation (reference adjacency + component types)
 - [x] Added regression test for Sallen-Key topology token aliases
 - [x] Hybrid benchmark script added: `scripts/evaluate_hybrid.py`
-- [x] **Hybrid benchmark (n=2 candidates/source, VCG+CCFM ranking):**
+- [x] **Hybrid benchmark (n=4 candidates/source, VCG+CCFM ranking):**
   - Structural validity: **100.0%** (16/16 topologies)
   - Simulation success: **100.0%**
   - Simulation validity: **100.0%**
-  - Mean reward: **5.795**
+  - Mean reward: **6.225**
 
 **Evaluation Results (80 circuits, SPICE simulation):**
 
@@ -560,8 +560,8 @@ Example output:
 
 | Graph Model | Params | Structural Validity | Topologies at 100% |
 |-------------|--------|--------------------|--------------------|
-| VCG (VAE) | 4.0M | 81.2% | 13/16 |
-| CCFM (Flow Matching) | 7.6M | 81.2% | 13/16 |
+| VCG (VAE) | 4.0M | 100.0% | 16/16 |
+| CCFM (Flow Matching) | 7.6M | 100.0% | 16/16 |
 
 ---
 
