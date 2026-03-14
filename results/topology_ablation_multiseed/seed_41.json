@@ -12,7 +12,7 @@
       "topology_family_moe_alpha": 0.3
     },
     "n_samples": 80,
-    "eval_time_s": 43.3,
+    "eval_time_s": 43.6,
     "valid_structure_rate": 0.8125,
     "sim_success_rate": 0.7375,
     "sim_valid_rate": 0.6375,
@@ -33,7 +33,7 @@
       "topology_family_moe_alpha": 0.3
     },
     "n_samples": 80,
-    "eval_time_s": 60.7,
+    "eval_time_s": 62.0,
     "valid_structure_rate": 0.8375,
     "sim_success_rate": 0.725,
     "sim_valid_rate": 0.6125,
@@ -54,7 +54,7 @@
       "topology_family_moe_alpha": 0.3
     },
     "n_samples": 80,
-    "eval_time_s": 23.6,
+    "eval_time_s": 26.0,
     "valid_structure_rate": 0.875,
     "sim_success_rate": 0.7875,
     "sim_valid_rate": 0.7,

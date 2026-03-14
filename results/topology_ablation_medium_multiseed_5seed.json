@@ -1,0 +1,162 @@
+{
+  "n_samples": 80,
+  "seeds": [
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "bootstrap": {
+    "iters": 5000,
+    "ci": 0.95,
+    "seed": 123
+  },
+  "per_seed_outputs": [
+    "results/topology_ablation_multiseed/seed_41.json",
+    "results/topology_ablation_multiseed/seed_42.json",
+    "results/topology_ablation_multiseed/seed_43.json",
+    "results/topology_ablation_multiseed/seed_44.json",
+    "results/topology_ablation_multiseed/seed_45.json"
+  ],
+  "summary": [
+    {
+      "name": "GraphTransformer + Family MoE",
+      "n_runs": 5,
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "sim_valid_mean": 0.625,
+      "sim_valid_std": 0.06903350635742037,
+      "sim_valid_ci": {
+        "mean": 0.625,
+        "low": 0.5700000000000001,
+        "high": 0.6799999999999999
+      },
+      "struct_mean": 0.8400000000000001,
+      "struct_std": 0.044546324203013646,
+      "struct_ci": {
+        "mean": 0.8400000000000001,
+        "low": 0.8025,
+        "high": 0.8724999999999999
+      },
+      "reward_mean": 4.001869836259474,
+      "reward_std": 0.3573638157925179,
+      "reward_ci": {
+        "mean": 4.001869836259474,
+        "low": 3.709395142242669,
+        "high": 4.270557142995175
+      }
+    },
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "n_runs": 5,
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "sim_valid_mean": 0.595,
+      "sim_valid_std": 0.01895718861012888,
+      "sim_valid_ci": {
+        "mean": 0.595,
+        "low": 0.5775,
+        "high": 0.6075
+      },
+      "struct_mean": 0.8150000000000001,
+      "struct_std": 0.02236067977499791,
+      "struct_ci": {
+        "mean": 0.8150000000000001,
+        "low": 0.7975,
+        "high": 0.8324999999999999
+      },
+      "reward_mean": 3.9866856773965393,
+      "reward_std": 0.16830789396106235,
+      "reward_ci": {
+        "mean": 3.9866856773965393,
+        "low": 3.85365286185505,
+        "high": 4.115933034485281
+      }
+    },
+    {
+      "name": "GraphTransformer Baseline",
+      "n_runs": 5,
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "sim_valid_mean": 0.63,
+      "sim_valid_std": 0.04968651728587947,
+      "sim_valid_ci": {
+        "mean": 0.63,
+        "low": 0.5925,
+        "high": 0.6675
+      },
+      "struct_mean": 0.845,
+      "struct_std": 0.033773140215265736,
+      "struct_ci": {
+        "mean": 0.845,
+        "low": 0.82,
+        "high": 0.8724999999999999
+      },
+      "reward_mean": 4.1011000594372735,
+      "reward_std": 0.18607179880472732,
+      "reward_ci": {
+        "mean": 4.1011000594372735,
+        "low": 3.9524672899857327,
+        "high": 4.227822620885776
+      }
+    }
+  ],
+  "pairwise_vs_baseline": {
+    "GraphTransformer + Topology Value Heads": {
+      "sim_valid_diff": {
+        "mean_diff": -0.03500000000000003,
+        "low": -0.07500000000000007,
+        "high": 0.007499999999999844,
+        "p_gt_zero": 0.0416
+      },
+      "reward_diff": {
+        "mean_diff": -0.11441438204073417,
+        "low": -0.3123821513352577,
+        "high": 0.08866936117431194,
+        "p_gt_zero": 0.1432
+      },
+      "struct_diff": {
+        "mean_diff": -0.029999999999999916,
+        "low": -0.0625,
+        "high": 0.0,
+        "p_gt_zero": 0.0248
+      }
+    },
+    "GraphTransformer + Family MoE": {
+      "sim_valid_diff": {
+        "mean_diff": -0.0050000000000000044,
+        "low": -0.0724999999999999,
+        "high": 0.06000000000000005,
+        "p_gt_zero": 0.4238
+      },
+      "reward_diff": {
+        "mean_diff": -0.09923022317779928,
+        "low": -0.4135494891269655,
+        "high": 0.21012327909468073,
+        "p_gt_zero": 0.2672
+      },
+      "struct_diff": {
+        "mean_diff": -0.004999999999999893,
+        "low": -0.050000000000000044,
+        "high": 0.03506249999999923,
+        "p_gt_zero": 0.406
+      }
+    }
+  }
+}

@@ -602,7 +602,7 @@ bash scripts/run_topology_ablation_short.sh
 bash scripts/run_topology_ablation_medium.sh
 
 # Multiseed robustness eval on medium checkpoints (no retraining)
-PYTHONPATH=src .venv/bin/python scripts/run_topology_ablation_multiseed.py --n-samples 80 --seeds 41 42 43
+PYTHONPATH=src .venv/bin/python scripts/run_topology_ablation_multiseed.py --n-samples 80 --seeds 41 42 43 44 45 --bootstrap-iters 5000 --ci 0.95 --output results/topology_ablation_medium_multiseed_5seed.json
 
 # Best-of-N inference scaling
 PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
@@ -635,19 +635,27 @@ Artifacts:
 - `results/topology_ablation_short.json`
 - `results/topology_ablation_medium.json`
 
-### Topology Ablation Robustness (Medium Checkpoints, 3 seeds)
+### Topology Ablation Robustness (Medium Checkpoints, 5 seeds + bootstrap CI)
 
 | Model | Structural (mean ± std) | Sim Valid (mean ± std) | Reward (mean ± std) |
 |-------|--------------------------|-------------------------|---------------------|
-| Baseline | 84.2% ± 4.0% | 60.0% ± 3.7% | 4.012 ± 0.185 |
-| + Topology Value Heads | 82.9% ± 1.4% | 59.2% ± 2.6% | 4.089 ± 0.105 |
-| + Family MoE | **85.4% ± 3.6%** | **67.1% ± 4.0%** | **4.241 ± 0.163** |
+| Baseline | **84.5% ± 3.4%** | **63.0% ± 5.0%** | **4.101 ± 0.186** |
+| + Topology Value Heads | 81.5% ± 2.2% | 59.5% ± 1.9% | 3.987 ± 0.168 |
+| + Family MoE | 84.0% ± 4.5% | 62.5% ± 6.9% | 4.002 ± 0.357 |
+
+Pairwise bootstrap deltas vs baseline (95% CI):
+- `+ Topology Value Heads`: sim_valid Δ = -3.5 pp `[-7.5, +0.7]`, reward Δ = -0.114 `[-0.312, +0.089]`
+- `+ Family MoE`: sim_valid Δ = -0.5 pp `[-7.2, +6.0]`, reward Δ = -0.099 `[-0.414, +0.210]`
 
 Artifacts:
-- `results/topology_ablation_medium_multiseed.json`
+- `results/topology_ablation_medium_multiseed_5seed.json`
+- `logs/evaluate_topology_ablation_medium_multiseed_5seed.log`
+- `results/topology_ablation_medium_multiseed.json` (prior 3-seed run)
 - `results/topology_ablation_multiseed/seed_41.json`
 - `results/topology_ablation_multiseed/seed_42.json`
 - `results/topology_ablation_multiseed/seed_43.json`
+- `results/topology_ablation_multiseed/seed_44.json`
+- `results/topology_ablation_multiseed/seed_45.json`
 
 ---
 
