@@ -598,6 +598,9 @@ PYTHONPATH=src python scripts/evaluate_topology_ablation.py --n-samples 48
 # End-to-end short run: train new variants from baseline + evaluate
 bash scripts/run_topology_ablation_short.sh
 
+# End-to-end medium run (defaults: EPOCHS=8, N_SAMPLES=80)
+bash scripts/run_topology_ablation_medium.sh
+
 # Best-of-N inference scaling
 PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
 
@@ -613,6 +616,21 @@ PYTHONPATH=src python -m arcs.baselines --method ga --n-repeats 10
 # Run all 273 tests
 PYTHONPATH=src python -m pytest tests/ -v
 ```
+
+### Topology Ablation Snapshot (Graph Transformer)
+
+| Run | Model | Structural | Sim Valid | Reward |
+|-----|-------|------------|-----------|--------|
+| Short (5 epochs, 48 samples) | Baseline | 75.0% | 60.4% | 3.890 |
+| Short (5 epochs, 48 samples) | + Topology Value Heads | **87.5%** | **72.9%** | **4.495** |
+| Short (5 epochs, 48 samples) | + Family MoE | 83.3% | 60.4% | 4.031 |
+| Medium (8 epochs, 80 samples) | Baseline | **82.5%** | **60.0%** | **3.961** |
+| Medium (8 epochs, 80 samples) | + Topology Value Heads | 81.2% | 58.8% | 3.923 |
+| Medium (8 epochs, 80 samples) | + Family MoE | 77.5% | 57.5% | 3.695 |
+
+Artifacts:
+- `results/topology_ablation_short.json`
+- `results/topology_ablation_medium.json`
 
 ---
 
