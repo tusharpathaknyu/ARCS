@@ -601,6 +601,9 @@ bash scripts/run_topology_ablation_short.sh
 # End-to-end medium run (defaults: EPOCHS=8, N_SAMPLES=80)
 bash scripts/run_topology_ablation_medium.sh
 
+# Multiseed robustness eval on medium checkpoints (no retraining)
+PYTHONPATH=src .venv/bin/python scripts/run_topology_ablation_multiseed.py --n-samples 80 --seeds 41 42 43
+
 # Best-of-N inference scaling
 PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
 
@@ -631,6 +634,20 @@ PYTHONPATH=src python -m pytest tests/ -v
 Artifacts:
 - `results/topology_ablation_short.json`
 - `results/topology_ablation_medium.json`
+
+### Topology Ablation Robustness (Medium Checkpoints, 3 seeds)
+
+| Model | Structural (mean ± std) | Sim Valid (mean ± std) | Reward (mean ± std) |
+|-------|--------------------------|-------------------------|---------------------|
+| Baseline | 84.2% ± 4.0% | 60.0% ± 3.7% | 4.012 ± 0.185 |
+| + Topology Value Heads | 82.9% ± 1.4% | 59.2% ± 2.6% | 4.089 ± 0.105 |
+| + Family MoE | **85.4% ± 3.6%** | **67.1% ± 4.0%** | **4.241 ± 0.163** |
+
+Artifacts:
+- `results/topology_ablation_medium_multiseed.json`
+- `results/topology_ablation_multiseed/seed_41.json`
+- `results/topology_ablation_multiseed/seed_42.json`
+- `results/topology_ablation_multiseed/seed_43.json`
 
 ---
 

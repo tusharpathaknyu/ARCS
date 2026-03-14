@@ -1,0 +1,65 @@
+[
+  {
+    "name": "GraphTransformer Baseline",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 41,
+    "n_params": 6829296,
+    "config": {
+      "use_topology_value_heads": false,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 80,
+    "eval_time_s": 43.3,
+    "valid_structure_rate": 0.8125,
+    "sim_success_rate": 0.7375,
+    "sim_valid_rate": 0.6375,
+    "mean_reward": 4.048059090071478,
+    "mean_efficiency": 0.5948060669873008,
+    "mean_vout_error": 25.66633746038417
+  },
+  {
+    "name": "GraphTransformer + Topology Value Heads",
+    "checkpoint": "checkpoints/arcs_graph_transformer_topo_value_medium/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 41,
+    "n_params": 9639152,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 80,
+    "eval_time_s": 60.7,
+    "valid_structure_rate": 0.8375,
+    "sim_success_rate": 0.725,
+    "sim_valid_rate": 0.6125,
+    "mean_reward": 4.09577081255709,
+    "mean_efficiency": 0.6124714013181051,
+    "mean_vout_error": 34.97002621154603
+  },
+  {
+    "name": "GraphTransformer + Family MoE",
+    "checkpoint": "checkpoints/arcs_graph_transformer_family_moe_medium/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 41,
+    "n_params": 10341616,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": true,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 80,
+    "eval_time_s": 23.6,
+    "valid_structure_rate": 0.875,
+    "sim_success_rate": 0.7875,
+    "sim_valid_rate": 0.7,
+    "mean_reward": 4.416479699121807,
+    "mean_efficiency": 0.6777242313854602,
+    "mean_vout_error": 24.233658550833145
+  }
+]

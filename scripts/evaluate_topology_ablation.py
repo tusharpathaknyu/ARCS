@@ -20,9 +20,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import time
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from arcs.evaluate import generate_and_evaluate
@@ -38,6 +40,14 @@ def _pick_device() -> torch.device:
     return torch.device("cpu")
 
 
+def _set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
 def evaluate_checkpoint(
     name: str,
     checkpoint: Path,
@@ -46,6 +56,7 @@ def evaluate_checkpoint(
     n_samples: int,
     temperature: float,
     top_k: int,
+    seed: int,
 ) -> dict | None:
     if not checkpoint.exists():
         print(f"SKIP {name}: missing checkpoint {checkpoint}")
@@ -74,6 +85,7 @@ def evaluate_checkpoint(
         "name": name,
         "checkpoint": str(checkpoint),
         "model_type": model_type,
+        "seed": seed,
         "n_params": n_params,
         "config": {
             "use_topology_value_heads": bool(getattr(config, "use_topology_value_heads", False)),
@@ -110,11 +122,14 @@ def main() -> None:
     parser.add_argument("--n-samples", type=int, default=48)
     parser.add_argument("--temperature", type=float, default=0.8)
     parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=str, default="results/topology_ablation.json")
     args = parser.parse_args()
 
     device = _pick_device()
     print(f"device: {device}")
+    _set_seed(args.seed)
+    print(f"seed: {args.seed}")
 
     tokenizer = CircuitTokenizer()
     variants = [
@@ -133,6 +148,7 @@ def main() -> None:
             n_samples=args.n_samples,
             temperature=args.temperature,
             top_k=args.top_k,
+            seed=args.seed,
         )
         if row is not None:
             rows.append(row)

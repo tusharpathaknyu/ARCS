@@ -1,0 +1,60 @@
+{
+  "n_samples": 80,
+  "seeds": [
+    41,
+    42,
+    43
+  ],
+  "per_seed_outputs": [
+    "results/topology_ablation_multiseed/seed_41.json",
+    "results/topology_ablation_multiseed/seed_42.json",
+    "results/topology_ablation_multiseed/seed_43.json"
+  ],
+  "summary": [
+    {
+      "name": "GraphTransformer + Family MoE",
+      "n_runs": 3,
+      "seeds": [
+        41,
+        42,
+        43
+      ],
+      "sim_valid_mean": 0.6708333333333334,
+      "sim_valid_std": 0.040181878170803965,
+      "struct_mean": 0.8541666666666666,
+      "struct_std": 0.03608439182435161,
+      "reward_mean": 4.24104005422091,
+      "reward_std": 0.1633039937672128
+    },
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "n_runs": 3,
+      "seeds": [
+        41,
+        42,
+        43
+      ],
+      "sim_valid_mean": 0.5916666666666667,
+      "sim_valid_std": 0.026020824993326672,
+      "struct_mean": 0.8291666666666666,
+      "struct_std": 0.014433756729740658,
+      "reward_mean": 4.089017209053051,
+      "reward_std": 0.10471505006465173
+    },
+    {
+      "name": "GraphTransformer Baseline",
+      "n_runs": 3,
+      "seeds": [
+        41,
+        42,
+        43
+      ],
+      "sim_valid_mean": 0.6,
+      "sim_valid_std": 0.03749999999999998,
+      "struct_mean": 0.8416666666666667,
+      "struct_std": 0.040181878170803965,
+      "reward_mean": 4.011542076733079,
+      "reward_std": 0.18456498119100226
+    }
+  ]
+}
