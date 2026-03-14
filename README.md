@@ -604,6 +604,9 @@ bash scripts/run_topology_ablation_medium.sh
 # Multiseed robustness eval on medium checkpoints (no retraining)
 PYTHONPATH=src .venv/bin/python scripts/run_topology_ablation_multiseed.py --n-samples 80 --seeds 41 42 43 44 45 --bootstrap-iters 5000 --ci 0.95 --output results/topology_ablation_medium_multiseed_5seed.json
 
+# Inference-time alpha sweep (topology heads + family MoE) on medium checkpoints
+PYTHONPATH=src .venv/bin/python scripts/run_topology_alpha_sweep.py --n-samples 48 --seeds 41 42 43 44 45 --topology-alphas 0.2 0.5 0.8 --family-alphas 0.1 0.3 0.5 --family-topology-alpha 0.5 --output results/topology_alpha_sweep_5seed.json
+
 # Best-of-N inference scaling
 PYTHONPATH=src python scripts/run_bestofn.py --checkpoint checkpoints/arcs_graph_transformer/best_model.pt --simulate
 
@@ -656,6 +659,24 @@ Artifacts:
 - `results/topology_ablation_multiseed/seed_43.json`
 - `results/topology_ablation_multiseed/seed_44.json`
 - `results/topology_ablation_multiseed/seed_45.json`
+
+### Alpha Sweep (Inference-time, 5 seeds, n=48)
+
+| Setting | Sim Valid (mean ± std) | Reward (mean ± std) | Structural (mean ± std) |
+|---------|--------------------------|----------------------|--------------------------|
+| Baseline | **64.2% ± 7.7%** | **4.271 ± 0.285** | **87.5% ± 4.9%** |
+| FamilyMoE αf=0.50, αt=0.50 | **64.2% ± 7.4%** | 4.109 ± 0.471 | 85.8% ± 4.5% |
+| FamilyMoE αf=0.30, αt=0.50 | 61.3% ± 6.4% | 3.998 ± 0.441 | 84.2% ± 6.4% |
+| FamilyMoE αf=0.10, αt=0.50 | 60.8% ± 4.0% | 4.071 ± 0.226 | 84.2% ± 3.5% |
+| TopologyHeads α=0.50 | 57.9% ± 7.7% | 3.781 ± 0.351 | 76.2% ± 5.8% |
+| TopologyHeads α=0.20 | 54.2% ± 4.9% | 3.779 ± 0.184 | 79.2% ± 2.6% |
+| TopologyHeads α=0.80 | 51.7% ± 4.5% | 3.703 ± 0.285 | 82.9% ± 6.8% |
+
+Best by `sim_valid`: `FamilyMoE αf=0.50, αt=0.50` (tie with baseline on mean sim_valid, but lower mean reward).
+
+Artifacts:
+- `results/topology_alpha_sweep_5seed.json`
+- `logs/evaluate_topology_alpha_sweep_5seed.log`
 
 ---
 
