@@ -1,0 +1,65 @@
+[
+  {
+    "name": "GraphTransformer Baseline",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 42,
+    "n_params": 6829296,
+    "config": {
+      "use_topology_value_heads": false,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 16.1,
+    "valid_structure_rate": 0.9375,
+    "sim_success_rate": 0.8333333333333334,
+    "sim_valid_rate": 0.5416666666666666,
+    "mean_reward": 4.335485430124252,
+    "mean_efficiency": 0.6058378178790279,
+    "mean_vout_error": 40.48395643534454
+  },
+  {
+    "name": "GraphTransformer + Topology Value Heads",
+    "checkpoint": "checkpoints/topology_sweep_pilot/pilot2/topology_heads/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 42,
+    "n_params": 9639152,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.2,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 15.3,
+    "valid_structure_rate": 0.8333333333333334,
+    "sim_success_rate": 0.7291666666666666,
+    "sim_valid_rate": 0.5833333333333334,
+    "mean_reward": 3.885269395897985,
+    "mean_efficiency": 0.6000138633902958,
+    "mean_vout_error": 29.74780612368217
+  },
+  {
+    "name": "GraphTransformer + Family MoE",
+    "checkpoint": "checkpoints/topology_sweep_pilot/pilot2/family_moe/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 42,
+    "n_params": 10341616,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": true,
+      "topology_family_moe_alpha": 0.5
+    },
+    "n_samples": 48,
+    "eval_time_s": 22.0,
+    "valid_structure_rate": 0.7083333333333334,
+    "sim_success_rate": 0.5833333333333334,
+    "sim_valid_rate": 0.5208333333333334,
+    "mean_reward": 3.297050000274903,
+    "mean_efficiency": 0.723109959956168,
+    "mean_vout_error": 23.66038557513423
+  }
+]
