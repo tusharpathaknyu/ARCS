@@ -1,0 +1,63 @@
+{
+  "run_prefix": "pilot2",
+  "seeds": [
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "per_seed_files": [
+    "results/topology_training_sweep_pilot2_seed41_eval.json",
+    "results/topology_training_sweep_pilot2_seed42_eval.json",
+    "results/topology_training_sweep_pilot2_seed43_eval.json",
+    "results/topology_training_sweep_pilot2_seed44_eval.json",
+    "results/topology_training_sweep_pilot2_seed45_eval.json"
+  ],
+  "summary": [
+    {
+      "name": "GraphTransformer + Family MoE",
+      "n_runs": 5,
+      "sim_valid_mean": 0.4875,
+      "sim_valid_std": 0.02795084971874739,
+      "reward_mean": 3.1489308031668215,
+      "reward_std": 0.26749374065995,
+      "struct_mean": 0.7208333333333334,
+      "struct_std": 0.0315953143502148
+    },
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "n_runs": 5,
+      "sim_valid_mean": 0.5416666666666666,
+      "sim_valid_std": 0.06421264586426018,
+      "reward_mean": 3.6095652941417233,
+      "reward_std": 0.42252919647309706,
+      "struct_mean": 0.8041666666666666,
+      "struct_std": 0.04564354645876388
+    },
+    {
+      "name": "GraphTransformer Baseline",
+      "n_runs": 5,
+      "sim_valid_mean": 0.6416666666666666,
+      "sim_valid_std": 0.07711148134717397,
+      "reward_mean": 4.271402503180198,
+      "reward_std": 0.28500395155646707,
+      "struct_mean": 0.875,
+      "struct_std": 0.0488584974981607
+    }
+  ],
+  "delta_vs_baseline": [
+    {
+      "name": "GraphTransformer + Family MoE",
+      "sim_valid_delta": -0.15416666666666662,
+      "reward_delta": -1.1224717000133766,
+      "struct_delta": -0.15416666666666656
+    },
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "sim_valid_delta": -0.09999999999999998,
+      "reward_delta": -0.6618372090384748,
+      "struct_delta": -0.07083333333333341
+    }
+  ]
+}
