@@ -411,17 +411,29 @@ def main():
             if load_result.unexpected_keys:
                 print(f"  Partial load: {len(load_result.unexpected_keys)} unexpected keys")
 
-        # Initialize expert heads from shared value head (avoids random init noise)
+        # Initialize expert heads from shared value head (only for heads that
+        # were NOT loaded from the checkpoint, to avoid overwriting trained weights)
+        missing = set(load_result.missing_keys) if args.resume_allow_partial else set()
         if args.init_experts_from_shared and hasattr(model, 'topology_value_heads') and model.topology_value_heads is not None:
             shared_w = model.value_head.weight.data
+            n_init = 0
             for i, expert in enumerate(model.topology_value_heads):
-                expert.weight.data.copy_(shared_w)
-            print(f"  Initialized {len(model.topology_value_heads)} topology expert heads from shared value head")
+                key = f"topology_value_heads.{i}.weight"
+                if not missing or key in missing:
+                    expert.weight.data.copy_(shared_w)
+                    n_init += 1
+            if n_init > 0:
+                print(f"  Initialized {n_init}/{len(model.topology_value_heads)} topology expert heads from shared value head")
         if args.init_experts_from_shared and hasattr(model, 'topology_family_value_heads') and model.topology_family_value_heads is not None:
             shared_w = model.value_head.weight.data
+            n_init = 0
             for i, expert in enumerate(model.topology_family_value_heads):
-                expert.weight.data.copy_(shared_w)
-            print(f"  Initialized {len(model.topology_family_value_heads)} family expert heads from shared value head")
+                key = f"topology_family_value_heads.{i}.weight"
+                if not missing or key in missing:
+                    expert.weight.data.copy_(shared_w)
+                    n_init += 1
+            if n_init > 0:
+                print(f"  Initialized {n_init}/{len(model.topology_family_value_heads)} family expert heads from shared value head")
 
         if args.resume_weights_only:
             print("  Loaded checkpoint weights only (fresh optimizer/scheduler state)")
