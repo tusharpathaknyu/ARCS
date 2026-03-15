@@ -295,6 +295,8 @@ def main():
                         help="Load model weights from --resume but reset optimizer/scheduler and epoch")
     parser.add_argument("--resume-allow-partial", action="store_true",
                         help="Allow missing/unexpected keys when loading model weights from --resume")
+    parser.add_argument("--init-experts-from-shared", action="store_true",
+                        help="Initialize topology expert value heads from the shared value head (avoids random init noise)")
     args = parser.parse_args()
 
     # --- Seed ---
@@ -408,6 +410,18 @@ def main():
                 print(f"  Partial load: {len(load_result.missing_keys)} missing keys")
             if load_result.unexpected_keys:
                 print(f"  Partial load: {len(load_result.unexpected_keys)} unexpected keys")
+
+        # Initialize expert heads from shared value head (avoids random init noise)
+        if args.init_experts_from_shared and hasattr(model, 'topology_value_heads') and model.topology_value_heads is not None:
+            shared_w = model.value_head.weight.data
+            for i, expert in enumerate(model.topology_value_heads):
+                expert.weight.data.copy_(shared_w)
+            print(f"  Initialized {len(model.topology_value_heads)} topology expert heads from shared value head")
+        if args.init_experts_from_shared and hasattr(model, 'topology_family_value_heads') and model.topology_family_value_heads is not None:
+            shared_w = model.value_head.weight.data
+            for i, expert in enumerate(model.topology_family_value_heads):
+                expert.weight.data.copy_(shared_w)
+            print(f"  Initialized {len(model.topology_family_value_heads)} family expert heads from shared value head")
 
         if args.resume_weights_only:
             print("  Loaded checkpoint weights only (fresh optimizer/scheduler state)")

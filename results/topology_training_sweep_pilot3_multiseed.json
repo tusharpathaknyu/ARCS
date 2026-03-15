@@ -1,0 +1,55 @@
+{
+  "run_prefix": "pilot3",
+  "recipe": {
+    "description": "Stability-first topology-head-only (no MoE)",
+    "lr": "1e-5",
+    "epochs": 1,
+    "topo_alpha": 0.1,
+    "augmentation": false,
+    "family_moe": false
+  },
+  "seeds": [
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "per_seed_files": [
+    "results/topology_training_sweep_pilot3_seed41_eval.json",
+    "results/topology_training_sweep_pilot3_seed42_eval.json",
+    "results/topology_training_sweep_pilot3_seed43_eval.json",
+    "results/topology_training_sweep_pilot3_seed44_eval.json",
+    "results/topology_training_sweep_pilot3_seed45_eval.json"
+  ],
+  "summary": [
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "n_runs": 5,
+      "sim_valid_mean": 0.5875,
+      "sim_valid_std": 0.055901699437494755,
+      "reward_mean": 3.682366998557195,
+      "reward_std": 0.28057825648221,
+      "struct_mean": 0.7708333333333333,
+      "struct_std": 0.03294039229342063
+    },
+    {
+      "name": "GraphTransformer Baseline",
+      "n_runs": 5,
+      "sim_valid_mean": 0.6416666666666666,
+      "sim_valid_std": 0.07711148134717397,
+      "reward_mean": 4.271402503180198,
+      "reward_std": 0.28500395155646707,
+      "struct_mean": 0.875,
+      "struct_std": 0.0488584974981607
+    }
+  ],
+  "delta_vs_baseline": [
+    {
+      "name": "GraphTransformer + Topology Value Heads",
+      "sim_valid_delta": -0.054166666666666585,
+      "reward_delta": -0.5890355046230029,
+      "struct_delta": -0.10416666666666674
+    }
+  ]
+}

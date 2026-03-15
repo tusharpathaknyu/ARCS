@@ -1,0 +1,44 @@
+[
+  {
+    "name": "GraphTransformer Baseline",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 44,
+    "n_params": 6829296,
+    "config": {
+      "use_topology_value_heads": false,
+      "topology_value_head_alpha": 0.5,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 14.1,
+    "valid_structure_rate": 0.9166666666666666,
+    "sim_success_rate": 0.8541666666666666,
+    "sim_valid_rate": 0.7083333333333334,
+    "mean_reward": 4.3818557035426915,
+    "mean_efficiency": 0.6882785262340818,
+    "mean_vout_error": 22.794395734070513
+  },
+  {
+    "name": "GraphTransformer + Topology Value Heads",
+    "checkpoint": "checkpoints/topology_sweep_pilot/pilot3_seed44/topology_heads/best_model.pt",
+    "model_type": "graph_transformer",
+    "seed": 44,
+    "n_params": 9639152,
+    "config": {
+      "use_topology_value_heads": true,
+      "topology_value_head_alpha": 0.1,
+      "use_topology_family_moe": false,
+      "topology_family_moe_alpha": 0.3
+    },
+    "n_samples": 48,
+    "eval_time_s": 43.9,
+    "valid_structure_rate": 0.7291666666666666,
+    "sim_success_rate": 0.6458333333333334,
+    "sim_valid_rate": 0.5,
+    "mean_reward": 3.3227792792309345,
+    "mean_efficiency": 0.6488865516714247,
+    "mean_vout_error": 37.1950339231868
+  }
+]
