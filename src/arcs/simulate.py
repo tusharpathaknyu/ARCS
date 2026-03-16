@@ -493,10 +493,16 @@ def compute_reward(
 
     _POWER_TOPOS = set(_TIER1_NAMES) | {
         "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
-        "shunt_regulator", "series_regulator",
     }
+    _REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}
+    _MIRROR_TOPOS = {"current_mirror"}
+
     if topology in _POWER_TOPOS:
         reward += _power_reward(outcome, target_specs)
+    elif topology in _REGULATOR_TOPOS:
+        reward += _regulator_reward(outcome, topology, target_specs)
+    elif topology in _MIRROR_TOPOS:
+        reward += _current_mirror_reward(outcome)
     else:
         reward += _signal_reward(outcome, topology)
 
@@ -586,6 +592,84 @@ def _signal_reward(
     return reward
 
 
+def _regulator_reward(
+    outcome: SimulationOutcome,
+    topology: str,
+    target_specs: dict[str, float] | None = None,
+) -> float:
+    """Voltage regulator reward: output regulation + low ripple (max 6.0).
+
+    shunt_regulator targets v_zener, series_regulator targets v_ref.
+    Both measure vout_avg and vout_ripple.
+    """
+    reward = 0.0
+    m = outcome.metrics
+
+    vout_avg = abs(m.get("vout_avg", 0))
+
+    # Determine target voltage from topology or specs
+    vtarget = 0.0
+    if target_specs:
+        vtarget = target_specs.get("v_zener", target_specs.get("v_ref", 0))
+    if vtarget <= 0 and topology == "shunt_regulator":
+        vtarget = 5.1  # default zener voltage
+    elif vtarget <= 0 and topology == "series_regulator":
+        vtarget = 2.5  # default ref voltage
+
+    # Vout regulation accuracy: 3.0 × max(0, 1 - error/10)
+    if vtarget > 0.01:
+        verr_pct = abs(vout_avg - vtarget) / vtarget * 100
+        reward += 3.0 * max(0.0, 1.0 - verr_pct / 10.0)
+    elif vout_avg > 0.1:
+        # At least producing some output
+        reward += 1.0
+
+    # Low ripple: 2.0 × max(0, 1 - ripple/vout × 10)
+    ripple = abs(m.get("vout_ripple", 0))
+    if vout_avg > 0.01:
+        rip_ratio = ripple / vout_avg
+        reward += 2.0 * max(0.0, 1.0 - rip_ratio * 10.0)
+
+    # Current sourcing: 1.0 if meaningful output current
+    iout = abs(m.get("iout_avg", 0))
+    if iout > 1e-6:
+        reward += 1.0
+
+    return reward
+
+
+def _current_mirror_reward(
+    outcome: SimulationOutcome,
+) -> float:
+    """Current mirror reward: output/reference current matching (max 6.0).
+
+    Measures iref and iout; a perfect mirror has iout/iref = 1.
+    """
+    reward = 0.0
+    m = outcome.metrics
+
+    iref = abs(m.get("iref", 0))
+    iout = abs(m.get("iout", 0))
+
+    if iref < 1e-9:
+        return reward  # no reference current → can't evaluate
+
+    # Current ratio accuracy: 3.0 × max(0, 1 - |1 - iout/iref| × 5)
+    ratio = iout / iref
+    ratio_error = abs(1.0 - ratio)
+    reward += 3.0 * max(0.0, 1.0 - ratio_error * 5.0)
+
+    # Both currents in reasonable range (1µA - 100mA): 2.0
+    if 1e-6 < iref < 0.1 and 1e-6 < iout < 0.1:
+        reward += 2.0
+
+    # Tight matching (< 5% error): bonus 1.0
+    if ratio_error < 0.05:
+        reward += 1.0
+
+    return reward
+
+
 # ---------------------------------------------------------------------------
 # Topology-aware test specs for evaluation
 # ---------------------------------------------------------------------------
@@ -627,8 +711,8 @@ TIER2_TEST_SPECS = [
     ("transimpedance_amp", {"cutoff_freq": 1000}),
     ("half_bridge", {"vin": 48.0, "vout": 24.0, "iout": 2.0, "fsw": 100000}),
     ("push_pull", {"vin": 48.0, "vout": 12.0, "iout": 2.0, "fsw": 100000}),
-    ("charge_pump", {"vin": 5.0, "iout": 0.1, "fsw": 100000}),
-    ("voltage_doubler", {"vin": 12.0, "iout": 0.1, "fsw": 50000}),
+    ("charge_pump", {"vin": 5.0, "vout": 10.0, "iout": 0.1, "fsw": 100000}),
+    ("voltage_doubler", {"vin": 12.0, "vout": 24.0, "iout": 0.1, "fsw": 50000}),
     ("zeta_converter", {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100000}),
 ]
 

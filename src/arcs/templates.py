@@ -2144,8 +2144,8 @@ SIGNAL_OPERATING_CONDITIONS = {
     # ---- Power/Misc Topologies ----
     "half_bridge": {"vin": 48.0, "vout": 24.0, "iout": 2.0, "fsw": 100e3},
     "push_pull": {"vin": 48.0, "vout": 12.0, "iout": 2.0, "fsw": 100e3},
-    "charge_pump": {"vin": 5.0, "iout": 0.1, "fsw": 100e3},
-    "voltage_doubler": {"vin": 12.0, "iout": 0.1, "fsw": 50e3},
+    "charge_pump": {"vin": 5.0, "vout": 10.0, "iout": 0.1, "fsw": 100e3},
+    "voltage_doubler": {"vin": 12.0, "vout": 24.0, "iout": 0.1, "fsw": 50e3},
     "zeta_converter": {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100e3},
 }
 

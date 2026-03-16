@@ -31,6 +31,7 @@
 | `0d964d5` | 2026-03-15 | Fix current_mirror and push_pull netlists for ngspice simulation |
 | `6046946` | 2026-03-16 | Add VCG v2 evaluation results and Phase 14 decisions to DECISIONS.md |
 | `d9b7aa3` | 2026-03-16 | Add CCFM v2 and latent reward results to DECISIONS.md |
+| — | 2026-03-16 | Phase 16: Fix reward routing for new power topologies, add dedicated reward functions |
 
 ---
 
@@ -919,3 +920,41 @@ Three topologies fail on graph connectivity only:
 - Hybrid ranked-union picks the best of 8 candidates (4×VCG + 4×CCFM), lifting reward from 4.87/4.73 → **5.48**
 - Full results saved to `results/hybrid_v2.json`
 - Refinement benchmark saved to `results/refinement_benchmark.json`
+
+---
+
+## Phase 16: Reward Routing & Metric Computation Fixes
+
+### Status: ✅ COMPLETE
+
+### Decision 16.1: Fix Reward Routing for New Power Converters
+- **Problem**: 5 Tier-2 power topologies (half_bridge, push_pull, charge_pump, voltage_doubler, zeta_converter) were routed to `_signal_reward()` instead of `_power_reward()`. Signal reward doesn't check efficiency/vout_error/ripple — these topologies got only the base 2.0 reward for simulation convergence.
+- **Root cause**: `compute_reward()` in simulate.py only routed `_TIER1_NAMES` to `_power_reward()`. The 5 new power topologies from Phase 14 were not included.
+- **Solution**: Created `_POWER_TOPOS = set(_TIER1_NAMES) | {"half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter"}` and route all of them to `_power_reward()`.
+- **Impact**: These 5 topologies now receive proper efficiency + vout_error + ripple scoring (up to 8.0 reward).
+
+### Decision 16.2: Dedicated Reward Functions for Regulators and Current Mirror
+- **Problem**: shunt_regulator, series_regulator, and current_mirror were falling through to `_signal_reward()` which expects gain_db/bw_3db — metrics these topologies don't produce. Result: reward stuck at 2.0.
+- **Solution**: Added two new reward functions:
+  - `_regulator_reward()`: Scores vout regulation accuracy vs v_zener/v_ref target (3.0), low ripple (2.0), and current sourcing (1.0). Max 6.0.
+  - `_current_mirror_reward()`: Scores iout/iref ratio accuracy (3.0), reasonable current range (2.0), and tight matching <5% (1.0). Max 6.0.
+- **Routing**: `_REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}`, `_MIRROR_TOPOS = {"current_mirror"}` — each gets dedicated reward routing before the signal fallback.
+
+### Decision 16.3: Add Missing vout Targets for Charge Pump & Voltage Doubler
+- **Problem**: charge_pump and voltage_doubler operating_conditions lacked `vout` target. `_power_reward()` computes `vout_error_pct = |vout_avg - vout_target| / vout_target * 100` — without a target, vout scoring was broken.
+- **Solution**: Added `"vout": 10.0` to charge_pump operating conditions, `"vout": 24.0` to voltage_doubler. Also fixed `_compute_power_metrics()` routing in datagen.py to include these 5 topologies.
+
+### Decision 16.4: Metric Computation Routing in datagen.py
+- **Problem**: `compute_derived_metrics()` only routed `_TIER1_NAMES` through `_compute_power_metrics()`. The 5 new power topologies got `_compute_signal_metrics()` which doesn't compute efficiency, vout_error_pct, or ripple_ratio — the very metrics needed for `_power_reward()`.
+- **Solution**: Created `_POWER_METRIC_TOPOS` set (same as simulate.py) and route all power topologies to `_compute_power_metrics()`.
+
+### Hybrid Pipeline v2b Evaluation (after reward fixes)
+| Metric | Before (v2) | After (v2b) | Delta |
+|--------|-------------|-------------|-------|
+| Struct valid | 100% | **100%** | — |
+| Sim success | 100% | **100%** | — |
+| Sim valid | 97.1% | **100%** | +2.9% |
+| Mean reward | 5.48 | **6.80** | +1.32 |
+
+- **8 topologies improved from reward=2.0**: half_bridge, push_pull, charge_pump, voltage_doubler, zeta_converter, shunt_regulator, series_regulator, current_mirror
+- Full results saved to `results/hybrid_v2b.json`

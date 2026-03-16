@@ -52,7 +52,12 @@ def compute_derived_metrics(
     Dispatches to power-converter or signal-processing logic based on
     topology tier.
     """
-    if topology_name in _TIER1_NAMES:
+    # Tier 1 power converters + the 5 Tier 2 power topologies that produce
+    # the same vout_avg/iout_avg/iin_avg measurements and have vin/vout targets.
+    _POWER_METRIC_TOPOS = set(_TIER1_NAMES) | {
+        "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+    }
+    if topology_name in _POWER_METRIC_TOPOS:
         return _compute_power_metrics(raw_metrics, operating_conditions)
     else:
         return _compute_signal_metrics(raw_metrics, operating_conditions, topology_name)
