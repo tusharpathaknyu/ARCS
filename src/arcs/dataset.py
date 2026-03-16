@@ -13,11 +13,14 @@ teacher-forced next-token prediction.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import torch
+
+logger = logging.getLogger(__name__)
 from torch.utils.data import Dataset, DataLoader
 
 from arcs.tokenizer import CircuitTokenizer, TokenType
@@ -231,8 +234,9 @@ class EulerianAugmentedDataset(CircuitDataset):
                     # No diverse Euler paths found, fall back to shuffle
                     self._augment_single_by_shuffle(orig_idx, n_extra)
 
-            except Exception:
+            except (ValueError, IndexError, KeyError) as e:
                 # Euler augmentation failed, fall back to shuffle
+                logger.debug("Euler augmentation failed for sample %d: %s", orig_idx, e)
                 self._augment_single_by_shuffle(orig_idx, n_extra)
 
         return euler_successes

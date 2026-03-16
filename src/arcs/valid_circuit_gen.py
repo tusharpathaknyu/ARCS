@@ -34,12 +34,15 @@ Parameters: ~4.0M
 from __future__ import annotations
 
 import json
+import logging
 import math
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -1718,7 +1721,8 @@ def check_circuit_validity(graph: CircuitGraph) -> dict[str, bool]:
                 expected_components = _count_connected_components(ref_adj)
 
             results["graph_connected"] = actual_components <= expected_components
-        except Exception:
+        except (ValueError, IndexError, RuntimeError) as e:
+            logger.debug("Connectivity check failed: %s", e)
             results["graph_connected"] = False
 
     # C5: Value bounds

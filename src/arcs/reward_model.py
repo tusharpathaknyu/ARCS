@@ -25,6 +25,7 @@ References:
 from __future__ import annotations
 
 import json
+import logging
 import math
 import time
 from dataclasses import dataclass, asdict, field
@@ -32,6 +33,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import torch
+
+logger = logging.getLogger(__name__)
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
@@ -253,8 +256,9 @@ class CircuitRewardDataset(Dataset):
                         )
 
                         self.samples.append((token_ids, reward))
-                    except Exception:
-                        continue  # Skip malformed samples
+                    except (ValueError, KeyError, TypeError) as e:
+                        logger.debug("Skipping malformed sample in %s: %s", f.name, e)
+                        continue
 
         if not self.samples:
             raise ValueError(f"No valid samples loaded from {data_dir}")

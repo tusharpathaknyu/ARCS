@@ -13,9 +13,12 @@ candidate ranking.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import torch
 
@@ -468,7 +471,8 @@ def run_scaling_experiment(
                     rewards.append(r)
                     if outcome.valid:
                         sim_valids += 1
-                except Exception:
+                except (ValueError, RuntimeError) as e:
+                    logger.debug("SPICE simulation failed: %s", e)
                     rewards.append(0.0)
 
         metrics = {
@@ -565,7 +569,8 @@ def calibration_analysis(
             else:
                 invalid_confs.append(conf)
                 all_valids.append(0)
-        except Exception:
+        except (ValueError, RuntimeError) as e:
+            logger.debug("Simulation error in confidence analysis: %s", e)
             invalid_confs.append(conf)
             all_valids.append(0)
 

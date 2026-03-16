@@ -300,8 +300,8 @@ class HybridGenerator:
                 inp = torch.tensor([token_ids], dtype=torch.long, device=self.device)
                 pred = self.reward_model.predict(inp)
                 return float(pred.squeeze().item())
-            except Exception:
-                pass
+            except (ValueError, RuntimeError, IndexError) as e:
+                logger.debug("Reward model prediction failed for %s: %s", candidate.topology, e)
 
         score = 0.0
         decoded = candidate.decoded
