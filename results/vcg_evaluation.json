@@ -1,10 +1,10 @@
 {
-  "vcg_params": 3989553,
+  "vcg_params": 3998769,
   "vcg_config": {
     "latent_dim": 64,
     "max_nodes": 12,
     "n_node_types": 16,
-    "n_topologies": 17,
+    "n_topologies": 35,
     "d_model": 256,
     "n_encoder_layers": 4,
     "n_heads": 4,
@@ -21,145 +21,253 @@
     "initial_lambda": 0.1
   },
   "validity": {
-    "n_generated": 496,
-    "validity_rate": 0.8125,
+    "n_generated": 136,
+    "validity_rate": 0.9852941176470589,
     "constraint_rates": {
-      "no_floating_nodes": 1.0,
-      "device_completeness": 1.0,
+      "no_floating_nodes": 0.9926470588235294,
+      "device_completeness": 0.9926470588235294,
       "no_short_circuits": 1.0,
-      "graph_connected": 0.8125,
+      "graph_connected": 0.9852941176470589,
       "values_in_bounds": 1.0
     },
     "per_topology": {
       "boost": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 30.625866305443548
+        "avg_gen_time_ms": 200.20580291748047
       },
       "buck": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 6.354193533620526
+        "avg_gen_time_ms": 4.274249076843262
       },
       "buck_boost": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 2.8843187516735442
+        "avg_gen_time_ms": 4.0000081062316895
+      },
+      "cascode": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 3.9072632789611816
+      },
+      "charge_pump": {
+        "n_generated": 4,
+        "n_valid": 3,
+        "validity_rate": 0.75,
+        "avg_gen_time_ms": 27.300536632537842
       },
       "colpitts": {
-        "n_generated": 31,
-        "n_valid": 0,
-        "validity_rate": 0.0,
-        "avg_gen_time_ms": 17.667516585319273
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.907548427581787
+      },
+      "common_base": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 3.842473030090332
+      },
+      "common_collector": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 3.950178623199463
+      },
+      "common_emitter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 3.9294958114624023
       },
       "cuk": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 5.973900518109722
+        "avg_gen_time_ms": 10.738015174865723
+      },
+      "current_mirror": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 27.78095006942749
       },
       "differential_amp": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 5.93144662918583
+        "avg_gen_time_ms": 5.360007286071777
       },
       "flyback": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 7.327425864435011
+        "avg_gen_time_ms": 4.45246696472168
       },
       "forward": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 5.154132843017578
+        "avg_gen_time_ms": 4.191458225250244
+      },
+      "half_bridge": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 10.899722576141357
+      },
+      "hartley": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.041016101837158
       },
       "instrumentation_amp": {
-        "n_generated": 31,
-        "n_valid": 0,
-        "validity_rate": 0.0,
-        "avg_gen_time_ms": 17.76789849804294
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.128992557525635
       },
       "inverting_amp": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 8.172681254725303
+        "avg_gen_time_ms": 4.053473472595215
+      },
+      "inverting_summing_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 8.80277156829834
       },
       "noninverting_amp": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 6.521132684523059
+        "avg_gen_time_ms": 4.195809364318848
+      },
+      "phase_shift": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 17.122268676757812
+      },
+      "push_pull": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 28.114497661590576
       },
       "sallen_key_bandpass": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 10.976583726944463
+        "avg_gen_time_ms": 4.055261611938477
       },
       "sallen_key_highpass": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 5.502262423115392
+        "avg_gen_time_ms": 7.824242115020752
       },
       "sallen_key_lowpass": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 7.513030882804624
+        "avg_gen_time_ms": 3.934025764465332
       },
       "sepic": {
-        "n_generated": 31,
-        "n_valid": 31,
+        "n_generated": 4,
+        "n_valid": 4,
         "validity_rate": 1.0,
-        "avg_gen_time_ms": 5.08647580300608
+        "avg_gen_time_ms": 10.490238666534424
+      },
+      "series_regulator": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.089772701263428
+      },
+      "shunt_regulator": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.15802001953125
+      },
+      "state_variable_filter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 6.858766078948975
+      },
+      "transimpedance_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.1661858558654785
+      },
+      "twin_t_notch": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 17.830252647399902
+      },
+      "voltage_doubler": {
+        "n_generated": 4,
+        "n_valid": 3,
+        "validity_rate": 0.75,
+        "avg_gen_time_ms": 27.989506721496582
       },
       "wien_bridge": {
-        "n_generated": 31,
-        "n_valid": 0,
-        "validity_rate": 0.0,
-        "avg_gen_time_ms": 17.56273546526509
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 4.5005083084106445
+      },
+      "zeta_converter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 28.028488159179688
       }
     },
-    "avg_gen_time_ms": 10.063850110576999,
+    "avg_gen_time_ms": 15.121302183936624,
     "n_unique_node_types": 5,
     "node_type_distribution": {
-      "INDUCTOR": 341,
-      "CAPACITOR": 558,
-      "RESISTOR": 961,
-      "MOSFET_N": 217,
-      "TRANSFORMER": 62
+      "INDUCTOR": 58,
+      "CAPACITOR": 141,
+      "RESISTOR": 303,
+      "MOSFET_N": 38,
+      "TRANSFORMER": 8
     },
     "projection_enabled": true
   },
   "reconstruction": {
-    "n_evaluated": 500,
+    "n_evaluated": 160,
     "type_accuracy": 1.0,
     "adjacency_accuracy": 1.0,
-    "avg_value_error_log10": 0.08261881203949452,
-    "avg_kl": 4.236026113271714
+    "avg_value_error_log10": 0.07493107980117202,
+    "avg_kl": 4.444666761904955
   },
   "latent_space": {
     "n_pairs": 20,
-    "avg_smoothness": 0.9920055487459452,
-    "std_smoothness": 0.00896508900686723
+    "avg_smoothness": 0.9934525484889983,
+    "std_smoothness": 0.0074431590557632
   },
   "projection_impact": {
     "with_projection": {
-      "validity_rate": 0.8125,
-      "avg_gen_time_ms": 18.24029783407847
+      "validity_rate": 0.9705882352941176,
+      "avg_gen_time_ms": 25.3597007078283
     },
     "without_projection": {
-      "validity_rate": 0.8125,
-      "avg_gen_time_ms": 3.041322032610575
+      "validity_rate": 1.0,
+      "avg_gen_time_ms": 5.089360124924604
     },
-    "projection_improvement": 0.0
+    "projection_improvement": -0.02941176470588236
   }
 }
