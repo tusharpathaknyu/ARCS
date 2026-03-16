@@ -33,10 +33,12 @@ class NGSpiceRunner:
 
     def __init__(
         self,
-        ngspice_path: str = "ngspice",
+        ngspice_path: str | None = None,
         timeout: int = 30,
         temp_dir: Optional[str] = None,
     ):
+        if ngspice_path is None:
+            ngspice_path = os.environ.get("NGSPICE_PATH", "ngspice")
         self.ngspice_path = ngspice_path
         self.timeout = timeout
         self.temp_dir = temp_dir or tempfile.gettempdir()
