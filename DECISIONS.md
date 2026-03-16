@@ -34,6 +34,10 @@
 | `74bff32` | 2026-03-16 | Phase 16: Fix reward routing for new power topologies, add dedicated reward functions |
 | `3b84728` | 2026-03-16 | Phase 17: Production hardening, integration tests, balanced data |
 | `0eaf40e` | 2026-03-16 | Phase 17: Pin deps, pytest config, deprecate legacy scripts |
+| `2fcfe8c` | 2026-03-16 | Improve error handling: specific exceptions + logging |
+| `76e37ed` | 2026-03-16 | Deduplicate rl.py: shared components_to_params from simulate |
+| — | 2026-03-16 | Phase 17: VCG v3 + CCFM v3 + latent reward v3 retraining on balanced data |
+| — | 2026-03-16 | Phase 17: Full hybrid eval, 34 topologies, reward=6.59 |
 
 ---
 
@@ -1001,9 +1005,34 @@ Three topologies fail on graph connectivity only:
   - Phase 14 new topologies: 2000 samples each (18 topologies)
   - **Total: ~71,000 samples** (up from 62,000)
 
-### Decision 17.6: Model Retraining Plan
-- **VCG v3**: Retrain on `data/combined_v2/` with balanced representation. Same hyperparameters as v2 (100 epochs, lr=1e-4, β-KL=0.1).
-- **CCFM v3**: Retrain flow matching on VCG v3 backbone.
-- **Latent reward v2**: Retrain reward predictor on expanded data.
-- **Expected improvement**: Better validity on underrepresented topologies, more uniform reward distribution across all 34 topologies.
-- Full results saved to `results/hybrid_v2b.json`
+### Decision 17.6: Model Retraining on Balanced Data
+- **VCG v3**: Retrained on `data/combined_v2/` (67,456 valid samples) for 50 epochs, batch_size=128, lr=1e-4, β-KL=0.1.
+  - Final val_loss=1.074, recon_loss=0.38, generation validity=100%
+  - Checkpoint: `checkpoints/vcg_v3/best_model.pt`
+- **CCFM v3**: Retrained flow matching on VCG v3 backbone for 50 epochs.
+  - Final val_loss=0.177, flow_loss=0.22, generation validity=100%
+  - Checkpoint: `checkpoints/ccfm_v3/best_ccfm.pt`
+- **Latent reward v3**: Retrained reward predictor on expanded data for 50 epochs.
+  - Final val_loss=0.006
+  - Checkpoint: `checkpoints/latent_reward_v3/best_model.pt`
+
+### Decision 17.7: v3 Hybrid Evaluation Results
+- **All 34 topologies** now generate valid circuits (up from 16 in Phase 15)
+- Full results saved to `results/hybrid_v3.json`
+
+| Source | Struct Valid | Sim Success | Sim Valid | Mean Reward |
+|--------|------------|------------|----------|-------------|
+| VCG v3 | 100% | 100% | 95.6% | 5.72 |
+| CCFM v3 | 100% | 100% | 91.2% | 5.58 |
+| **Hybrid v3** | **100%** | **100%** | **94.1%** | **6.59** |
+
+- Comparison to v2b (16 topologies): v2b had sim_valid=100%, reward=6.80
+- v3 tests 34 topologies (including newly added Phase 14 circuits) so direct comparison is unfair
+- Top performers (reward ≥ 7.5): current_mirror (8.0), sallen_key_bandpass (8.0), sallen_key_lowpass (8.0), state_variable_filter (8.0), series_regulator (8.0), charge_pump (7.8), shunt_regulator (7.9), transimpedance_amp (7.7), common_emitter (7.5), cascode (7.5)
+- Weaker topologies: flyback (4.0), half_bridge (4.6), sepic (4.7), zeta_converter (4.9) — power converters with complex switching dynamics
+
+### Decision 17.8: Code Quality Improvements
+- Replaced 6 bare `except Exception` clauses with specific exception types + debug logging
+- Deduplicated `components_to_params` and `spec_to_cond` mapping from rl.py (was Tier-1 only, now uses comprehensive simulate.py version covering all 34 topologies)
+- Added `logging.getLogger(__name__)` to 4 modules: bestofn, dataset, reward_model, valid_circuit_gen
+- Net code reduction: -113 lines from rl.py deduplication
