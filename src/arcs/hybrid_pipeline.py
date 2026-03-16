@@ -278,7 +278,7 @@ class HybridGenerator:
         self.reward_model = reward_model
 
         self.tokenizer = CircuitTokenizer()
-        self.runner = NGSpiceRunner()
+        self.runner = NGSpiceRunner(ngspice_path="/opt/homebrew/bin/ngspice")
 
         if device is None:
             device = torch.device("cpu")

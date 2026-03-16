@@ -1,0 +1,273 @@
+{
+  "vcg_params": 3998769,
+  "vcg_config": {
+    "latent_dim": 64,
+    "max_nodes": 12,
+    "n_node_types": 16,
+    "n_topologies": 35,
+    "d_model": 256,
+    "n_encoder_layers": 4,
+    "n_heads": 4,
+    "d_ff": 512,
+    "dropout": 0.1,
+    "n_decoder_layers": 3,
+    "decoder_hidden": 512,
+    "n_spec_types": 10,
+    "max_specs": 8,
+    "n_projection_steps": 20,
+    "projection_lr": 0.1,
+    "n_constraints": 5,
+    "beta_kl": 0.1,
+    "initial_lambda": 0.1
+  },
+  "validity": {
+    "n_generated": 136,
+    "validity_rate": 1.0,
+    "constraint_rates": {
+      "no_floating_nodes": 1.0,
+      "device_completeness": 1.0,
+      "no_short_circuits": 1.0,
+      "graph_connected": 1.0,
+      "values_in_bounds": 1.0
+    },
+    "per_topology": {
+      "boost": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 186.77395582199097
+      },
+      "buck": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.284040451049805
+      },
+      "buck_boost": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.218236923217773
+      },
+      "cascode": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 29.605746269226074
+      },
+      "charge_pump": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 47.40971326828003
+      },
+      "colpitts": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 23.216962814331055
+      },
+      "common_base": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 18.20194721221924
+      },
+      "common_collector": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 7.429778575897217
+      },
+      "common_emitter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 13.958513736724854
+      },
+      "cuk": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 19.763052463531494
+      },
+      "current_mirror": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 42.69677400588989
+      },
+      "differential_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 9.367227554321289
+      },
+      "flyback": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 15.563726425170898
+      },
+      "forward": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 18.12845468521118
+      },
+      "half_bridge": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 11.272013187408447
+      },
+      "hartley": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.886464595794678
+      },
+      "instrumentation_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 15.748202800750732
+      },
+      "inverting_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 15.153706073760986
+      },
+      "inverting_summing_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 16.63649082183838
+      },
+      "noninverting_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.212514877319336
+      },
+      "phase_shift": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 20.164549350738525
+      },
+      "push_pull": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 46.60159349441528
+      },
+      "sallen_key_bandpass": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 24.015188217163086
+      },
+      "sallen_key_highpass": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.170016765594482
+      },
+      "sallen_key_lowpass": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 24.350762367248535
+      },
+      "sepic": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 14.537215232849121
+      },
+      "series_regulator": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 16.706466674804688
+      },
+      "shunt_regulator": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 8.890748023986816
+      },
+      "state_variable_filter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 24.396240711212158
+      },
+      "transimpedance_amp": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 9.7847580909729
+      },
+      "twin_t_notch": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 15.500962734222412
+      },
+      "voltage_doubler": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 46.757519245147705
+      },
+      "wien_bridge": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 12.92276382446289
+      },
+      "zeta_converter": {
+        "n_generated": 4,
+        "n_valid": 4,
+        "validity_rate": 1.0,
+        "avg_gen_time_ms": 49.45451021194458
+      }
+    },
+    "avg_gen_time_ms": 25.493553456138162,
+    "n_unique_node_types": 5,
+    "node_type_distribution": {
+      "INDUCTOR": 60,
+      "CAPACITOR": 140,
+      "RESISTOR": 304,
+      "MOSFET_N": 36,
+      "TRANSFORMER": 8
+    },
+    "projection_enabled": true
+  },
+  "reconstruction": {
+    "n_evaluated": 160,
+    "type_accuracy": 1.0,
+    "adjacency_accuracy": 1.0,
+    "avg_value_error_log10": 0.07493107980117202,
+    "avg_kl": 4.444666761904955
+  },
+  "latent_space": {
+    "n_pairs": 20,
+    "avg_smoothness": 0.9934525484889983,
+    "std_smoothness": 0.0074431590557632
+  },
+  "projection_impact": {
+    "with_projection": {
+      "validity_rate": 1.0,
+      "avg_gen_time_ms": 40.39193602169261
+    },
+    "without_projection": {
+      "validity_rate": 1.0,
+      "avg_gen_time_ms": 12.428851688609404
+    },
+    "projection_improvement": 0.0
+  }
+}

@@ -1379,6 +1379,16 @@ class ValidCircuitGenModel(nn.Module):
         # Post-projection: clamp values to bounds
         pred_values = torch.clamp(pred_values, min=bounds_min, max=bounds_max)
 
+        # Post-discretization connectivity repair: if the thresholded adjacency
+        # is more disconnected than the reference topology, greedily add the
+        # highest-probability edges (from soft_A) that reconnect components.
+        # This guarantees graph_connected validity for topologies where the
+        # decoder is under-trained (e.g. voltage_doubler, charge_pump with
+        # only 500 training samples vs 5000 for Tier-1 topologies).
+        pred_adj = _repair_connectivity(
+            pred_adj, soft_A, active_mask, topology_idx, EXPECTED_COMPONENTS_BY_IDX
+        )
+
         # Create CircuitGraph objects
         graphs = []
         for b in range(total_B):
@@ -1566,6 +1576,99 @@ class LagrangianVAETrainer:
         self.model_opt.load_state_dict(d["model_opt"])
         self.scheduler.load_state_dict(d["scheduler"])
         self.step_count = d["step_count"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Post-discretization connectivity repair
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _repair_connectivity(
+    pred_adj: torch.Tensor,        # (B, N, N) binary, already discretized
+    soft_A: torch.Tensor,          # (B, N, N) soft pre-threshold values
+    active_mask: torch.Tensor,     # (B, N)
+    topology_idx: Optional[torch.Tensor],
+    expected_components_by_idx: torch.Tensor,
+) -> torch.Tensor:
+    """Greedily add missing edges to reach the topology's expected component count.
+
+    For each sample in the batch, if the thresholded adjacency has more
+    connected components than the reference topology, iteratively add the
+    highest-soft-probability edge that bridges two different components.
+    This repairs mode-collapse issues for under-trained topologies (e.g.
+    voltage_doubler always generating two disconnected pairs).
+
+    Args:
+        pred_adj: Binary adjacency after (soft_A > 0.5) thresholding.
+        soft_A: Pre-threshold soft adjacency (probabilities).
+        active_mask: Boolean mask of active nodes.
+        topology_idx: (B,) topology indices for per-sample K lookup.
+        expected_components_by_idx: precomputed K tensor.
+
+    Returns:
+        Repaired binary adjacency tensor (same shape as pred_adj).
+    """
+    pred_adj = pred_adj.clone()
+    B = pred_adj.shape[0]
+
+    for b in range(B):
+        n_active = int(active_mask[b].sum().item())
+        if n_active <= 1:
+            continue
+
+        K = 1
+        if topology_idx is not None:
+            idx = int(topology_idx[b].item())
+            if idx < len(expected_components_by_idx):
+                K = int(expected_components_by_idx[idx].item())
+
+        # Iteratively add edges until we reach K components
+        max_repairs = n_active * 2
+        for _ in range(max_repairs):
+            actual_K = _count_connected_components(pred_adj[b, :n_active, :n_active])
+            if actual_K <= K:
+                break  # already at or below target
+
+            # Find which component each node belongs to (union-find via BFS)
+            adj_np = pred_adj[b, :n_active, :n_active].cpu().numpy()
+            component = [-1] * n_active
+            comp_id = 0
+            for start in range(n_active):
+                if component[start] == -1:
+                    queue = [start]
+                    component[start] = comp_id
+                    while queue:
+                        node = queue.pop()
+                        for nb in range(n_active):
+                            if adj_np[node][nb] > 0.5 and component[nb] == -1:
+                                component[nb] = comp_id
+                                queue.append(nb)
+                    comp_id += 1
+
+            # Find the highest-soft-probability cross-component edge
+            best_prob = -1.0
+            best_i, best_j = -1, -1
+            soft_sub = soft_A[b, :n_active, :n_active]
+            for i in range(n_active):
+                for j in range(i + 1, n_active):
+                    if component[i] != component[j]:
+                        prob = soft_sub[i, j].item()
+                        if prob > best_prob:
+                            best_prob = prob
+                            best_i, best_j = i, j
+
+            if best_i == -1:
+                # No cross-component pair found (shouldn't happen) — fall back
+                # to connecting node 0 to its nearest unconnected neighbour
+                for j in range(1, n_active):
+                    if component[0] != component[j]:
+                        best_i, best_j = 0, j
+                        break
+
+            if best_i >= 0:
+                pred_adj[b, best_i, best_j] = 1.0
+                pred_adj[b, best_j, best_i] = 1.0
+
+    return pred_adj
 
 
 # ═══════════════════════════════════════════════════════════════════════════

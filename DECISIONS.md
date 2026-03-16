@@ -29,6 +29,8 @@
 | `60463a5` | 2026-03-15 | Phase 14: Topology-aware constraints, expand to 31 topologies, latent reward refinement |
 | `31411dd` | 2026-03-15 | Wire latent refinement into VCG.generate() and add training script |
 | `0d964d5` | 2026-03-15 | Fix current_mirror and push_pull netlists for ngspice simulation |
+| `6046946` | 2026-03-16 | Add VCG v2 evaluation results and Phase 14 decisions to DECISIONS.md |
+| `d9b7aa3` | 2026-03-16 | Add CCFM v2 and latent reward results to DECISIONS.md |
 
 ---
 
@@ -841,11 +843,6 @@ Three topologies fail on graph connectivity only:
 - **Solution**: Added 18 new token slots (indices 45–62), expanding `TOPO_RESERVED` range to index 70 for future growth. Each new topology gets a named token (e.g., `TOPO_COMMON_EMITTER = 45`).
 
 ### VCG v2 Training Results
-- **Dataset**: Combined old (16 topologies) + new (15 topologies) data
-- **Training**: 100 epochs, batch size 64, val loss: 1.69 → 0.93
-- **Best model saved at**: epoch 91, val loss 0.933
-
-### VCG v2 Training Results
 - **Dataset**: 41,064 circuits across 31 topologies (combined original + 15 new topology data)
 - **Training**: 100 epochs, batch size 64, val loss: 1.69 → 0.93
 - **Best checkpoint**: epoch 91, val loss 0.933, 3,998,769 parameters
@@ -887,3 +884,38 @@ Three topologies fail on graph connectivity only:
 | Latent reward predictor | 9 | 9 |
 | Tokenizer expansion | covered in constrained tests | — |
 | **Total suite** | **~100 new** | **~454 tests** |
+
+---
+
+## Phase 15: Post-Discretization Connectivity Repair & Full-Pipeline Evaluation
+
+### Status: ✅ COMPLETE
+
+### Decision 15.1: Post-Discretization Connectivity Repair
+- **Problem**: voltage_doubler and charge_pump achieved only ~75–40% validity despite training because the decoder learned a mode-collapsed adjacency (2 disconnected pairs instead of a chain). Root cause: only 500 training samples per new topology vs 5000 for Tier-1, combined with the projection gradient signal being too weak (max 0.01) to push A[1,2] from near 0 to 0.5+.
+- **Solution**: Added `_repair_connectivity()` post-processing step in `ValidCircuitGenModel.generate()`. After thresholding soft adjacency at 0.5, if the resulting graph has more connected components than the reference topology's expected K, greedily add the highest-soft-probability cross-component edge, repeat until target connectivity is met. O(N²) per sample.
+- **Impact**: voltage_doubler: ~40% → **100%**, charge_pump: ~75% → **100%**. VCG now achieves **100% structural validity across all 34 topologies**.
+
+### Decision 15.2: ngspice PATH Fix in HybridGenerator
+- **Problem**: `HybridGenerator` called `NGSpiceRunner()` with default path `"ngspice"`, which is not in the tool-environment PATH (installed at `/opt/homebrew/bin/ngspice`). This caused `sim_success_rate=0%` for all hybrid evaluations.
+- **Solution**: Hardcoded `/opt/homebrew/bin/ngspice` in `HybridGenerator` instantiation. Production deployments should inject this via config.
+
+### VCG v2 Final Evaluation (with repair)
+- **Overall structural validity**: **100.0%** (136/136 samples) across all 34 topologies
+- **All 34 topologies at 100%** including previously weak voltage_doubler and charge_pump
+- **Reconstruction quality**: 100% type accuracy, 100% adjacency accuracy, value error 0.075 (log10)
+- **Latent refinement (refine=True)**: 100% structural validity — no degradation from reward-guided optimization
+- Full results saved to `results/vcg_evaluation_v2b.json`
+
+### Hybrid Pipeline v2 Full Evaluation (34 topologies, n_candidates=4)
+| Metric | VCG-only | CCFM-only | Hybrid (VCG+CCFM) |
+|--------|----------|-----------|-------------------|
+| Struct valid | **100%** | **100%** | **100%** |
+| Sim success | 98.5% | **100%** | **100%** |
+| Sim valid | 95.6% | 95.6% | **97.1%** |
+| Mean reward | 4.87 | 4.73 | **5.48** |
+| Gen time | 25ms | 181ms | 63ms |
+
+- Hybrid ranked-union picks the best of 8 candidates (4×VCG + 4×CCFM), lifting reward from 4.87/4.73 → **5.48**
+- Full results saved to `results/hybrid_v2.json`
+- Refinement benchmark saved to `results/refinement_benchmark.json`
