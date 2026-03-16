@@ -706,6 +706,37 @@ class TestValidCircuitGenModel:
 
         assert len(graphs) == 2
 
+    def test_generate_with_latent_refinement(self, config):
+        from arcs.latent_reward import LatentRewardConfig, LatentRewardPredictor, LatentRefinement
+
+        model = ValidCircuitGenModel(config)
+
+        reward_config = LatentRewardConfig(
+            latent_dim=config.latent_dim,
+            spec_dim=config.d_model,
+            n_refine_steps=3,
+        )
+        predictor = LatentRewardPredictor(reward_config)
+        refinement = LatentRefinement(predictor, reward_config)
+
+        B, S, N = 1, config.max_specs, config.max_nodes
+        graphs, stats = model.generate(
+            spec_types=torch.randint(0, config.n_spec_types, (B, S)),
+            spec_values=torch.randn(B, S),
+            spec_mask=torch.ones(B, S),
+            topology_idx=torch.ones(B, dtype=torch.long),
+            active_mask=torch.ones(B, N),
+            bounds_min=torch.full((B, N), LOG_VAL_MIN),
+            bounds_max=torch.full((B, N), LOG_VAL_MAX),
+            n_samples=2,
+            use_projection=True,
+            latent_refinement=refinement,
+        )
+
+        assert len(graphs) == 2
+        assert "refinement" in stats
+        assert "reward_improvement" in stats["refinement"]
+
     def test_interpolate(self, config, sample_batch_with_adj):
         model = ValidCircuitGenModel(config)
 

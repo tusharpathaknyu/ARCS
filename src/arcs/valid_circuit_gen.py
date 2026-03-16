@@ -1307,10 +1307,17 @@ class ValidCircuitGenModel(nn.Module):
         n_samples: int = 1,
         temperature: float = 1.0,
         use_projection: bool = True,
+        latent_refinement: Optional["LatentRefinement"] = None,
     ) -> Tuple[list[CircuitGraph], dict]:
         """Generate circuits from specs.
 
-        Samples z from prior N(0,I), decodes, projects, discretizes.
+        Samples z from prior N(0,I), optionally refines z via reward
+        predictor gradient ascent, decodes, projects, discretizes.
+
+        Args:
+            latent_refinement: If provided, refines z to maximize predicted
+                SPICE reward before decoding. Requires a trained
+                LatentRewardPredictor.
 
         Returns:
             List of CircuitGraph objects and generation stats.
@@ -1347,6 +1354,11 @@ class ValidCircuitGenModel(nn.Module):
 
         # Sample from prior
         z = torch.randn(total_B, self.config.latent_dim, device=device) * temperature
+
+        # Latent refinement: gradient ascent on z to maximize predicted reward
+        refine_stats = {}
+        if latent_refinement is not None:
+            z, refine_stats = latent_refinement.refine(z, spec_embed)
 
         # Decode
         soft_X, soft_A, soft_V = self.decode(z, spec_embed, topology_idx)
@@ -1397,6 +1409,7 @@ class ValidCircuitGenModel(nn.Module):
         gen_stats = {
             "n_generated": total_B,
             "projection": proj_stats,
+            "refinement": refine_stats,
         }
         return graphs, gen_stats
 
