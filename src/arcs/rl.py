@@ -39,6 +39,11 @@ from arcs.datagen import compute_derived_metrics, is_valid_result
 from arcs.evaluate import DecodedCircuit, decode_generated_sequence
 from arcs.model import ARCSConfig, ARCSModel
 from arcs.model_enhanced import create_model, load_model
+from arcs.simulate import (
+    COMPONENT_TO_PARAM,
+    components_to_params,
+    _get_spec_to_cond,
+)
 from arcs.spice import NGSpiceRunner
 from arcs.templates import (
     OPERATING_CONDITIONS,
@@ -50,120 +55,7 @@ from arcs.tokenizer import CircuitTokenizer, TokenType
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Token → Parameter inverse mapping
-# ---------------------------------------------------------------------------
-
-# Per-topology: ordered list of (component_type, param_name) pairs.
-# This mirrors the iteration order in tokenizer._params_to_components(),
-# which iterates over the params dict.  For Python 3.7+ dicts preserve
-# insertion order, so this matches DataGenerator's param sampling order.
-
-COMPONENT_TO_PARAM: dict[str, list[tuple[str, str]]] = {
-    "buck": [
-        ("INDUCTOR", "inductance"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "boost": [
-        ("INDUCTOR", "inductance"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "buck_boost": [
-        ("INDUCTOR", "inductance"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "cuk": [
-        ("INDUCTOR", "inductance_1"),
-        ("INDUCTOR", "inductance_2"),
-        ("CAPACITOR", "cap_coupling"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "sepic": [
-        ("INDUCTOR", "inductance_1"),
-        ("INDUCTOR", "inductance_2"),
-        ("CAPACITOR", "cap_coupling"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "flyback": [
-        ("INDUCTOR", "inductance_primary"),
-        ("TRANSFORMER", "turns_ratio"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-    "forward": [
-        ("INDUCTOR", "inductance_primary"),
-        ("TRANSFORMER", "turns_ratio"),
-        ("INDUCTOR", "inductance_output"),
-        ("CAPACITOR", "capacitance"),
-        ("RESISTOR", "esr"),
-        ("MOSFET_N", "r_dson"),
-    ],
-}
-
-
-def components_to_params(
-    topology: str,
-    components: list[tuple[str, float]],
-) -> dict[str, float] | None:
-    """Inverse of tokenizer._params_to_components().
-
-    Maps a list of (component_type, value) pairs back to a parameter dict
-    suitable for TopologyTemplate.generate_netlist().
-
-    Returns None if the component list doesn't match the expected topology
-    template (wrong types or wrong count).
-    """
-    expected = COMPONENT_TO_PARAM.get(topology)
-    if expected is None:
-        return None
-
-    # Strategy: match in order.  The tokenizer emits components in
-    # parameter-dict iteration order, and the model was trained on that.
-    # We iterate through expected slots and consume matching components.
-    params: dict[str, float] = {}
-    comp_idx = 0
-
-    for expected_type, param_name in expected:
-        if comp_idx >= len(components):
-            # Not enough components — use default from bounds
-            break
-        comp_type, comp_val = components[comp_idx]
-        if comp_type.upper() == expected_type:
-            params[param_name] = comp_val
-            comp_idx += 1
-        else:
-            # Type mismatch — try to continue (model may have
-            # generated components in a different order due to shuffle aug)
-            # Search remaining components for a match
-            found = False
-            for j in range(comp_idx, len(components)):
-                if components[j][0].upper() == expected_type:
-                    params[param_name] = components[j][1]
-                    # Remove consumed component and reset
-                    components = components[:j] + components[j + 1 :]
-                    found = True
-                    break
-            if not found:
-                # Missing required component — use middle of bounds
-                bounds = POWER_CONVERTER_BOUNDS.get(topology)
-                if bounds:
-                    for b in bounds:
-                        if b.name == param_name:
-                            params[param_name] = math.sqrt(b.min_val * b.max_val)
-                            break
-
-    return params if len(params) >= 3 else None  # Need at least 3 params
+# components_to_params and COMPONENT_TO_PARAM imported from arcs.simulate
 
 
 # ---------------------------------------------------------------------------
@@ -217,12 +109,7 @@ def simulate_decoded_circuit(
     # Determine operating conditions
     conditions = dict(template.operating_conditions)
     # Override with decoded specs if available
-    spec_to_cond = {
-        "vin": "vin",
-        "vout": "vout",
-        "iout": "iout",
-        "fsw": "fsw",
-    }
+    spec_to_cond = _get_spec_to_cond(decoded.topology)
     if decoded.specs:
         for spec_key, cond_key in spec_to_cond.items():
             if spec_key in decoded.specs:
