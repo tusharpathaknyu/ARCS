@@ -31,7 +31,9 @@
 | `0d964d5` | 2026-03-15 | Fix current_mirror and push_pull netlists for ngspice simulation |
 | `6046946` | 2026-03-16 | Add VCG v2 evaluation results and Phase 14 decisions to DECISIONS.md |
 | `d9b7aa3` | 2026-03-16 | Add CCFM v2 and latent reward results to DECISIONS.md |
-| — | 2026-03-16 | Phase 16: Fix reward routing for new power topologies, add dedicated reward functions |
+| `74bff32` | 2026-03-16 | Phase 16: Fix reward routing for new power topologies, add dedicated reward functions |
+| `3b84728` | 2026-03-16 | Phase 17: Production hardening, integration tests, balanced data |
+| `0eaf40e` | 2026-03-16 | Phase 17: Pin deps, pytest config, deprecate legacy scripts |
 
 ---
 
@@ -957,4 +959,51 @@ Three topologies fail on graph connectivity only:
 | Mean reward | 5.48 | **6.80** | +1.32 |
 
 - **8 topologies improved from reward=2.0**: half_bridge, push_pull, charge_pump, voltage_doubler, zeta_converter, shunt_regulator, series_regulator, current_mirror
+
+---
+
+## Phase 17: Production Hardening, Data Balancing & Model Retraining
+
+### Status: 🔄 IN PROGRESS
+
+### Decision 17.1: Remove Hardcoded ngspice Path
+- **Problem**: `hybrid_pipeline.py` had `NGSpiceRunner(ngspice_path="/opt/homebrew/bin/ngspice")` — breaks on any non-macOS-homebrew system.
+- **Solution**: `NGSpiceRunner()` now reads `NGSPICE_PATH` env var with fallback to `"ngspice"` (assumes on `$PATH`). Removed all hardcoded paths.
+
+### Decision 17.2: Comprehensive Integration Tests
+- **Problem**: No end-to-end tests verifying all 34 topologies work through the full pipeline.
+- **Solution**: Added `tests/test_integration_topologies.py` with 278 parametric tests covering:
+  - Topology registration (34 total, 7 Tier-1, 27 Tier-2)
+  - Netlist generation (valid SPICE, contains `.end`)
+  - Parameter sampling (within bounds, all params present)
+  - E-series snapping (E24 for R/L/C components)
+  - Derived metric computation (no crashes)
+  - Reward computation (proper routing, non-negative)
+  - Validity checking (returns bool)
+  - Topology normalization (canonical names)
+  - VCG coverage (all topologies in ALL_TOPOLOGIES, TOPOLOGY_TO_IDX, TOPOLOGY_ADJACENCY, TOPOLOGY_EXPECTED_COMPONENTS)
+- **Result**: 733 total tests passing in ~55s.
+
+### Decision 17.3: Pin Dependency Versions
+- **Problem**: `pyproject.toml` had unbounded `>=` deps — major version bumps could silently break things.
+- **Solution**: Added upper bounds: `numpy>=1.24,<3`, `torch>=2.0,<3`, etc. Added `[tool.pytest.ini_options]` section for consistent test discovery.
+
+### Decision 17.4: Deprecate Legacy Scripts
+- **Problem**: 5 scripts (`train.py`, `train_v2.py`, `train_v3.py`, `generate_data.py`, `generate_circuit.py`) import from the deprecated `circuitgenie` package — they can't run against the current `arcs` codebase.
+- **Solution**: Added `[DEPRECATED]` notices to all docstrings with pointers to current equivalents (`train_vcg.py`, `train_ccfm.py`, `evaluate_vcg.py`, `evaluate_hybrid.py`).
+
+### Decision 17.5: Data Balancing for Tier-2 Topologies
+- **Problem**: 18 Phase 14 topologies had only 500 samples vs 2000-5000 for original topologies. This causes VCG mode collapse — model learns to generate Tier-1 topologies disproportionately.
+- **Solution**: Generate 1500 additional SPICE-validated samples per topology (seed=123), bringing totals to ~2000 each. Merge into `data/combined_v2/` for retraining.
+- **Distribution after balancing**:
+  - Tier-1 power converters: 5000 samples each (7 topologies)
+  - Original Tier-2 (signal/filter/oscillator): 2000 samples each (9 topologies)
+  - Phase 14 new topologies: 2000 samples each (18 topologies)
+  - **Total: ~71,000 samples** (up from 62,000)
+
+### Decision 17.6: Model Retraining Plan
+- **VCG v3**: Retrain on `data/combined_v2/` with balanced representation. Same hyperparameters as v2 (100 epochs, lr=1e-4, β-KL=0.1).
+- **CCFM v3**: Retrain flow matching on VCG v3 backbone.
+- **Latent reward v2**: Retrain reward predictor on expanded data.
+- **Expected improvement**: Better validity on underrepresented topologies, more uniform reward distribution across all 34 topologies.
 - Full results saved to `results/hybrid_v2b.json`
