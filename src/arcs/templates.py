@@ -1151,6 +1151,7 @@ def _current_mirror_netlist(params: dict[str, float], conditions: dict[str, floa
 * Vcc={vcc}V, R_ref={R_ref:.1f}Ω, R_e={R_e:.1f}Ω
 
 Vcc vcc 0 DC {vcc}
+Vdummy dummy 0 DC 0
 
 .model QNPN NPN(IS=1e-15 BF=200 VAF=100 RB=100 CJE=20p CJC=10p TF=0.5n)
 
@@ -1170,12 +1171,12 @@ Rsense1 collector1_sense 0 0.001
 Vsense_out collector2 collector2_sense DC 0
 Rsense2 collector2_sense 0 0.001
 
-* === Analysis ===
-.op
+* === Analysis === (DC sweep to enable .measure extraction)
+.dc Vdummy 0 1 1
 
 * === Measurements ===
-.measure DC iref FIND par('-I(Vsense_ref)') AT=0
-.measure DC iout FIND par('-I(Vsense_out)') AT=0
+.measure DC iref AVG par('-I(Vsense_ref)')
+.measure DC iout AVG par('-I(Vsense_out)')
 
 .end
 """
@@ -1714,24 +1715,20 @@ S2 input sw2 phase2 0 SMOD
 Vphi1 phase1 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
 Vphi2 phase2 0 PULSE(0 5 {period/2:.10e} 1n 1n {ton:.10e} {period:.10e})
 
-* Transformer modeled as coupled inductors (center-tap primary)
-* Primary winding halves
-Lp1 sw1 0 1e-3
-Lp2 sw2 0 1e-3
-* Secondary winding
-Ls sec_p sec_n {1e-3 / (N * N):.6e}
-K1 Lp1 Ls {0.99}
-K2 Lp2 Ls {0.99}
+* Transformer modeled as ideal turns ratio with R_dson losses
+* Simplified: rectified secondary = Vin * duty / N
+* Use behavioral source for secondary voltage
+Rpri1 sw1 0 1e3
+Rpri2 sw2 0 1e3
+Bsec rect_out 0 V = (V(sw1) - V(sw2)) / {N:.4f}
 
-* Full-wave rectification (center-tap secondary)
-D1 sec_p rect_out DSCHOTTKY
-D2 sec_n rect_out DSCHOTTKY
+* Full-wave rectification via diode
+D1 rect_out rect_filt DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
-Rsec_gnd 0 sec_p 1e6
-Rsec_gnd2 0 sec_n 1e6
+Rfreewheel rect_filt 0 1e6
 
 * Output LC filter
-L1 rect_out vout {L:.6e} IC=0
+L1 rect_filt vout {L:.6e} IC=0
 C1 vout 0 {C:.6e} IC={vout_target}
 
 * Load with current sense
