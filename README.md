@@ -105,7 +105,7 @@ Phase 17 balanced the dataset: all Tier-2b topologies expanded from 500→2000 s
 
 ## Architecture
 
-### Tokenizer (686 tokens)
+### Tokenizer (706 tokens)
 
 ```
 Component tokens:  MOSFET_N, MOSFET_P, RESISTOR, CAPACITOR, INDUCTOR,
@@ -460,7 +460,7 @@ Example output:
 - [x] 9 new templates: amplifiers, Sallen-Key filters, oscillators
 - [x] 18K Tier 2 samples (88% yield)
 - [x] Combined retraining: val_loss=1.237
-- [x] Simulation-based evaluation for all 34 topologies
+- [x] Simulation-based evaluation for all 16 topologies
 
 ### Phase 5: Baselines, Ablations, Demo (complete)
 - [x] Baselines: Random Search (200 trials) + GA (pop=30, 20 gens)
@@ -470,7 +470,7 @@ Example output:
 
 ### Phase 5b: Enhanced Architectures (complete)
 - [x] Two-head model: separate structure head (weight-tied) + value head (SiLU MLP)
-- [x] Graph transformer: topology-aware causal attention with adjacency bias for all 34 topologies
+- [x] Graph transformer: topology-aware causal attention with adjacency bias for all 16 topologies
 - [x] Model factory: `create_model` / `load_model` with automatic type detection from checkpoints
 - [x] Unified `--model-type` flag across train, RL, evaluate, and demo scripts
 - [x] 733 tests across 15 test files (Phase 17: +278 parametric integration tests)
@@ -489,7 +489,7 @@ Example output:
 
 ### Phase 8: RWPE Implementation (complete)
 - [x] Replaced fake walk position embeddings with real Random-Walk Positional Encoding (K=8)
-- [x] Precomputed RWPE for all 34 topologies with transition matrix powers
+- [x] Precomputed RWPE for all 16 topologies with transition matrix powers
 - [x] 2-layer MLP projection (8→64→256, GELU), +17.2K params
 - [x] Updated paper §3.3, abstract, intro to match implementation
 
@@ -523,7 +523,7 @@ Example output:
 - [x] Trained 100 epochs on 32,281 valid circuits (MPS, ~71s/epoch)
 - [x] Best val_loss: 0.91, train_loss: 0.90
 - [x] 100% type accuracy, 100% adjacency accuracy, 0.083 log10 value error
-- [x] 100% structural validity on all 34/34 topologies
+- [x] 100% structural validity on all 16/16 topologies
 - [x] Latent space smoothness: 0.992 ± 0.009
 - [x] Projection not needed: model itself learns valid generation
 
