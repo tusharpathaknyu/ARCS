@@ -800,7 +800,7 @@ Three topologies fail on graph connectivity only:
 
 ## Phase 14: Topology-Aware Constraints, Library Expansion & Latent Refinement
 
-### Status: ✅ COMPLETE (model retraining in progress)
+### Status: ✅ COMPLETE
 
 ### Decision 14.1: Topology-Aware Graph Connectivity Constraint
 - **Problem**: VCG achieved 0% structural validity on wien_bridge, instrumentation_amp, and colpitts. Root cause: `graph_connectivity()` always enforced exactly 1 connected component, but these 3 topologies have 2 connected components in their reference adjacency.
@@ -845,15 +845,40 @@ Three topologies fail on graph connectivity only:
 - **Training**: 100 epochs, batch size 64, val loss: 1.69 → 0.93
 - **Best model saved at**: epoch 91, val loss 0.933
 
+### VCG v2 Training Results
+- **Dataset**: 41,064 circuits across 31 topologies (combined original + 15 new topology data)
+- **Training**: 100 epochs, batch size 64, val loss: 1.69 → 0.93
+- **Best checkpoint**: epoch 91, val loss 0.933, 3,998,769 parameters
+
 ### VCG v2 Evaluation Results
-- **Overall structural validity**: 98.5% across 31 topologies
+- **Overall structural validity**: 98.5% (136/138 samples) across 31 topologies
 - **Previously broken topologies now fixed**:
   - colpitts: 0% → **100%** (topology-aware connectivity fix)
   - wien_bridge: 0% → **100%**
   - instrumentation_amp: 0% → **100%**
-- **31/34 topology results at 100%**, charge_pump and voltage_doubler at 75%
+- **31/34 topology results at 100%**, voltage_doubler at 75%, charge_pump at 75%
 - **Reconstruction quality**: 100% type accuracy, 100% adjacency accuracy, value error 0.075 (log10)
 - **Latent space**: interpolation smoothness 0.993 ± 0.007
+- Full results saved to `results/vcg_evaluation.json`
+
+### CCFM v2 Training Results
+- **Backbone**: VCG v2 encoder (frozen during CCFM training)
+- **Training**: 80 epochs, best val_loss **0.137**, flow loss 0.82 → 0.17
+- **Best checkpoint**: `checkpoints/ccfm_v2/best_ccfm.pt`, 7,663,345 total params (3,664,581 trainable)
+- **Architecture improvements**: CFG (p_uncond=0.1), adaptive guidance ramp (t=0.2→0.5), EMA constraint weights
+
+### CCFM v2 Evaluation Results
+- **Overall structural validity**: 98.2% (334/340 samples) across 34 topologies (10 samples each)
+- **33/34 topologies at 100%**: all amplifiers, power converters, filters, oscillators, regulators at perfect validity
+- **voltage_doubler: 40%** — isolated topology with unusual connectivity pattern; acknowledged known limitation
+- **colpitts/wien_bridge/instrumentation_amp**: 100% (previously broken in CCFM v1 due to connectivity bug)
+- Full results saved to `results/ccfm_evaluation.json`
+
+### Latent Reward Predictor Training Results
+- **Architecture**: MLP (z_dim + spec_embed → 256 → 128 → 64 → 1), 148,225 parameters
+- **Training**: 50 epochs, best val_loss **0.0115** (MSE on normalized reward)
+- **Checkpoint**: `checkpoints/latent_reward_v2/`
+- **Integration**: Wired into `VCG.generate(refine=True)` via gradient ascent on z (n_refine_steps default 10)
 
 ### Test Coverage Summary (Phase 14)
 | Component | New Tests | Total |
