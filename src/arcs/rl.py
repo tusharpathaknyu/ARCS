@@ -453,12 +453,12 @@ class RLConfig:
     save_interval: int = 500
     eval_interval: int = 100
     n_eval_samples: int = 50
-    # v2 additions
+    # Stability controls
     struct_bonus: float = 1.0         # structure validity reward weight
     kl_target: float = 0.5           # target KL divergence (adaptive coeff)
     adaptive_kl: bool = False        # enable adaptive KL coefficient
     validity_early_stop: float = 0.0 # stop if struct_valid drops below this (0 = disabled)
-    # v3: GRPO (Group Relative Policy Optimization)
+    # GRPO (Group Relative Policy Optimization)
     grpo: bool = False               # enable GRPO mode
     group_size: int = 4              # circuits per topology per step
     n_topos_per_step: int = 3        # topologies sampled per GRPO step
