@@ -558,7 +558,7 @@ Example output:
 - [x] Added regression test for Sallen-Key topology token aliases
 - [x] Hybrid benchmark script added: `scripts/evaluate_hybrid.py`
 - [x] **Hybrid benchmark (n=4 candidates/source, VCG+CCFM ranking):**
-  - Structural validity: **100.0%** (16/16 topologies)
+  - Structural validity: **100.0%** (34/34 topologies)
   - Simulation success: **100.0%**
   - Simulation validity: **100.0%**
   - Mean reward: **6.225**

@@ -282,7 +282,7 @@ Short walks (k=1,2) capture local structure (immediate neighbors). Longer walks 
 
 ### Precomputation
 
-RWPE is computed once per topology at import time (not during training). Since ARCS supports 16 fixed topologies, we precompute and cache all 16 RWPE matrices. During training/inference, we just look up the right one.
+RWPE is computed once per topology at import time (not during training). Since ARCS supports 34 fixed topologies, we precompute and cache all 34 RWPE matrices. During training/inference, we just look up the right one.
 
 ---
 
@@ -488,7 +488,7 @@ Since e^(-∞) = 0, masked tokens get exactly zero probability. The model can on
 
 ### Training Data
 
-ARCS is trained on 53,000 circuit samples across 16 topologies, stored as JSONL files. Each sample contains:
+ARCS is trained on ~80,000 circuit samples across 34 topologies, stored as JSONL files. Each sample contains:
 - Topology type
 - Specification values (Vin, Vout, etc.)
 - Component types and values

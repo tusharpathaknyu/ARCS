@@ -1,7 +1,7 @@
 """ARCS Phase 6: Compare all 3 model architectures.
 
 Evaluates baseline, two_head, and graph_transformer on the same 160 conditioned
-specs (10 per topology × 16 topologies) with SPICE simulation.
+specs (10 per topology × 34 topologies) with SPICE simulation.
 
 Prerequisites:
   - checkpoints/arcs_combined/best_model.pt       (baseline, from Phase 4)

@@ -110,7 +110,6 @@ class CircuitTokenizer:
         topologies = [
             # Tier 1 — power converters
             "BUCK", "BOOST", "BUCK_BOOST", "CUK", "SEPIC", "FLYBACK", "FORWARD",
-            "LLC", "PFC", "INVERTER",
             # Tier 2 — signal processing
             "INVERTING_AMP", "NONINVERTING_AMP", "INSTRUMENTATION_AMP",
             "DIFFERENTIAL_AMP",

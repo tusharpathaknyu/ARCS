@@ -489,7 +489,7 @@ This is actually an advantage — explicit inductive bias from known topology gr
 | Two-head output | 307K | Inherited from TwoHeadARCSModel |
 | Rest (backbone) | 6,505K | Same structure as baseline |
 
-- **TOPOLOGY_ADJACENCY**: Hardcoded for all 16 topologies — e.g., buck: L↔MOS, L↔CAP, CAP↔ESR
+- **TOPOLOGY_ADJACENCY**: Hardcoded for all 34 topologies — e.g., buck: L↔MOS, L↔CAP, CAP↔ESR
   - Derived from actual SPICE schematics, not heuristic position-based adjacency
   - Indexed by component order in `templates.py` bounds dicts
 - **GraphAwareCausalAttention**: Standard causal attention + learned `adj_bias` (per-head scalar for circuit-adjacent pairs) + `edge_type_bias` (component-type pair → per-head bias)
@@ -501,7 +501,7 @@ This is actually an advantage — explicit inductive bias from known topology gr
 - All entry points unified: `--model-type` flag in train.py, rl.py, evaluate.py, demo.py
 
 #### Tests (30 new, 96 total)
-- `TestTopologyAdjacency`: All 16 topologies present, valid tuple pairs, indices in range
+- `TestTopologyAdjacency`: All 34 topologies present, valid tuple pairs, indices in range
 - `TestTwoHeadModel`: Instantiation, param groups, forward ± targets, value_mask routing, generate
 - `TestGraphTransformerModel`: Forward ± graph features, `compute_graph_features`, adjacency correctness for buck, generate ± tokenizer
 - `TestModelFactory`: create all 3 types, save/load roundtrip, backward-compatible loading

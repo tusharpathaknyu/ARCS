@@ -138,7 +138,7 @@ def plot_supervised(data):
     ax2.set_xlim(0, 100)
     ax2.set_ylim(0.35, 0.85)
 
-    fig.suptitle('Supervised Pre-training on Combined Dataset (32K circuits, 16 topologies)', y=1.02)
+    fig.suptitle('Supervised Pre-training on Combined Dataset (59K circuits, 34 topologies)', y=1.02)
     plt.tight_layout()
     fig.savefig(os.path.join(OUT_DIR, 'supervised_training.pdf'))
     fig.savefig(os.path.join(OUT_DIR, 'supervised_training.png'))

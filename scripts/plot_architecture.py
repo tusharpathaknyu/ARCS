@@ -69,7 +69,7 @@ def draw_pipeline():
     # ─── Bottom row: Training pipeline ───────────────────────
 
     # Data generation
-    box(0, 0.5, 2.0, 1.5, 'SPICE Templates\n──────────\n16 Topologies\nRandom Sweep\n→ ngspice\n→ Metrics', C_DATA, 8, True)
+    box(0, 0.5, 2.0, 1.5, 'SPICE Templates\n──────────\n34 Topologies\nRandom Sweep\n→ ngspice\n→ Metrics', C_DATA, 8, True)
 
     # Dataset
     box(2.6, 0.7, 1.8, 1.0, 'Training Data\n──────────\n32K circuits\n161K augmented', C_DATA, 8)

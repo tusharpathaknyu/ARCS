@@ -3,7 +3,7 @@
 Tests:
   1. Grammar state machine transitions
   2. Constraint mask computation at each level
-  3. End-to-end constrained generation (all 16 topologies)
+  3. End-to-end constrained generation (all 34 topologies)
   4. 100% structural validity guarantee
   5. Value range enforcement
   6. Lagrangian constraint loss
@@ -305,7 +305,7 @@ class TestConstraintMask:
 # ---------------------------------------------------------------------------
 
 class TestAllTopologies:
-    """Ensure constrained decoding works for all 16 topologies."""
+    """Ensure constrained decoding works for all 34 topologies."""
 
     ALL_TOPOLOGIES = list(COMPONENT_TO_PARAM.keys())
 

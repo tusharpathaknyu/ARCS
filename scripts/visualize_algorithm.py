@@ -96,7 +96,7 @@ def fig_pipeline():
         (3.0, 2.0, 2.2, 1.8, C["topo"],    C["topo_d"],  "Tokenizer\n(686 vocab)\n\nLog-discretize\nvalues → 500 bins"),
         (6.0, 2.0, 2.6, 1.8, C["rwpe"],    C["rwpe_d"],  "GraphTransformer\n(6.8M params)\n\n6 layers, 4 heads\n+ RWPE + Graph bias"),
         (9.5, 2.0, 2.2, 1.8, C["comp"],    C["comp_d"],  "Constrained\nDecoder\n\nGrammar FSM\n+ Value bounds"),
-        (12.5, 2.0, 2.2, 1.8, C["val"],    C["val_d"],   "SPICE\nNetlist\n\n16 topologies\n.measure stmts"),
+        (12.5, 2.0, 2.2, 1.8, C["val"],    C["val_d"],   "SPICE\nNetlist\n\n34 topologies\n.measure stmts"),
     ]
     for x, y, w, h, fc, ec, txt in stages:
         rounded_box(ax, (x, y), w, h, fc, ec, txt, fontsize=8.5, fontweight="bold")
