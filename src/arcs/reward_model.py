@@ -49,7 +49,7 @@ from arcs.templates import _TIER1_NAMES
 class RewardModelConfig:
     """Reward model hyperparameters."""
 
-    vocab_size: int = 686           # Must match CircuitTokenizer
+    vocab_size: int = 706           # Must match CircuitTokenizer
     max_seq_len: int = 128          # Max token sequence length
     d_model: int = 128              # Hidden dimension (smaller than generator)
     n_heads: int = 4                # Attention heads

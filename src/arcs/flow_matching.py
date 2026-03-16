@@ -111,6 +111,16 @@ class FlowMatchingConfig:
     guidance_strength: float = 1.0  # constraint guidance weight λ
     guidance_start_t: float = 0.3   # start guidance after t=0.3
 
+    # Adaptive guidance ramp: ramp λ linearly from 0→1 between
+    # guidance_ramp_start and guidance_ramp_end (set both to same value
+    # to disable ramp and use a hard threshold like guidance_start_t).
+    guidance_ramp_start: float = 0.2
+    guidance_ramp_end: float = 0.5
+
+    # Classifier-free guidance (CFG)
+    p_uncond: float = 0.1           # probability of dropping spec conditioning during training
+    cfg_scale: float = 1.5          # inference: v = v_uncond + cfg_scale * (v_cond - v_uncond)
+
     # Training
     sigma_min: float = 1e-4         # minimum noise for stability
     ot_plan: bool = True            # use OT-conditional path (vs VP)
@@ -392,9 +402,17 @@ class ConstraintGuidance(nn.Module):
         # Per-constraint weights (learnable)
         self.log_weights = nn.Parameter(torch.zeros(5))
 
+        # EMA tracker for per-constraint violation magnitudes.
+        # Used to adaptively upweight constraints that are harder to satisfy.
+        self.register_buffer("ema_violations", torch.ones(5))
+        self.ema_decay = 0.99
+
     @property
     def weights(self) -> torch.Tensor:
-        return F.softplus(self.log_weights)
+        base_weights = F.softplus(self.log_weights)
+        # Scale by inverse of EMA — upweight constraints that are violated more
+        adaptive_scale = self.ema_violations / self.ema_violations.sum().clamp(min=1e-8) * 5.0
+        return base_weights * adaptive_scale
 
     def compute_guidance(
         self,
@@ -419,7 +437,16 @@ class ConstraintGuidance(nn.Module):
         # Compute constraint violations
         violations = self.constraints.all_constraints(
             soft_A, soft_X, soft_V, active_mask, bounds_min, bounds_max,
+            topology_idx=topology_idx,
         )  # (B, 5)
+
+        # Update EMA of per-constraint violations (for adaptive weighting)
+        with torch.no_grad():
+            per_constraint = violations.mean(dim=0).detach()
+            self.ema_violations = (
+                self.ema_decay * self.ema_violations
+                + (1 - self.ema_decay) * per_constraint
+            )
 
         # Weighted violation
         total_violation = (self.weights * violations.mean(dim=0)).sum()
@@ -537,6 +564,11 @@ class ConstrainedFlowMatchingModel(nn.Module):
             spec_embed = spec_embed.detach()
             z_1 = z_1.detach()
 
+        # Classifier-free guidance: randomly drop spec conditioning
+        if self.training and self.flow_config.p_uncond > 0:
+            drop_mask = torch.rand(B, device=device) < self.flow_config.p_uncond
+            spec_embed = spec_embed * (~drop_mask).float().unsqueeze(-1)
+
         # Sample noise z_0 ~ N(0, I)
         z_0 = torch.randn_like(z_1)
 
@@ -624,23 +656,44 @@ class ConstrainedFlowMatchingModel(nn.Module):
         total_violation = 0.0
         guidance_applied = 0
 
+        # Classifier-free guidance: precompute unconditioned embedding
+        cfg_scale = self.flow_config.cfg_scale
+        use_cfg = cfg_scale > 1.0
+        if use_cfg:
+            spec_embed_uncond = torch.zeros_like(spec_embed)
+
+        ramp_start = self.flow_config.guidance_ramp_start
+        ramp_end = self.flow_config.guidance_ramp_end
+
         # Euler integration: z_0 → z_1
         for step in range(n_steps):
             t_val = step / n_steps
             t = torch.full((B,), t_val, device=device)
 
-            # Predict velocity
-            v = self.flow_net(z, t, spec_embed, topology_idx)
+            # Predict velocity (with optional classifier-free guidance)
+            if use_cfg:
+                v_cond = self.flow_net(z, t, spec_embed, topology_idx)
+                v_uncond = self.flow_net(z, t, spec_embed_uncond, topology_idx)
+                v = v_uncond + cfg_scale * (v_cond - v_uncond)
+            else:
+                v = self.flow_net(z, t, spec_embed, topology_idx)
 
-            # Apply constraint guidance after guidance_start_t
-            if λ > 0 and t_val >= self.flow_config.guidance_start_t:
+            # Apply constraint guidance with adaptive ramp
+            if λ > 0 and t_val >= ramp_start:
+                # Linear ramp from 0 → 1 between ramp_start and ramp_end
+                if ramp_end > ramp_start:
+                    ramp_factor = min(1.0, (t_val - ramp_start) / (ramp_end - ramp_start))
+                else:
+                    ramp_factor = 1.0
+                effective_lambda = λ * ramp_factor
+
                 with torch.enable_grad():
                     grad_z, viol = self.guidance.compute_guidance(
                         z, spec_embed, topology_idx,
                         active_mask, bounds_min, bounds_max,
                     )
                 # Steer away from constraint violations
-                v = v - λ * grad_z
+                v = v - effective_lambda * grad_z
                 total_violation += viol
                 guidance_applied += 1
 
@@ -685,6 +738,7 @@ class ConstrainedFlowMatchingModel(nn.Module):
         # Project onto constraint set
         soft_X, soft_A, soft_V, proj_stats = self.projection.project(
             soft_X, soft_A, soft_V, active_mask, bounds_min, bounds_max,
+            topology_idx=topology_idx,
         )
         info.update({f"proj_{k}": v for k, v in proj_stats.items()})
 

@@ -97,6 +97,59 @@ TOPOLOGY_TO_IDX: dict[str, int] = {t: i + 1 for i, t in enumerate(ALL_TOPOLOGIES
 TOPOLOGY_TO_IDX["unknown"] = 0
 N_TOPOLOGIES = len(TOPOLOGY_TO_IDX)
 
+
+def _count_connected_components(adj: torch.Tensor) -> int:
+    """Count connected components in an undirected adjacency matrix."""
+    n = adj.shape[0]
+    if n <= 1:
+        return n
+
+    visited = [False] * n
+    n_components = 0
+
+    for start in range(n):
+        if visited[start]:
+            continue
+        n_components += 1
+        stack = [start]
+        visited[start] = True
+        while stack:
+            node = stack.pop()
+            neighbors = torch.where(adj[node] > 0.5)[0].tolist()
+            for nei in neighbors:
+                if not visited[nei]:
+                    visited[nei] = True
+                    stack.append(nei)
+
+    return n_components
+
+
+def _compute_expected_components() -> dict[str, int]:
+    """Count connected components in each topology's reference adjacency."""
+    result: dict[str, int] = {}
+    for topo_name, edges in TOPOLOGY_ADJACENCY.items():
+        if not edges:
+            result[topo_name] = 1
+            continue
+        n_nodes = max(max(i, j) for i, j in edges) + 1
+        adj = torch.zeros(n_nodes, n_nodes)
+        for i, j in edges:
+            adj[i, j] = 1.0
+            adj[j, i] = 1.0
+        result[topo_name] = _count_connected_components(adj)
+    return result
+
+
+TOPOLOGY_EXPECTED_COMPONENTS: dict[str, int] = _compute_expected_components()
+
+# Tensor lookup: topology_idx → expected connected components
+_max_topo_idx = max(TOPOLOGY_TO_IDX.values())
+EXPECTED_COMPONENTS_BY_IDX = torch.ones(_max_topo_idx + 1, dtype=torch.long)
+for _name, _idx in TOPOLOGY_TO_IDX.items():
+    if _name in TOPOLOGY_EXPECTED_COMPONENTS:
+        EXPECTED_COMPONENTS_BY_IDX[_idx] = TOPOLOGY_EXPECTED_COMPONENTS[_name]
+
+
 # Spec types
 SPEC_TYPES = [
     "vin", "vout", "iout", "efficiency", "ripple", "fsw",
@@ -513,15 +566,20 @@ class CircuitConstraints(nn.Module):
         self,
         soft_A: torch.Tensor,
         active_mask: torch.Tensor,
+        topology_idx: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """C4: Graph must be connected (single component).
+        """C4: Graph has at most K connected components (topology-aware).
 
-        Uses algebraic connectivity: second smallest eigenvalue of the
-        graph Laplacian (Fiedler value) must be > 0.
+        Uses algebraic connectivity: the K-th smallest eigenvalue of the
+        graph Laplacian must be > 0, where K is the expected number of
+        connected components for the topology.  For most topologies K=1
+        (single component), but wien_bridge, instrumentation_amp, and
+        colpitts have K=2.
 
         Args:
             soft_A: (B, N, N)
             active_mask: (B, N)
+            topology_idx: (B,) optional topology indices for per-sample K
         Returns:
             (B,) violation
         """
@@ -533,6 +591,17 @@ class CircuitConstraints(nn.Module):
             if n_active <= 1:
                 continue  # trivially connected
 
+            # Look up expected connected components for this topology
+            K = 1
+            if topology_idx is not None:
+                idx = topology_idx[b].item()
+                if idx < len(EXPECTED_COMPONENTS_BY_IDX):
+                    K = EXPECTED_COMPONENTS_BY_IDX[idx].item()
+
+            # If expected components >= active nodes, any graph is fine
+            if K >= n_active:
+                continue
+
             A_sub = soft_A[b, :n_active, :n_active]
             degree = A_sub.sum(dim=1)
             L = torch.diag(degree) - A_sub
@@ -541,8 +610,10 @@ class CircuitConstraints(nn.Module):
                 # eigvalsh not implemented on MPS — move to CPU if needed
                 L_compute = L.cpu() if L.device.type == "mps" else L
                 eigenvalues = torch.linalg.eigvalsh(L_compute)
-                fiedler = eigenvalues[1].to(L.device)  # 2nd smallest
-                violations[b] = F.relu(0.01 - fiedler)
+                # K-th eigenvalue should be > 0 (at most K components)
+                check_idx = min(K, n_active - 1)
+                eig_k = eigenvalues[check_idx].to(L.device)
+                violations[b] = F.relu(0.01 - eig_k)
             except RuntimeError:
                 violations[b] = 1.0  # failed → assume disconnected
 
@@ -591,8 +662,13 @@ class CircuitConstraints(nn.Module):
         active_mask: torch.Tensor,
         bounds_min: torch.Tensor,
         bounds_max: torch.Tensor,
+        topology_idx: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """Compute all constraints.
+
+        Args:
+            topology_idx: (B,) optional topology indices, used by
+                graph_connectivity to allow multi-component topologies.
 
         Returns:
             (B, 5) tensor — per-constraint violations for each sample
@@ -600,7 +676,7 @@ class CircuitConstraints(nn.Module):
         c1 = self.no_floating_nodes(soft_A, active_mask)
         c2 = self.device_completeness(soft_A, soft_X, active_mask)
         c3 = self.no_short_circuits(soft_A, soft_X, active_mask)
-        c4 = self.graph_connectivity(soft_A, active_mask)
+        c4 = self.graph_connectivity(soft_A, active_mask, topology_idx)
         c5 = self.value_bounds(soft_V, active_mask, bounds_min, bounds_max)
         return torch.stack([c1, c2, c3, c4, c5], dim=-1)
 
@@ -996,6 +1072,7 @@ class ConstraintProjection(nn.Module):
         active_mask: torch.Tensor,   # (B, N)
         bounds_min: torch.Tensor,    # (B, N)
         bounds_max: torch.Tensor,    # (B, N)
+        topology_idx: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
         """Project onto constraint set via gradient descent.
 
@@ -1038,6 +1115,7 @@ class ConstraintProjection(nn.Module):
             with torch.enable_grad():
                 violations = self.constraints.all_constraints(
                     cur_A, cur_X, cur_V, active_mask, bounds_min, bounds_max,
+                    topology_idx=topology_idx,
                 )
                 total_violation = violations.sum()
 
@@ -1189,6 +1267,7 @@ class ValidCircuitGenModel(nn.Module):
         violations = self.constraints.all_constraints(
             soft_A, soft_X, soft_V, active_mask,
             batch["value_bounds_min"], batch["value_bounds_max"],
+            topology_idx=batch["topology_idx"],
         )
 
         # 7. Lagrangian total loss
@@ -1277,6 +1356,7 @@ class ValidCircuitGenModel(nn.Module):
         if use_projection:
             soft_X, soft_A, soft_V, proj_stats = self.projection.project(
                 soft_X, soft_A, soft_V, active_mask, bounds_min, bounds_max,
+                topology_idx=topology_idx,
             )
 
         # Discretize: argmax for types, threshold for edges, bin for values
@@ -1478,31 +1558,6 @@ class LagrangianVAETrainer:
 # ═══════════════════════════════════════════════════════════════════════════
 # Validity checker (post-generation)
 # ═══════════════════════════════════════════════════════════════════════════
-
-def _count_connected_components(adj: torch.Tensor) -> int:
-    """Count connected components in an undirected adjacency matrix."""
-    n = adj.shape[0]
-    if n <= 1:
-        return n
-
-    visited = [False] * n
-    n_components = 0
-
-    for start in range(n):
-        if visited[start]:
-            continue
-        n_components += 1
-        stack = [start]
-        visited[start] = True
-        while stack:
-            node = stack.pop()
-            neighbors = torch.where(adj[node] > 0.5)[0].tolist()
-            for nei in neighbors:
-                if not visited[nei]:
-                    visited[nei] = True
-                    stack.append(nei)
-
-    return n_components
 
 def check_circuit_validity(graph: CircuitGraph) -> dict[str, bool]:
     """Check if a generated CircuitGraph is structurally valid.

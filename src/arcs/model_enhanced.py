@@ -179,6 +179,72 @@ TOPOLOGY_ADJACENCY: dict[str, list[tuple[int, int]]] = {
     # Colpitts: L(0), C1(1), C2(2), Rb1(3), Rb2(4), Re(5), Rc(6)
     # Tank: L <-> C1 <-> C2; Bias divider: Rb1 <-> Rb2; BJT: Re, Rc
     "colpitts": [(0, 1), (0, 2), (1, 2), (3, 4), (4, 5), (4, 6)],
+
+    # ==== Tier 3: BJT Amplifiers ====
+
+    # Common emitter: Rc(0), Rb(1), Re(2), Ce(3)
+    "common_emitter": [(0, 1), (1, 2), (2, 3)],
+
+    # Common collector: Rb(0), Re(1)
+    "common_collector": [(0, 1)],
+
+    # Common base: Rc(0), Re(1)
+    "common_base": [(0, 1)],
+
+    # Cascode: Rc(0), Rb1(1), Rb2(2), Re(3)
+    "cascode": [(0, 1), (1, 2), (2, 3)],
+
+    # Current mirror: Rref(0)
+    "current_mirror": [(0, 1)],
+
+    # ==== Additional Filters ====
+
+    # Twin-T notch: R1(0), R2(1), R3(2), C1(3), C2(4), C3(5)
+    "twin_t_notch": [(0, 1), (0, 3), (1, 2), (1, 4), (2, 5), (3, 4)],
+
+    # State variable filter: R1(0), R2(1), R3(2), R4(3), C1(4), C2(5)
+    "state_variable_filter": [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)],
+
+    # ==== Additional Oscillators ====
+
+    # Hartley: L1(0), L2(1), C1(2), Rb1(3), Rb2(4)
+    "hartley": [(0, 1), (1, 2), (0, 2), (3, 4)],
+
+    # Phase shift: R1(0), R2(1), R3(2), C1(3), C2(4), C3(5)
+    "phase_shift": [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)],
+
+    # ==== Regulators ====
+
+    # Shunt regulator: R_series(0), R_load(1)
+    "shunt_regulator": [(0, 1)],
+
+    # Series regulator: R1(0), R2(1), R_load(2)
+    "series_regulator": [(0, 1), (1, 2)],
+
+    # ==== Additional Amplifiers ====
+
+    # Inverting summing amp: R_input1(0), R_input2(1), R_feedback(2)
+    "inverting_summing_amp": [(0, 1), (0, 2)],
+
+    # Transimpedance amp: R_feedback(0), C_feedback(1)
+    "transimpedance_amp": [(0, 1)],
+
+    # ==== Power/Misc Topologies ====
+
+    # Half-bridge: R_dson_high(0), R_dson_low(1), Inductor(2), Capacitor(3)
+    "half_bridge": [(0, 1), (1, 2), (2, 3)],
+
+    # Push-pull: Transformer(0), MOSFET(1), Capacitor(2), Inductor(3)
+    "push_pull": [(0, 1), (0, 2), (2, 3)],
+
+    # Charge pump: C_flying(0), C_output(1), R_load(2), R_esr(3)
+    "charge_pump": [(0, 1), (1, 2), (2, 3)],
+
+    # Voltage doubler: C1(0), C2(1), R_diode1(2), R_diode2(3)
+    "voltage_doubler": [(0, 1), (1, 2), (2, 3)],
+
+    # Zeta: L1(0), L2(1), C_coupling(2), C_out(3), MOSFET(4)
+    "zeta_converter": [(0, 1), (1, 2), (2, 3), (3, 4)],
 }
 
 # Precompute RWPE features for all topologies at import time
@@ -205,6 +271,24 @@ TOPOLOGY_TO_FAMILY = {
     "sallen_key_bandpass": "filter",
     "wien_bridge": "oscillator",
     "colpitts": "oscillator",
+    "common_emitter": "amp",
+    "common_collector": "amp",
+    "common_base": "amp",
+    "cascode": "amp",
+    "current_mirror": "amp",
+    "twin_t_notch": "filter",
+    "state_variable_filter": "filter",
+    "hartley": "oscillator",
+    "phase_shift": "oscillator",
+    "shunt_regulator": "power",
+    "series_regulator": "power",
+    "inverting_summing_amp": "amp",
+    "transimpedance_amp": "amp",
+    "half_bridge": "power",
+    "push_pull": "power",
+    "charge_pump": "power",
+    "voltage_doubler": "power",
+    "zeta_converter": "power",
 }
 TOPOLOGY_FAMILY_NAMES = sorted(set(TOPOLOGY_TO_FAMILY.values()))
 TOPOLOGY_FAMILY_TO_IDX = {

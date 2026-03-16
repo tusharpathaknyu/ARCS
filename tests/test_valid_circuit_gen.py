@@ -50,6 +50,8 @@ from arcs.valid_circuit_gen import (
     N_NODE_TYPES,
     LOG_VAL_MIN,
     LOG_VAL_MAX,
+    TOPOLOGY_EXPECTED_COMPONENTS,
+    EXPECTED_COMPONENTS_BY_IDX,
 )
 from arcs.datagen import CircuitSample
 from arcs.simulate import COMPONENT_TO_PARAM
@@ -1012,3 +1014,134 @@ class TestIntegration:
             tokens = graph_to_token_sequence(g, tokenizer)
             assert tokens[0] == tokenizer.start_id
             assert tokens[-1] == tokenizer.end_id
+
+
+# ---------------------------------------------------------------------------
+# Topology-aware connectivity constraint tests
+# ---------------------------------------------------------------------------
+
+class TestTopologyExpectedComponents:
+    """Test that TOPOLOGY_EXPECTED_COMPONENTS is correctly computed."""
+
+    def test_single_component_topologies(self):
+        """Most topologies should have 1 expected connected component."""
+        for name in ["buck", "boost", "buck_boost", "cuk", "sepic",
+                      "flyback", "forward", "inverting_amp",
+                      "noninverting_amp", "differential_amp",
+                      "sallen_key_lowpass", "sallen_key_highpass",
+                      "sallen_key_bandpass"]:
+            assert TOPOLOGY_EXPECTED_COMPONENTS.get(name, 1) == 1, (
+                f"{name} should have 1 expected component"
+            )
+
+    def test_multi_component_topologies(self):
+        """wien_bridge, instrumentation_amp, colpitts have 2 components."""
+        assert TOPOLOGY_EXPECTED_COMPONENTS["wien_bridge"] == 2
+        assert TOPOLOGY_EXPECTED_COMPONENTS["instrumentation_amp"] == 2
+        assert TOPOLOGY_EXPECTED_COMPONENTS["colpitts"] == 2
+
+    def test_index_lookup_matches(self):
+        """EXPECTED_COMPONENTS_BY_IDX should match the dict."""
+        for name, expected_k in TOPOLOGY_EXPECTED_COMPONENTS.items():
+            if name in TOPOLOGY_TO_IDX:
+                idx = TOPOLOGY_TO_IDX[name]
+                assert EXPECTED_COMPONENTS_BY_IDX[idx].item() == expected_k
+
+    def test_unknown_defaults_to_one(self):
+        """Unknown topology index should default to 1 component."""
+        assert EXPECTED_COMPONENTS_BY_IDX[0].item() == 1  # index 0 = "unknown"
+
+
+class TestTopologyAwareConnectivity:
+    """Test that graph_connectivity respects multi-component topologies."""
+
+    def test_two_component_graph_no_violation_for_wien_bridge(self, config):
+        """A 2-component graph should have zero violation for wien_bridge."""
+        constraints = CircuitConstraints(config)
+        N = config.max_nodes
+
+        # Build a graph with 2 disconnected pairs: (0,1) and (2,3)
+        soft_A = torch.zeros(1, N, N)
+        soft_A[0, 0, 1] = 1.0
+        soft_A[0, 1, 0] = 1.0
+        soft_A[0, 2, 3] = 1.0
+        soft_A[0, 3, 2] = 1.0
+
+        active_mask = torch.zeros(1, N)
+        active_mask[0, :4] = 1.0
+
+        wien_idx = torch.tensor([TOPOLOGY_TO_IDX["wien_bridge"]])
+
+        violation = constraints.graph_connectivity(
+            soft_A, active_mask, topology_idx=wien_idx,
+        )
+        assert violation[0].item() < 1e-6, (
+            "2-component graph should have no violation for wien_bridge"
+        )
+
+    def test_two_component_graph_has_violation_for_buck(self, config):
+        """A 2-component graph should have violation > 0 for buck (expects 1)."""
+        constraints = CircuitConstraints(config)
+        N = config.max_nodes
+
+        soft_A = torch.zeros(1, N, N)
+        soft_A[0, 0, 1] = 1.0
+        soft_A[0, 1, 0] = 1.0
+        soft_A[0, 2, 3] = 1.0
+        soft_A[0, 3, 2] = 1.0
+
+        active_mask = torch.zeros(1, N)
+        active_mask[0, :4] = 1.0
+
+        buck_idx = torch.tensor([TOPOLOGY_TO_IDX["buck"]])
+
+        violation = constraints.graph_connectivity(
+            soft_A, active_mask, topology_idx=buck_idx,
+        )
+        assert violation[0].item() > 0, (
+            "2-component graph should have violation for buck (expects 1 component)"
+        )
+
+    def test_single_component_graph_no_violation_for_any_topology(self, config):
+        """A fully connected graph should have no violation for any topology."""
+        constraints = CircuitConstraints(config)
+        N = config.max_nodes
+
+        # Build a fully connected 4-node graph
+        soft_A = torch.zeros(1, N, N)
+        for i in range(4):
+            for j in range(4):
+                if i != j:
+                    soft_A[0, i, j] = 1.0
+
+        active_mask = torch.zeros(1, N)
+        active_mask[0, :4] = 1.0
+
+        for topo_name in ["buck", "wien_bridge", "colpitts"]:
+            topo_idx = torch.tensor([TOPOLOGY_TO_IDX[topo_name]])
+            violation = constraints.graph_connectivity(
+                soft_A, active_mask, topology_idx=topo_idx,
+            )
+            assert violation[0].item() < 1e-6, (
+                f"Fully connected graph should have no violation for {topo_name}"
+            )
+
+    def test_backward_compatible_without_topology_idx(self, config):
+        """Without topology_idx, should behave like before (expect 1 component)."""
+        constraints = CircuitConstraints(config)
+        N = config.max_nodes
+
+        # 2-component graph, no topology_idx → should violate
+        soft_A = torch.zeros(1, N, N)
+        soft_A[0, 0, 1] = 1.0
+        soft_A[0, 1, 0] = 1.0
+        soft_A[0, 2, 3] = 1.0
+        soft_A[0, 3, 2] = 1.0
+
+        active_mask = torch.zeros(1, N)
+        active_mask[0, :4] = 1.0
+
+        violation = constraints.graph_connectivity(soft_A, active_mask)
+        assert violation[0].item() > 0, (
+            "Without topology_idx, 2-component graph should violate"
+        )

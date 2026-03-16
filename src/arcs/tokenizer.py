@@ -56,14 +56,14 @@ class Token:
 class CircuitTokenizer:
     """Tokenizer with native circuit vocabulary.
 
-    Vocabulary structure (686 tokens):
+    Vocabulary structure (726 tokens):
         [0-4]       Special tokens: PAD, START, END, SEP, INVALID (5)
         [5-24]      Component type tokens (16 named + 4 reserved = 20)
-        [25-44]     Topology tokens (19 named + 1 reserved = 20)
-        [45-64]     Spec tokens (20)
-        [65-85]     Pin tokens (21)
-        [86-185]    Net/connection tokens (100)
-        [186-685]   Value tokens (500 bins, log-discretized)
+        [25-64]     Topology tokens (37 named + 3 reserved = 40)
+        [65-84]     Spec tokens (20)
+        [85-105]    Pin tokens (21)
+        [106-205]   Net/connection tokens (100)
+        [206-705]   Value tokens (500 bins, log-discretized)
     """
 
     # Value discretization: log-scale bins covering 1e-12 to 1e6
@@ -116,12 +116,21 @@ class CircuitTokenizer:
             "DIFFERENTIAL_AMP",
             "SALLEN_KEY_LP", "SALLEN_KEY_HP", "SALLEN_KEY_BP",
             "WIEN_BRIDGE", "COLPITTS",
+            # Tier 2 — BJT amplifiers
+            "COMMON_EMITTER", "COMMON_COLLECTOR", "COMMON_BASE",
+            "CASCODE", "CURRENT_MIRROR",
+            # Tier 2 — additional (future)
+            "HALF_BRIDGE", "PUSH_PULL", "ZETA_CONVERTER", "CHARGE_PUMP",
+            "TWIN_T_NOTCH", "STATE_VARIABLE_FILTER",
+            "HARTLEY", "PHASE_SHIFT",
+            "SHUNT_REGULATOR", "SERIES_REGULATOR",
+            "VOLTAGE_DOUBLER", "INVERTING_SUMMING_AMP", "TRANSIMPEDANCE_AMP",
         ]
         for name in topologies:
             self._add_token(idx, f"TOPO_{name}", TokenType.TOPOLOGY)
             idx += 1
 
-        while idx < 45:
+        while idx < 65:
             self._add_token(idx, f"TOPO_RESERVED_{idx}", TokenType.TOPOLOGY)
             idx += 1
 
@@ -143,7 +152,7 @@ class CircuitTokenizer:
             self._add_token(idx, name, TokenType.SPEC)
             idx += 1
 
-        while idx < 65:
+        while idx < 85:
             self._add_token(idx, f"SPEC_RESERVED_{idx}", TokenType.SPEC)
             idx += 1
 
@@ -168,7 +177,7 @@ class CircuitTokenizer:
             self._add_token(idx, name, TokenType.PIN)
             idx += 1
 
-        while idx < 85:
+        while idx < 106:
             self._add_token(idx, f"PIN_RESERVED_{idx}", TokenType.PIN)
             idx += 1
 
@@ -361,10 +370,21 @@ class CircuitTokenizer:
             "r_bias_2": ("RESISTOR", None),
             "r_emitter": ("RESISTOR", None),
             "r_collector": ("RESISTOR", None),
+            "r_base": ("RESISTOR", None),
+            "r4": ("RESISTOR", None),
+            "r_series": ("RESISTOR", None),
+            "r_input_2": ("RESISTOR", None),
+            "r_dson_high": ("MOSFET_N", None),
+            "r_dson_low": ("MOSFET_N", None),
             # Tier 2 — capacitors
             "c1": ("CAPACITOR", None),
             "c2": ("CAPACITOR", None),
+            "c3": ("CAPACITOR", None),
             "c_freq": ("CAPACITOR", None),
+            "c_bypass": ("CAPACITOR", None),
+            "c_feedback": ("CAPACITOR", None),
+            "cap_output": ("CAPACITOR", None),
+            "cap_fly": ("CAPACITOR", None),
         }
 
         for param_name, param_value in params.items():

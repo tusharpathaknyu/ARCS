@@ -9,7 +9,7 @@ class TestTokenizerVocabulary:
     """Vocabulary structure and consistency tests."""
 
     def test_vocab_size(self, tokenizer):
-        assert tokenizer.vocab_size == 686
+        assert tokenizer.vocab_size == 706
 
     def test_special_tokens_exist(self, tokenizer):
         assert tokenizer.pad_id >= 0
@@ -23,7 +23,7 @@ class TestTokenizerVocabulary:
         assert len(ids) == 4
 
     def test_topology_tokens(self, tokenizer):
-        """All 16 topologies should have tokens."""
+        """All topologies should have tokens."""
         expected = [
             "TOPO_BUCK", "TOPO_BOOST", "TOPO_BUCK_BOOST",
             "TOPO_CUK", "TOPO_SEPIC", "TOPO_FLYBACK", "TOPO_FORWARD",
@@ -32,6 +32,8 @@ class TestTokenizerVocabulary:
             "TOPO_SALLEN_KEY_LP", "TOPO_SALLEN_KEY_HP",
             "TOPO_SALLEN_KEY_BP",
             "TOPO_WIEN_BRIDGE", "TOPO_COLPITTS",
+            "TOPO_COMMON_EMITTER", "TOPO_COMMON_COLLECTOR",
+            "TOPO_COMMON_BASE", "TOPO_CASCODE", "TOPO_CURRENT_MIRROR",
         ]
         for name in expected:
             assert name in tokenizer.name_to_id, f"Missing topology token: {name}"

@@ -148,6 +148,116 @@ COMPONENT_TO_PARAM: dict[str, list[tuple[str, str]]] = {
         ("RESISTOR", "r_emitter"),
         ("RESISTOR", "r_collector"),
     ],
+    # ---- Additional Filters ----
+    "twin_t_notch": [
+        ("RESISTOR", "r1"),
+        ("RESISTOR", "r2"),
+        ("RESISTOR", "r3"),
+        ("CAPACITOR", "c1"),
+        ("CAPACITOR", "c2"),
+        ("CAPACITOR", "c3"),
+    ],
+    "state_variable_filter": [
+        ("RESISTOR", "r1"),
+        ("RESISTOR", "r2"),
+        ("RESISTOR", "r3"),
+        ("RESISTOR", "r4"),
+        ("CAPACITOR", "c1"),
+        ("CAPACITOR", "c2"),
+    ],
+    # ---- Additional Oscillators ----
+    "hartley": [
+        ("INDUCTOR", "inductance_1"),
+        ("INDUCTOR", "inductance_2"),
+        ("CAPACITOR", "c1"),
+        ("RESISTOR", "r_bias_1"),
+        ("RESISTOR", "r_bias_2"),
+    ],
+    "phase_shift": [
+        ("RESISTOR", "r1"),
+        ("RESISTOR", "r2"),
+        ("RESISTOR", "r3"),
+        ("CAPACITOR", "c1"),
+        ("CAPACITOR", "c2"),
+        ("CAPACITOR", "c3"),
+    ],
+    # ---- Regulators ----
+    "shunt_regulator": [
+        ("RESISTOR", "r_series"),
+        ("RESISTOR", "r_load"),
+    ],
+    "series_regulator": [
+        ("RESISTOR", "r1"),
+        ("RESISTOR", "r2"),
+        ("RESISTOR", "r_load"),
+    ],
+    # ---- Additional Amplifiers ----
+    "inverting_summing_amp": [
+        ("RESISTOR", "r_input1"),
+        ("RESISTOR", "r_input2"),
+        ("RESISTOR", "r_feedback"),
+    ],
+    "transimpedance_amp": [
+        ("RESISTOR", "r_feedback"),
+        ("CAPACITOR", "c_feedback"),
+    ],
+    # ---- Tier 3: BJT Amplifiers ----
+    "common_emitter": [
+        ("RESISTOR", "r_collector"),
+        ("RESISTOR", "r_base"),
+        ("RESISTOR", "r_emitter"),
+        ("CAPACITOR", "c_bypass"),
+    ],
+    "common_collector": [
+        ("RESISTOR", "r_base"),
+        ("RESISTOR", "r_emitter"),
+    ],
+    "common_base": [
+        ("RESISTOR", "r_collector"),
+        ("RESISTOR", "r_emitter"),
+    ],
+    "cascode": [
+        ("RESISTOR", "r_collector"),
+        ("RESISTOR", "r_bias1"),
+        ("RESISTOR", "r_bias2"),
+        ("RESISTOR", "r_emitter"),
+    ],
+    "current_mirror": [
+        ("RESISTOR", "r_ref"),
+        ("RESISTOR", "r_emitter"),
+    ],
+    # ---- Power/Misc Topologies ----
+    "half_bridge": [
+        ("MOSFET_N", "r_dson_high"),
+        ("MOSFET_N", "r_dson_low"),
+        ("INDUCTOR", "inductance"),
+        ("CAPACITOR", "capacitance"),
+    ],
+    "push_pull": [
+        ("TRANSFORMER", "turns_ratio"),
+        ("MOSFET_N", "r_dson"),
+        ("CAPACITOR", "capacitance"),
+        ("INDUCTOR", "inductance"),
+    ],
+    "charge_pump": [
+        ("CAPACITOR", "c_flying"),
+        ("CAPACITOR", "c_output"),
+        ("RESISTOR", "r_load"),
+        ("RESISTOR", "r_esr"),
+    ],
+    "voltage_doubler": [
+        ("CAPACITOR", "c1"),
+        ("CAPACITOR", "c2"),
+        ("RESISTOR", "r_diode1"),
+        ("RESISTOR", "r_diode2"),
+    ],
+    "zeta_converter": [
+        ("INDUCTOR", "inductance_1"),
+        ("INDUCTOR", "inductance_2"),
+        ("CAPACITOR", "cap_coupling"),
+        ("CAPACITOR", "capacitance"),
+        ("MOSFET_N", "r_dson"),
+    ],
 }
 
 # Merge both bounds dicts for fallback defaults
@@ -381,7 +491,11 @@ def compute_reward(
     # +1.0 for sim convergence
     reward += 1.0
 
-    if topology in _TIER1_NAMES:
+    _POWER_TOPOS = set(_TIER1_NAMES) | {
+        "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+        "shunt_regulator", "series_regulator",
+    }
+    if topology in _POWER_TOPOS:
         reward += _power_reward(outcome, target_specs)
     else:
         reward += _signal_reward(outcome, topology)
@@ -425,9 +539,12 @@ def _signal_reward(
     reward = 0.0
     m = outcome.metrics
 
-    amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp"}
-    filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass"}
-    osc_types = {"wien_bridge", "colpitts"}
+    amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp",
+                  "common_emitter", "common_collector", "common_base", "cascode",
+                  "inverting_summing_amp", "transimpedance_amp"}
+    filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass",
+                    "twin_t_notch", "state_variable_filter"}
+    osc_types = {"wien_bridge", "colpitts", "hartley", "phase_shift"}
 
     if topology in amp_types:
         # Gain exists and reasonable → 3.0
@@ -495,6 +612,24 @@ TIER2_TEST_SPECS = [
     ("sallen_key_bandpass", {"cutoff_freq": 1000}),
     ("wien_bridge", {}),
     ("colpitts", {"vin": 12.0}),
+    ("common_emitter", {"vin": 0.1, "cutoff_freq": 1000}),
+    ("common_collector", {"vin": 0.1, "cutoff_freq": 1000}),
+    ("common_base", {"vin": 0.1, "cutoff_freq": 1000}),
+    ("cascode", {"vin": 0.1, "cutoff_freq": 1000}),
+    ("current_mirror", {"vin": 12.0}),
+    ("twin_t_notch", {"cutoff_freq": 1000}),
+    ("state_variable_filter", {"cutoff_freq": 1000}),
+    ("hartley", {"vin": 12.0}),
+    ("phase_shift", {}),
+    ("shunt_regulator", {"vin": 12.0}),
+    ("series_regulator", {"vin": 12.0}),
+    ("inverting_summing_amp", {"vin": 0.1, "cutoff_freq": 1000}),
+    ("transimpedance_amp", {"cutoff_freq": 1000}),
+    ("half_bridge", {"vin": 48.0, "vout": 24.0, "iout": 2.0, "fsw": 100000}),
+    ("push_pull", {"vin": 48.0, "vout": 12.0, "iout": 2.0, "fsw": 100000}),
+    ("charge_pump", {"vin": 5.0, "iout": 0.1, "fsw": 100000}),
+    ("voltage_doubler", {"vin": 12.0, "iout": 0.1, "fsw": 50000}),
+    ("zeta_converter", {"vin": 12.0, "vout": 5.0, "iout": 1.0, "fsw": 100000}),
 ]
 
 ALL_TEST_SPECS = TIER1_TEST_SPECS + TIER2_TEST_SPECS
