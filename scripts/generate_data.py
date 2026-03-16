@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Load MLEntry simulation data and prepare CircuitGenie dataset."""
+"""[DEPRECATED] Load MLEntry simulation data and prepare CircuitGenie dataset.
+
+This script uses the legacy circuitgenie package. For current data generation,
+use the arcs.datagen module directly or scripts/generate_training_data.py.
+"""
 
 import sys
 from pathlib import Path

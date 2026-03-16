@@ -14,21 +14,21 @@ authors = [
 ]
 
 dependencies = [
-    "numpy>=1.24",
-    "torch>=2.0",
-    "networkx>=3.0",
-    "pandas>=2.0",
-    "tqdm",
-    "PyYAML",
-    "matplotlib",
-    "pyspice>=1.5",
+    "numpy>=1.24,<3",
+    "torch>=2.0,<3",
+    "networkx>=3.0,<4",
+    "pandas>=2.0,<3",
+    "tqdm>=4.60",
+    "PyYAML>=6.0",
+    "matplotlib>=3.7",
+    "pyspice>=1.5,<2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "ruff",
-    "ipython",
+    "pytest>=7.0",
+    "ruff>=0.1",
+    "ipython>=8.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -37,3 +37,10 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

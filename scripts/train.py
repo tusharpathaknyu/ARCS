@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Train CircuitGenie model on Phase 1 power converter data."""
+"""[DEPRECATED] Train CircuitGenie model on Phase 1 power converter data.
+
+This script uses the legacy circuitgenie package. For current training, use:
+  - scripts/train_vcg.py   (ValidCircuitGen VAE)
+  - scripts/train_ccfm.py  (Constraint-guided Flow Matching)
+"""
 
 import sys
 from pathlib import Path

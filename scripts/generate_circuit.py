@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Generate circuits from specs using a trained CircuitGenie model."""
+"""[DEPRECATED] Generate circuits from specs using a trained CircuitGenie model.
+
+This script uses the legacy circuitgenie package. For current generation, use:
+  - scripts/evaluate_vcg.py    (VCG generation + evaluation)
+  - scripts/evaluate_hybrid.py (Hybrid VCG+CCFM pipeline)
+"""
 
 import sys
 from pathlib import Path

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""
-CircuitGenie v3: Eulerian walk representation training.
+"""[DEPRECATED] CircuitGenie v3: Eulerian walk representation training.
 
+This script uses the legacy circuitgenie package. For current training, use:
+  - scripts/train_vcg.py   (ValidCircuitGen VAE)
+  - scripts/train_ccfm.py  (Constraint-guided Flow Matching)
+
+Original description:
 Two-stage training with Eulerian walk augmented data:
   Stage 1: Cross-entropy with 5x value weight (175K augmented sequences)
   Stage 2: REINFORCE with SPICE reward

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""
-CircuitGenie Phase 2: Two-stage training.
+"""[DEPRECATED] CircuitGenie Phase 2: Two-stage training.
 
+This script uses the legacy circuitgenie package. For current training, use:
+  - scripts/train_vcg.py   (ValidCircuitGen VAE)
+  - scripts/train_ccfm.py  (Constraint-guided Flow Matching)
+
+Original description:
 Stage 1: Cross-entropy with 5x value weight + spec-param consistency loss
 Stage 2: REINFORCE fine-tuning with SPICE simulation reward
 """
