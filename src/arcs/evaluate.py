@@ -318,7 +318,11 @@ def evaluate_generated_circuits(
                 if sim.valid:
                     ts["sim_valid"] += 1
 
-                if topo in _TIER1_NAMES:
+                _POWER_TOPOS = set(_TIER1_NAMES) | {
+                    "half_bridge", "push_pull", "charge_pump",
+                    "voltage_doubler", "zeta_converter",
+                }
+                if topo in _POWER_TOPOS:
                     verr = sim.metrics.get("vout_error_pct")
                     eff = sim.metrics.get("efficiency")
                     rip = sim.metrics.get("ripple_ratio")

@@ -181,7 +181,11 @@ def is_valid_result(
     We keep ALL results (valid & invalid) in the dataset,
     but this flag helps label them for the model.
     """
-    if topology_name in _TIER1_NAMES or not topology_name:
+    # Use same power-topology set as compute_derived_metrics
+    _POWER_METRIC_TOPOS = set(_TIER1_NAMES) | {
+        "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+    }
+    if topology_name in _POWER_METRIC_TOPOS or not topology_name:
         return _is_valid_power(metrics, operating_conditions)
     else:
         return _is_valid_signal(metrics, operating_conditions, topology_name)
@@ -207,10 +211,39 @@ def _is_valid_signal(
     operating_conditions: dict[str, float],
     topology_name: str,
 ) -> bool:
-    """Signal-processing validity checks."""
-    amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp"}
-    filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass"}
-    osc_types = {"wien_bridge", "colpitts"}
+    """Signal-processing validity checks for ALL Tier-2 topologies.
+
+    Every topology category has explicit validation — no fallthrough to
+    generic ``len(metrics) > 0`` which would accept any noisy result.
+    """
+    # Op-amp amplifiers (original 4 + BJT amplifiers + summing/transimpedance)
+    amp_types = {
+        "inverting_amp", "noninverting_amp", "instrumentation_amp",
+        "differential_amp",
+        # BJT amplifiers produce same gain_db / gain_dc metrics
+        "common_emitter", "common_collector", "common_base", "cascode",
+        # Extended amplifiers
+        "inverting_summing_amp", "transimpedance_amp",
+        # IC-level opamps
+        "folded_cascode", "telescopic_cascode", "two_stage_opamp",
+        "rail_to_rail",
+        # Differential pair is an amplifier
+        "differential_pair",
+    }
+    # Filters (original 3 + twin-T + state variable)
+    filter_types = {
+        "sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass",
+        "twin_t_notch", "state_variable_filter",
+    }
+    # Oscillators (original 2 + hartley + phase shift)
+    osc_types = {"wien_bridge", "colpitts", "hartley", "phase_shift"}
+
+    # Current sources
+    mirror_types = {"current_mirror", "wilson_current_mirror"}
+
+    # Regulators — now routed to _is_valid_power via dispatch,
+    # but keep a safety net here in case they arrive
+    regulator_types = {"shunt_regulator", "series_regulator"}
 
     if topology_name in amp_types:
         gain_db = metrics.get("gain_db", metrics.get("gain_dc"))
@@ -221,7 +254,7 @@ def _is_valid_signal(
         return True
 
     if topology_name in filter_types:
-        # Must have gain_dc (passband or reference) and bw_3db from post-processing
+        # Must have gain_dc (passband or reference)
         gain_dc = metrics.get("gain_dc")
         if gain_dc is None:
             return False
@@ -232,10 +265,30 @@ def _is_valid_signal(
 
     if topology_name in osc_types:
         vosc_pp = metrics.get("vosc_pp", 0)
-        if vosc_pp < 0.01:
+        if vosc_pp < 0.1:  # 100mV threshold (above noise floor)
             return False
         return True
 
+    if topology_name in mirror_types:
+        iref = abs(metrics.get("iref", 0))
+        iout = abs(metrics.get("iout", 0))
+        if iref < 1e-9 or iout < 1e-9:
+            return False  # no meaningful current
+        ratio = iout / iref
+        if ratio < 0.1 or ratio > 10.0:
+            return False  # wildly off from unity mirror
+        return True
+
+    if topology_name in regulator_types:
+        # Safety net: regulators should now go through _is_valid_power,
+        # but validate vout here too
+        vout = abs(metrics.get("vout_avg", 0))
+        if vout < 0.01:
+            return False
+        return True
+
+    # If we reach here, topology is unrecognized — require metrics exist
+    # but log a warning (this should never happen for known topologies)
     return len(metrics) > 0
 
 

@@ -39,6 +39,7 @@ class LatentRewardConfig:
     refine_lr: float = 0.01
     constraint_weight: float = 10.0  # penalty for constraint violations during refinement
     max_z_drift: float = 3.0         # max L2 distance from initial z
+    drift_weight: float = 5.0        # weight for drift penalty (scaled to reward range [0,8])
 
 
 class LatentRewardPredictor(nn.Module):
@@ -137,8 +138,9 @@ class LatentRefinement(nn.Module):
                     objective = objective - self.config.constraint_weight * violation
 
                 # Drift penalty — keep z close to initial sample
+                # Weighted to scale consistently with reward range [0, 8]
                 drift = (z_opt - z_init).norm(dim=-1).mean()
-                drift_penalty = F.relu(drift - self.config.max_z_drift)
+                drift_penalty = self.config.drift_weight * F.relu(drift - self.config.max_z_drift)
                 objective = objective - drift_penalty
 
                 # Maximize objective → minimize negative

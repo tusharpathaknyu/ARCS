@@ -203,8 +203,11 @@ def main():
     with open(output_dir / "config.json", "w") as f:
         json.dump(config.to_dict(), f, indent=2)
 
-    # Training loop
+    # Training loop — restore best_val_loss from checkpoint if resuming
     best_val_loss = float("inf")
+    if args.resume and "val_loss" in ckpt:
+        best_val_loss = ckpt["val_loss"]
+        print(f"  Restored best_val_loss={best_val_loss:.4f}")
     print(f"\n{'='*60}")
     print(f"Training ValidCircuitGen for {args.epochs} epochs")
     print(f"{'='*60}\n")

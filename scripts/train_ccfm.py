@@ -66,7 +66,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-interval", type=int, default=20, help="Evaluate every N epochs")
     parser.add_argument("--eval-samples", type=int, default=50, help="Samples for evaluation")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--valid-only", action="store_true", default=True, help="Only use valid circuits")
+    parser.add_argument("--no-valid-only", dest="valid_only", action="store_false",
+                        help="Include invalid circuits (default: valid only)")
+    parser.set_defaults(valid_only=True)
     return parser.parse_args()
 
 
@@ -205,8 +207,9 @@ def main():
 
     # Create CCFM model with pre-trained VCG components
     model = ConstrainedFlowMatchingModel(flow_config, vcg_model=vcg_model)
+    model = model.to(device)
     n_total = model.count_parameters()
-    logger.info(f"CCFM model: {n_total:,} total parameters")
+    logger.info(f"CCFM model: {n_total:,} total parameters (device={device})")
 
     # Dataset
     logger.info(f"Loading data from {args.data}...")

@@ -44,7 +44,7 @@ _POWER_TOPOS = set(_TIER1_NAMES) | {
     "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
 }
 _REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}
-_MIRROR_TOPOS = {"current_mirror"}
+_MIRROR_TOPOS = {"current_mirror", "wilson_current_mirror"}
 
 logger = logging.getLogger(__name__)
 

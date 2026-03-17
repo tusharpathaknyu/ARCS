@@ -81,8 +81,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-layers", type=int, default=3, help="MLP layers")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--log-interval", type=int, default=20, help="Log every N steps")
-    parser.add_argument("--valid-only", action="store_true", default=True,
-                        help="Only use valid circuits")
+    parser.add_argument("--no-valid-only", dest="valid_only", action="store_false",
+                        help="Include invalid circuits (default: valid only)")
+    parser.set_defaults(valid_only=True)
     return parser.parse_args()
 
 
@@ -304,13 +305,15 @@ def main():
 
                 reward = batch.get("reward")
                 if reward is None:
+                    # Fallback proxy: struct(1) + converge(1) + bounds ratio * 6
+                    # Matches real reward range [2.0, 8.0] for valid circuits
                     values = batch["values"]
                     bounds_min = batch["value_bounds_min"]
                     bounds_max = batch["value_bounds_max"]
                     mask = batch["active_mask"]
                     in_bounds = ((values >= bounds_min) & (values <= bounds_max)).float()
-                    reward = (in_bounds * mask).sum(dim=-1) / mask.sum(dim=-1).clamp(min=1)
-                    reward = reward * 8.0
+                    bounds_ratio = (in_bounds * mask).sum(dim=-1) / mask.sum(dim=-1).clamp(min=1)
+                    reward = 2.0 + bounds_ratio * 6.0
 
                 pred = predictor(z, spec_embed)
                 loss = torch.nn.functional.mse_loss(pred, reward)

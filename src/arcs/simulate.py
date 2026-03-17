@@ -355,7 +355,13 @@ _SPEC_TO_COND_SIGNAL = {
 
 def _get_spec_to_cond(topology: str) -> dict[str, str]:
     """Get the spec→condition mapping for a given topology."""
-    if topology in _TIER1_NAMES:
+    # Must check ALL power topologies, not just Tier 1.
+    # Extended power topos (half_bridge, push_pull, etc.) use the same
+    # vin/vout/iout/fsw conditions as Tier 1 converters.
+    _POWER_TOPOS = set(_TIER1_NAMES) | {
+        "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+    }
+    if topology in _POWER_TOPOS:
         return _SPEC_TO_COND_POWER
     return _SPEC_TO_COND_SIGNAL
 
@@ -495,7 +501,7 @@ def compute_reward(
         "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
     }
     _REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}
-    _MIRROR_TOPOS = {"current_mirror"}
+    _MIRROR_TOPOS = {"current_mirror", "wilson_current_mirror"}
 
     if topology in _POWER_TOPOS:
         reward += _power_reward(outcome, target_specs)
@@ -547,7 +553,10 @@ def _signal_reward(
 
     amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp",
                   "common_emitter", "common_collector", "common_base", "cascode",
-                  "inverting_summing_amp", "transimpedance_amp"}
+                  "inverting_summing_amp", "transimpedance_amp",
+                  # IC-level opamps and differential pair
+                  "folded_cascode", "telescopic_cascode", "two_stage_opamp",
+                  "rail_to_rail", "differential_pair"}
     filter_types = {"sallen_key_lowpass", "sallen_key_highpass", "sallen_key_bandpass",
                     "twin_t_notch", "state_variable_filter"}
     osc_types = {"wien_bridge", "colpitts", "hartley", "phase_shift"}

@@ -226,11 +226,16 @@ class CircuitTokenizer:
         return self.name_to_id["SEP"]
 
     def encode_value(self, value: float) -> int:
-        """Map a continuous value to the nearest value bin token ID."""
-        if value <= 0:
-            return self.name_to_id["VAL_0"]
+        """Map a continuous value to the nearest value bin token ID.
 
-        log_val = math.log10(value)
+        Negative values (e.g. currents with sign convention) are encoded
+        by magnitude — the sign is not representable in the token space.
+        """
+        if value == 0:
+            return self.name_to_id["VAL_0"]
+        # Use absolute value so negative currents/voltages are encoded
+        # by magnitude rather than all collapsing to VAL_0
+        log_val = math.log10(abs(value))
         log_min = math.log10(self.VALUE_MIN)
         log_max = math.log10(self.VALUE_MAX)
 
