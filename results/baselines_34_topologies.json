@@ -2,7 +2,7 @@
   "random_search": {
     "n_topologies": 34,
     "n_trials": 200,
-    "avg_reward": 6.0345,
+    "avg_reward": 7.315029411764706,
     "per_topology": {
       "buck": {
         "reward": 7.352
@@ -65,7 +65,7 @@
         "reward": 8.0
       },
       "current_mirror": {
-        "reward": 2.0
+        "reward": 8.0
       },
       "twin_t_notch": {
         "reward": 7.0
@@ -80,10 +80,10 @@
         "reward": 5.0
       },
       "shunt_regulator": {
-        "reward": 2.0
+        "reward": 7.983
       },
       "series_regulator": {
-        "reward": 2.0
+        "reward": 7.996
       },
       "inverting_summing_amp": {
         "reward": 7.0
@@ -92,19 +92,19 @@
         "reward": 8.0
       },
       "half_bridge": {
-        "reward": 2.0
+        "reward": 7.78
       },
       "push_pull": {
-        "reward": 2.0
+        "reward": 7.688
       },
       "charge_pump": {
-        "reward": 2.0
+        "reward": 7.975
       },
       "voltage_doubler": {
-        "reward": 2.0
+        "reward": 7.162
       },
       "zeta_converter": {
-        "reward": 2.0
+        "reward": 4.954
       }
     }
   },
@@ -114,7 +114,7 @@
     "generations": 20,
     "sim_success_rate": 1.0,
     "sim_valid_rate": 1.0,
-    "avg_reward": 6.1207095839895995,
+    "avg_reward": 7.410704878107246,
     "wall_time": 6355.553548812866,
     "per_topology": {
       "boost": {
@@ -134,7 +134,7 @@
         "valid": 1.0
       },
       "charge_pump": {
-        "reward": 2.0,
+        "reward": 8.0,
         "valid": 1.0
       },
       "colpitts": {
@@ -158,7 +158,7 @@
         "valid": 1.0
       },
       "current_mirror": {
-        "reward": 2.0,
+        "reward": 8.0,
         "valid": 1.0
       },
       "differential_amp": {
@@ -174,7 +174,7 @@
         "valid": 1.0
       },
       "half_bridge": {
-        "reward": 2.0,
+        "reward": 7.8578,
         "valid": 1.0
       },
       "hartley": {
@@ -202,7 +202,7 @@
         "valid": 1.0
       },
       "push_pull": {
-        "reward": 2.0,
+        "reward": 7.76488,
         "valid": 1.0
       },
       "sallen_key_bandpass": {
@@ -222,11 +222,11 @@
         "valid": 1.0
       },
       "series_regulator": {
-        "reward": 2.0,
+        "reward": 8.0,
         "valid": 1.0
       },
       "shunt_regulator": {
-        "reward": 2.0,
+        "reward": 8.0,
         "valid": 1.0
       },
       "state_variable_filter": {
@@ -242,7 +242,7 @@
         "valid": 1.0
       },
       "voltage_doubler": {
-        "reward": 2.0,
+        "reward": 7.23362,
         "valid": 1.0
       },
       "wien_bridge": {
@@ -250,7 +250,7 @@
         "valid": 1.0
       },
       "zeta_converter": {
-        "reward": 2.0,
+        "reward": 5.00354,
         "valid": 1.0
       }
     }

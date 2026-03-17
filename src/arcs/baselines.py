@@ -34,8 +34,17 @@ from arcs.simulate import (
     _SPEC_TO_COND_SIGNAL,
     _power_reward,
     _signal_reward,
+    _regulator_reward,
+    _current_mirror_reward,
     SimulationOutcome,
 )
+
+# Extended power topologies that use _power_reward (same as simulate.py)
+_POWER_TOPOS = set(_TIER1_NAMES) | {
+    "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+}
+_REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}
+_MIRROR_TOPOS = {"current_mirror"}
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +67,7 @@ def _specs_to_conditions(topology: str, specs: dict[str, float],
                          template: TopologyTemplate) -> dict[str, float]:
     """Merge test specs into operating conditions for simulation."""
     conditions = dict(template.operating_conditions)
-    mapping = _SPEC_TO_COND_POWER if topology in _TIER1_NAMES else _SPEC_TO_COND_SIGNAL
+    mapping = _SPEC_TO_COND_POWER if topology in _POWER_TOPOS else _SPEC_TO_COND_SIGNAL
     for spec_key, cond_key in mapping.items():
         if spec_key in specs:
             conditions[cond_key] = specs[spec_key]
@@ -131,8 +140,12 @@ def _simulate_params(
     # Compute reward: struct_bonus(1) + sim_converge(1) + domain(6) = max 8.0
     # Baselines always have valid structure since we sample within bounds
     reward = 2.0  # struct(1) + sim_converge(1)
-    if topology in _TIER1_NAMES:
+    if topology in _POWER_TOPOS:
         reward += _power_reward(outcome, specs)
+    elif topology in _REGULATOR_TOPOS:
+        reward += _regulator_reward(outcome, topology, specs)
+    elif topology in _MIRROR_TOPOS:
+        reward += _current_mirror_reward(outcome)
     else:
         reward += _signal_reward(outcome, topology)
 

@@ -261,18 +261,13 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 
 | Method | Params | Sims/Design | Sim Success | Sim Valid | Avg Reward | Wall Time/Design |
 |--------|--------|-------------|-------------|-----------|------------|------------------|
-| Random Search (N=200) | — | 200 | 100.0% | 100.0% | 6.04/8.0 | ~75s |
-| Genetic Algorithm (30×20) | — | 630 | 100.0% | 100.0% | 6.12/8.0 | ~187s |
+| Random Search (N=200) | — | 200 | 100.0% | 100.0% | 7.32/8.0 | ~75s |
+| Genetic Algorithm (30×20) | — | 630 | 100.0% | 100.0% | 7.41/8.0 | ~187s |
 | ARCS Graph Transformer v2 (SL) | 6.83M | 1 | 50.0% | 24.0% | 2.10/8.0 | ~0.02s |
 | **ARCS GT v2 + GRPO** | **6.83M** | **1** | **86.0%** | **30.0%** | **3.74/8.0** | **~0.02s** |
 | ValidCircuitGen v3 (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
 
 †VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 34/34 topologies.
-
-> **Note**: Baseline rewards are lower on 34 topologies vs. the original 16 because
-> 8 newer topologies (regulators, extended power, current mirror) score 2.0 due to
-> limited simulation template coverage. On the original 7 Tier-1 power topologies,
-> GA achieves 7.86 avg reward, and RS achieves 7.45.
 
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
 20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **3,750-9,350x
@@ -603,7 +598,9 @@ Example output:
 - [x] Retrained Graph Transformer v2 on 34-topology dataset (89K samples, 50 epochs)
   - Best val_loss=1.957 at epoch 19, accuracy=71.0%, struct_acc=90.7%
 - [x] GRPO reinforcement learning (200 steps): reward 2.10→3.74, struct 62%→92%
-- [x] Re-ran RS/GA baselines on all 34 topologies: RS=6.04, GA=6.12 avg reward
+- [x] Re-ran RS/GA baselines on all 34 topologies: RS=7.32, GA=7.41 avg reward
+- [x] Fixed baseline reward routing bug: 8 topologies (regulators, extended power, current mirror) were missing reward functions in baselines.py — rewards jumped from 2.0 to 5.0-8.0
+- [x] Trained latent reward predictor v2 on VCG-encoded data
 - [x] Added hartley to multi-component topology tests
 - [x] 751 tests passing across 18 test files
 
