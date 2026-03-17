@@ -72,9 +72,9 @@ For each topology (Buck, Boost, Flyback, Sallen-Key, Colpitts, ...):
 | Tier 1: Power converters | 7 | 35,000 | 16,400 | 82,000 |
 | Tier 2: Amplifiers, filters, oscillators | 9 | 18,000 | 15,842 | 79,210 |
 | Tier 2b: BJT, regulators, power (Phase 14+17) | 18 | 27,000 | 27,000 | 135,000 |
-| **Combined v2** | **34** | **80,000** | **59,242** | **~296,000** |
+| **Combined v2 (re-validated)** | **34** | **89,000** | **59,360** | **~297,000** |
 
-Phase 17 balanced the dataset: all Tier-2b topologies expanded from 500→2000 samples each to eliminate mode collapse in VCG training.
+Phase 17 balanced the dataset: all Tier-2b topologies expanded from 500→2000 samples each to eliminate mode collapse in VCG training. Phase 22 re-validated all samples with corrected per-topology validation (18 topologies previously fell through to `len(metrics)>0`). Note: zeta_converter has 0 valid samples (vout_error consistently >86%) and wien_bridge has only 54 valid (oscillation hard to achieve with random sweeps) — both need targeted data generation.
 
 ---
 
@@ -614,6 +614,30 @@ Example output:
 - [x] Trained latent reward predictor v3 with real SPICE rewards: val_loss=0.55, val_corr=0.898 (vs v2's corr≈0.001)
 - [x] VCG + latent refinement (v3): avg reward 5.61→5.78 (+3%), top gains on state_variable_filter (+1.67), series_regulator (+1.33), transimpedance_amp (+1.26)
 - [x] Fixed train_latent_reward.py to use RewardGraphDataset with actual SPICE rewards
+
+### Phase 22: Full Codebase Audit & Pre-Retrain Fixes (complete)
+- [x] **Datagen validation overhaul**: 18/27 Tier-2 topologies had fallthrough to `len(metrics)>0`
+  - Extended power topos (half_bridge, push_pull, etc.) now routed through `_is_valid_power`
+  - BJT amps, filters, oscillators, current mirrors all get proper topology-specific validation
+  - Data re-labeled: 67,456→59,360 valid samples (8,643 incorrectly labeled samples fixed)
+  - Derived metrics (efficiency, vout_error_pct) re-computed for 5 extended power topologies
+- [x] **Reward function fixes**:
+  - 6 IC-level opamps + differential_pair added to `_signal_reward` amp_types (were getting reward=0)
+  - `wilson_current_mirror` added to mirror reward routing
+  - `_get_spec_to_cond()` fixed to check all power topos (not just Tier 1)
+  - Amplifier gain: topology-aware sign check (inverting vs non-inverting)
+  - Filter gain capped at +20dB, oscillation threshold raised to 100mV
+  - Oscillator frequency: checks f_osc/frequency/f_peak (was unreachable)
+- [x] **RL training fixes**:
+  - GRPO advantage: Bessel-corrected sample std (ddof=1) instead of population std
+  - Entropy bonus: now grad-enabled (was dead code from .item() detach)
+- [x] **Tokenizer**: negative values now encode by magnitude (was collapsing all to VAL_0)
+- [x] **VCG decoder**: value outputs clamped to [-12, 7] log10 scale (was unbounded)
+- [x] **Flow matching**: autograd.grad crash guard (allow_unused=True)
+- [x] **Hybrid pipeline**: tracks raw vs repaired validity separately
+- [x] **Training scripts**: fixed --valid-only flags, VCG resume best_val_loss, CCFM device placement
+- [x] **Latent reward**: configurable drift_weight, proxy reward range [2,8] to match real rewards
+- [x] 751 tests passing across 18 test files
 
 ---
 
