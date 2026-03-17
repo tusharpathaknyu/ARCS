@@ -29,13 +29,33 @@ from arcs.valid_circuit_gen import (
     VCGConfig,
     ValidCircuitGenModel,
     CircuitGraphDataset,
+    CircuitSample,
+    circuit_sample_to_graph,
+    normalize_topology,
+    TOPOLOGY_TO_IDX,
+    COMPONENT_TO_PARAM,
 )
-from arcs.simulate import compute_reward
+from arcs.simulate import (
+    compute_reward,
+    _power_reward,
+    _signal_reward,
+    _regulator_reward,
+    _current_mirror_reward,
+    SimulationOutcome,
+    _TIER1_NAMES,
+)
 from arcs.latent_reward import (
     LatentRewardConfig,
     LatentRewardPredictor,
     LatentRewardTrainer,
 )
+
+# Topology groupings for reward routing
+_POWER_TOPOS = set(_TIER1_NAMES) | {
+    "half_bridge", "push_pull", "charge_pump", "voltage_doubler", "zeta_converter",
+}
+_REGULATOR_TOPOS = {"shunt_regulator", "series_regulator"}
+_MIRROR_TOPOS = {"current_mirror"}
 
 
 logging.basicConfig(
@@ -64,6 +84,97 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--valid-only", action="store_true", default=True,
                         help="Only use valid circuits")
     return parser.parse_args()
+
+
+def _compute_reward_from_sample(sample_dict: dict) -> float:
+    """Compute actual SPICE reward from raw JSONL sample metrics."""
+    topology = normalize_topology(sample_dict.get("topology", ""))
+    metrics = sample_dict.get("metrics", {})
+    valid = sample_dict.get("valid", False)
+    specs = sample_dict.get("operating_conditions", {})
+
+    if not valid or not metrics:
+        return 0.0
+
+    reward = 2.0  # struct(1) + sim_converge(1)
+    outcome = SimulationOutcome(
+        success=True, valid=valid, metrics=metrics, error=None, sim_time=0.0,
+    )
+
+    if topology in _POWER_TOPOS:
+        reward += _power_reward(outcome, specs)
+    elif topology in _REGULATOR_TOPOS:
+        reward += _regulator_reward(outcome, topology, specs)
+    elif topology in _MIRROR_TOPOS:
+        reward += _current_mirror_reward(outcome)
+    else:
+        reward += _signal_reward(outcome, topology)
+
+    return reward
+
+
+class RewardGraphDataset(torch.utils.data.Dataset):
+    """CircuitGraphDataset that also stores computed SPICE rewards."""
+
+    def __init__(self, data_path, tokenizer, config, valid_only=True):
+        self.tokenizer = tokenizer
+        self.config = config
+        self.graphs = []
+        self.rewards = []
+
+        data_path = Path(data_path)
+        files = sorted(data_path.glob("*.jsonl"))
+
+        n_loaded = 0
+        n_skipped = 0
+        for fpath in files:
+            with open(fpath) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                    sample = CircuitSample.from_dict(d)
+                    if valid_only and not sample.valid:
+                        n_skipped += 1
+                        continue
+                    topology = normalize_topology(sample.topology)
+                    if topology not in COMPONENT_TO_PARAM:
+                        n_skipped += 1
+                        continue
+
+                    reward = _compute_reward_from_sample(d)
+                    graph = circuit_sample_to_graph(sample, tokenizer, config)
+                    self.graphs.append(graph)
+                    self.rewards.append(reward)
+                    n_loaded += 1
+
+        logger.info(f"[RewardDataset] Loaded {n_loaded}, skipped {n_skipped}")
+        rewards_t = torch.tensor(self.rewards)
+        logger.info(f"  Reward stats: mean={rewards_t.mean():.3f}, std={rewards_t.std():.3f}, "
+                     f"min={rewards_t.min():.3f}, max={rewards_t.max():.3f}")
+
+    def __len__(self):
+        return len(self.graphs)
+
+    def __getitem__(self, idx):
+        g = self.graphs[idx]
+        return {
+            "node_types": g.node_types,
+            "adjacency": g.adjacency,
+            "values": g.values,
+            "active_mask": g.active_mask,
+            "spec_types": g.spec_types,
+            "spec_values": g.spec_values,
+            "spec_mask": g.spec_mask,
+            "value_bounds_min": g.value_bounds_min,
+            "value_bounds_max": g.value_bounds_max,
+            "topology_idx": torch.tensor(
+                TOPOLOGY_TO_IDX.get(g.topology, 0), dtype=torch.long
+            ),
+            "n_components": torch.tensor(g.n_components, dtype=torch.long),
+            "reward": torch.tensor(self.rewards[idx], dtype=torch.float32),
+        }
 
 
 def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
@@ -98,9 +209,9 @@ def main():
         p.requires_grad_(False)
     logger.info(f"VCG loaded (frozen): {vcg_model.count_parameters():,} params")
 
-    # Dataset
+    # Dataset with REAL SPICE rewards (not proxy)
     logger.info(f"Loading data from {args.data}...")
-    dataset = CircuitGraphDataset(
+    dataset = RewardGraphDataset(
         args.data, tokenizer, vcg_config, valid_only=args.valid_only,
     )
     logger.info(f"Dataset: {len(dataset)} circuits")
@@ -169,20 +280,8 @@ def main():
                 mu, logvar, spec_embed = vcg_model.encode(batch)
                 z = ValidCircuitGenModel.reparameterize(mu, logvar)
 
-            # Use the reward from the dataset (stored in spec_values as proxy)
-            # The actual reward is computed from simulation metrics
-            # For now we use a heuristic: circuits that are valid get reward
-            # proportional to how well their values match bounds
-            reward = batch.get("reward")
-            if reward is None:
-                # Fallback: use value-bounds adherence as proxy reward
-                values = batch["values"]
-                bounds_min = batch["value_bounds_min"]
-                bounds_max = batch["value_bounds_max"]
-                mask = batch["active_mask"]
-                in_bounds = ((values >= bounds_min) & (values <= bounds_max)).float()
-                reward = (in_bounds * mask).sum(dim=-1) / mask.sum(dim=-1).clamp(min=1)
-                reward = reward * 8.0  # Scale to [0, 8] range
+            # Use actual SPICE reward from RewardGraphDataset
+            reward = batch["reward"]
 
             stats = trainer.train_step(z, spec_embed, reward)
             epoch_losses.append(stats["loss"])

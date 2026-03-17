@@ -1,0 +1,45 @@
+{
+  "scaling": {
+    "1": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.5525560799766989,
+      "avg_entropy": 1.6002822623533361,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 155.7128995191306,
+      "avg_time_per_design_ms": 155.7128995191306,
+      "total_candidates": 34,
+      "avg_reward": 4.972597859726483,
+      "sim_valid_rate": 0.7058823529411765
+    },
+    "5": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.3622434437274933,
+      "avg_entropy": 1.5470428712227766,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 664.0344669576734,
+      "avg_time_per_design_ms": 664.0344669576734,
+      "total_candidates": 170,
+      "avg_reward": 5.042599849490962,
+      "sim_valid_rate": 0.7058823529411765
+    },
+    "10": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.3333573551738964,
+      "avg_entropy": 1.5545552828732658,
+      "avg_diversity": 0.9947712418300654,
+      "avg_time_ms": 1319.5486458511475,
+      "avg_time_per_design_ms": 1319.5486458511475,
+      "total_candidates": 340,
+      "avg_reward": 5.137129299345676,
+      "sim_valid_rate": 0.7941176470588235
+    }
+  },
+  "config": {
+    "checkpoint": "checkpoints/arcs_graph_transformer_v2/best_model.pt",
+    "constraint": "topology",
+    "n_specs": 34,
+    "temperature": 0.8,
+    "top_k": 50,
+    "device": "mps"
+  }
+}

@@ -604,6 +604,17 @@ Example output:
 - [x] Added hartley to multi-component topology tests
 - [x] 751 tests passing across 18 test files
 
+### Phase 21: Inference-Time Scaling & SPICE Evaluation (complete)
+- [x] VCG v3: 100% structural validity across all 34 topologies, avg SPICE reward 5.61
+- [x] GT v2 Best-of-N scaling with SPICE simulation:
+  - N=1: 100% struct valid, 70.6% sim valid, reward 4.97
+  - N=5: 100% struct valid, 70.6% sim valid, reward 5.04
+  - N=10: 100% struct valid, 79.4% sim valid, reward 5.14 (+8.8pp sim_valid)
+- [x] Diagnosed and fixed latent reward predictor bug: v2 trained on proxy reward (bounds adherence ≈8.0, corr≈0) instead of actual SPICE rewards
+- [x] Trained latent reward predictor v3 with real SPICE rewards: val_loss=0.55, val_corr=0.898 (vs v2's corr≈0.001)
+- [x] VCG + latent refinement (v3): avg reward 5.61→5.78 (+3%), top gains on state_variable_filter (+1.67), series_regulator (+1.33), transimpedance_amp (+1.26)
+- [x] Fixed train_latent_reward.py to use RewardGraphDataset with actual SPICE rewards
+
 ---
 
 ## Setup

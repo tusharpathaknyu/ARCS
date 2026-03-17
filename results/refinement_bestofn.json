@@ -1,0 +1,322 @@
+{
+  "vcg_refinement": {
+    "no_refinement_validity": 1.0,
+    "with_refinement_validity": 1.0,
+    "n_per_topology": 5,
+    "n_topologies": 34,
+    "per_topology_no_refine": {
+      "boost": {
+        "valid": 5,
+        "total": 5
+      },
+      "buck": {
+        "valid": 5,
+        "total": 5
+      },
+      "buck_boost": {
+        "valid": 5,
+        "total": 5
+      },
+      "cascode": {
+        "valid": 5,
+        "total": 5
+      },
+      "charge_pump": {
+        "valid": 5,
+        "total": 5
+      },
+      "colpitts": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_base": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_collector": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_emitter": {
+        "valid": 5,
+        "total": 5
+      },
+      "cuk": {
+        "valid": 5,
+        "total": 5
+      },
+      "current_mirror": {
+        "valid": 5,
+        "total": 5
+      },
+      "differential_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "flyback": {
+        "valid": 5,
+        "total": 5
+      },
+      "forward": {
+        "valid": 5,
+        "total": 5
+      },
+      "half_bridge": {
+        "valid": 5,
+        "total": 5
+      },
+      "hartley": {
+        "valid": 5,
+        "total": 5
+      },
+      "instrumentation_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "inverting_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "inverting_summing_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "noninverting_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "phase_shift": {
+        "valid": 5,
+        "total": 5
+      },
+      "push_pull": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_bandpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_highpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_lowpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sepic": {
+        "valid": 5,
+        "total": 5
+      },
+      "series_regulator": {
+        "valid": 5,
+        "total": 5
+      },
+      "shunt_regulator": {
+        "valid": 5,
+        "total": 5
+      },
+      "state_variable_filter": {
+        "valid": 5,
+        "total": 5
+      },
+      "transimpedance_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "twin_t_notch": {
+        "valid": 5,
+        "total": 5
+      },
+      "voltage_doubler": {
+        "valid": 5,
+        "total": 5
+      },
+      "wien_bridge": {
+        "valid": 5,
+        "total": 5
+      },
+      "zeta_converter": {
+        "valid": 5,
+        "total": 5
+      }
+    },
+    "per_topology_refine": {
+      "boost": {
+        "valid": 5,
+        "total": 5
+      },
+      "buck": {
+        "valid": 5,
+        "total": 5
+      },
+      "buck_boost": {
+        "valid": 5,
+        "total": 5
+      },
+      "cascode": {
+        "valid": 5,
+        "total": 5
+      },
+      "charge_pump": {
+        "valid": 5,
+        "total": 5
+      },
+      "colpitts": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_base": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_collector": {
+        "valid": 5,
+        "total": 5
+      },
+      "common_emitter": {
+        "valid": 5,
+        "total": 5
+      },
+      "cuk": {
+        "valid": 5,
+        "total": 5
+      },
+      "current_mirror": {
+        "valid": 5,
+        "total": 5
+      },
+      "differential_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "flyback": {
+        "valid": 5,
+        "total": 5
+      },
+      "forward": {
+        "valid": 5,
+        "total": 5
+      },
+      "half_bridge": {
+        "valid": 5,
+        "total": 5
+      },
+      "hartley": {
+        "valid": 5,
+        "total": 5
+      },
+      "instrumentation_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "inverting_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "inverting_summing_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "noninverting_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "phase_shift": {
+        "valid": 5,
+        "total": 5
+      },
+      "push_pull": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_bandpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_highpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sallen_key_lowpass": {
+        "valid": 5,
+        "total": 5
+      },
+      "sepic": {
+        "valid": 5,
+        "total": 5
+      },
+      "series_regulator": {
+        "valid": 5,
+        "total": 5
+      },
+      "shunt_regulator": {
+        "valid": 5,
+        "total": 5
+      },
+      "state_variable_filter": {
+        "valid": 5,
+        "total": 5
+      },
+      "transimpedance_amp": {
+        "valid": 5,
+        "total": 5
+      },
+      "twin_t_notch": {
+        "valid": 5,
+        "total": 5
+      },
+      "voltage_doubler": {
+        "valid": 5,
+        "total": 5
+      },
+      "wien_bridge": {
+        "valid": 5,
+        "total": 5
+      },
+      "zeta_converter": {
+        "valid": 5,
+        "total": 5
+      }
+    }
+  },
+  "bestofn_scaling": {
+    "1": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.5664747339837692,
+      "avg_entropy": 1.5784410694066215,
+      "avg_diversity": 1.0,
+      "avg_time_ms": 153.6597414079177,
+      "avg_time_per_design_ms": 153.6597414079177,
+      "total_candidates": 34
+    },
+    "5": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.3716060615637724,
+      "avg_entropy": 1.5774482558755314,
+      "avg_diversity": 0.9970588235294118,
+      "avg_time_ms": 656.7659766605015,
+      "avg_time_per_design_ms": 656.7659766605015,
+      "total_candidates": 170
+    },
+    "10": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.302634011296665,
+      "avg_entropy": 1.55873121584163,
+      "avg_diversity": 0.9980392156862744,
+      "avg_time_ms": 1313.8034889638861,
+      "avg_time_per_design_ms": 1313.8034889638861,
+      "total_candidates": 340
+    },
+    "20": {
+      "validity_rate": 1.0,
+      "avg_confidence": -1.2693714981569963,
+      "avg_entropy": 1.5530098851989298,
+      "avg_diversity": 0.9993808049535604,
+      "avg_time_ms": 2616.8512806488093,
+      "avg_time_per_design_ms": 2616.8512806488093,
+      "total_candidates": 680
+    }
+  }
+}
