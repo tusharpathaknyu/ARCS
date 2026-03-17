@@ -263,7 +263,8 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 |--------|--------|-------------|-------------|-----------|------------|------------------|
 | Random Search (N=200) | — | 200 | 100.0% | 100.0% | 6.04/8.0 | ~75s |
 | Genetic Algorithm (30×20) | — | 630 | 100.0% | 100.0% | 6.12/8.0 | ~187s |
-| ARCS Graph Transformer v2 (SL) | 6.83M | 1 | — | — | —/8.0 | ~0.02s |
+| ARCS Graph Transformer v2 (SL) | 6.83M | 1 | 50.0% | 24.0% | 2.10/8.0 | ~0.02s |
+| **ARCS GT v2 + GRPO** | **6.83M** | **1** | **86.0%** | **30.0%** | **3.74/8.0** | **~0.02s** |
 | ValidCircuitGen v3 (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
 
 †VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 34/34 topologies.
@@ -596,6 +597,15 @@ Example output:
 |-------------|--------|--------------------|--------------------|
 | VCG v3 (VAE) | 4.0M | 100.0% | 34/34 |
 | CCFM v3 (Flow Matching) | 7.6M | 100.0% | 34/34 |
+
+### Phase 20: 34-Topology Retraining & Evaluation (complete)
+- [x] Retrained reward model v2 on 89K samples: r=0.986, val_mae=0.113
+- [x] Retrained Graph Transformer v2 on 34-topology dataset (89K samples, 50 epochs)
+  - Best val_loss=1.957 at epoch 19, accuracy=71.0%, struct_acc=90.7%
+- [x] GRPO reinforcement learning (200 steps): reward 2.10→3.74, struct 62%→92%
+- [x] Re-ran RS/GA baselines on all 34 topologies: RS=6.04, GA=6.12 avg reward
+- [x] Added hartley to multi-component topology tests
+- [x] 751 tests passing across 18 test files
 
 ---
 
