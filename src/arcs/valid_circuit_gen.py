@@ -1039,8 +1039,10 @@ class VCGDecoder(nn.Module):
         diag_mask = torch.eye(N, device=z.device).bool().unsqueeze(0)
         soft_A = soft_A.masked_fill(diag_mask, 0.0)
 
-        # Values: unconstrained (log10 scale)
+        # Values: clamped to physical range [LOG_VAL_MIN, LOG_VAL_MAX] = [-12, 6]
+        # Without clamping, extreme values (10^100) corrupt metrics and simulations.
         soft_V = self.value_head(h)  # (B, N)
+        soft_V = soft_V.clamp(-12.0, 7.0)  # slight margin beyond LOG_VAL_MAX
 
         return soft_X, soft_A, soft_V
 

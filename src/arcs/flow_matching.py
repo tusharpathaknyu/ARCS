@@ -452,13 +452,18 @@ class ConstraintGuidance(nn.Module):
         total_violation = (self.weights * violations.mean(dim=0)).sum()
 
         # Gradient of violation w.r.t. z
-        grad_z = torch.autograd.grad(
+        # Use allow_unused=True to handle cases where violations don't
+        # depend on z (e.g., all constraints are constants) — avoids crash.
+        grad_result = torch.autograd.grad(
             total_violation, z_grad,
             create_graph=False,
             retain_graph=False,
+            allow_unused=True,
         )[0]
+        if grad_result is None:
+            grad_result = torch.zeros_like(z)
 
-        return grad_z, total_violation.item()
+        return grad_result, total_violation.item()
 
 
 # ═══════════════════════════════════════════════════════════════════════════

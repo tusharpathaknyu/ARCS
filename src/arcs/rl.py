@@ -765,7 +765,9 @@ class ARCSRLTrainer:
             # ---- compute group-relative advantages ----
             grp = np.array(group_rewards)
             grp_mean = grp.mean()
-            grp_std = grp.std()
+            # Use ddof=1 (Bessel correction) for unbiased sample std;
+            # ddof=0 underestimates std for small groups, inflating advantages.
+            grp_std = grp.std(ddof=1) if len(grp) > 1 else 0.0
 
             for i, (log_probs, kl, entropy) in enumerate(group_episodes):
                 adv = (group_rewards[i] - grp_mean) / (
@@ -944,7 +946,15 @@ class ARCSRLTrainer:
         # effectively zero but still finite for stable gradient computation.
         log_probs = log_probs.clamp(min=-20.0)
 
-        return gen_tensor, log_probs, torch.tensor(entropies, device=device)
+        # Compute entropy from the grad-enabled forward pass so the entropy
+        # bonus term actually produces gradients (the sampling-loop entropies
+        # were detached via .item() and couldn't influence training).
+        probs_all = log_probs_all.exp()
+        # Mask out zero-prob entries to avoid NaN in log
+        safe_probs = probs_all.clamp(min=1e-10)
+        grad_entropies = -(probs_all * safe_probs.log()).sum(dim=-1)  # (n_gen,)
+
+        return gen_tensor, log_probs, grad_entropies
 
     def evaluate(self, n_samples: int | None = None) -> dict[str, float]:
         """Evaluate current policy by generating and simulating circuits.

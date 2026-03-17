@@ -361,14 +361,21 @@ class HybridGenerator:
         gen_time = (time.time() - t0) * 1000
 
         results = []
+        n_raw_valid = 0
+        n_repaired = 0
         for graph in graphs:
             validity = check_circuit_validity(graph)
-            if not validity["valid"]:
+            was_repaired = False
+            if validity["valid"]:
+                n_raw_valid += 1
+            else:
                 repaired = _apply_topology_skeleton(graph)
                 repaired_validity = check_circuit_validity(repaired)
                 if repaired_validity["valid"]:
                     graph = repaired
                     validity = repaired_validity
+                    was_repaired = True
+                    n_repaired += 1
             if simulate:
                 decoded, outcome, reward = vcg_graph_to_spice(
                     graph, self.runner, self.tokenizer
@@ -436,6 +443,8 @@ class HybridGenerator:
         )
 
         results = []
+        n_raw_valid = 0
+        n_repaired = 0
         for b in range(n_candidates):
             n_active = int(batch_rep["active_mask"][b].sum().item())
             graph = CircuitGraph(
@@ -453,12 +462,15 @@ class HybridGenerator:
             )
 
             validity = check_circuit_validity(graph)
-            if not validity["valid"]:
+            if validity["valid"]:
+                n_raw_valid += 1
+            else:
                 repaired = _apply_topology_skeleton(graph)
                 repaired_validity = check_circuit_validity(repaired)
                 if repaired_validity["valid"]:
                     graph = repaired
                     validity = repaired_validity
+                    n_repaired += 1
             if simulate:
                 decoded, outcome, reward = vcg_graph_to_spice(
                     graph, self.runner, self.tokenizer

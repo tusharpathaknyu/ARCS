@@ -552,14 +552,22 @@ def _signal_reward(
                     "twin_t_notch", "state_variable_filter"}
     osc_types = {"wien_bridge", "colpitts", "hartley", "phase_shift"}
 
+    # Topologies that should have negative gain (inverting circuits)
+    _inverting_topos = {"inverting_amp", "inverting_summing_amp"}
+
     if topology in amp_types:
         # Gain exists and reasonable → 3.0
         gain_db = m.get("gain_db", m.get("gain_dc"))
         if gain_db is not None and abs(gain_db) <= 120:
             reward += 3.0
-            # Gain magnitude bonus (higher gain within reason → better)
-            if abs(gain_db) > 0:
-                reward += min(2.0, abs(gain_db) / 30.0)
+            # Gain magnitude bonus — topology-aware sign check:
+            # Inverting amps should have negative gain, others positive.
+            # Only reward gain in the correct direction.
+            if topology in _inverting_topos:
+                effective_gain = abs(gain_db) if gain_db < 0 else 0.0
+            else:
+                effective_gain = gain_db if gain_db > 0 else 0.0
+            reward += min(2.0, effective_gain / 30.0)
             # Has bandwidth measurement → +1.0
             if m.get("bw_3db") is not None and m["bw_3db"] > 0:
                 reward += 1.0
@@ -573,20 +581,24 @@ def _signal_reward(
         bw = m.get("bw_3db")
         if bw is not None and bw > 0:
             reward += 3.0
-        # Reasonable passband gain (not too much attenuation) → 1.0
-        if gain_dc is not None and gain_dc > -6:
+        # Reasonable passband gain (not too much attenuation, not unstable) → 1.0
+        # Upper bound at +20 dB prevents rewarding unstable/oscillating filters
+        if gain_dc is not None and -6 < gain_dc < 20:
             reward += 1.0
 
     elif topology in osc_types:
         # Oscillation detected → 3.0
+        # Threshold at 100mV to avoid noise-floor false positives
         vosc = m.get("vosc_pp", 0)
-        if vosc >= 0.01:
+        if vosc >= 0.1:
             reward += 3.0
         # Reasonable amplitude (0.1-20V peak-to-peak) → 2.0
         if 0.1 <= vosc <= 20:
             reward += 2.0
         # Frequency detected → 1.0
-        if m.get("f_peak") is not None and m["f_peak"] > 0:
+        # Check both f_peak and f_osc (different templates use different names)
+        freq = m.get("f_peak", m.get("f_osc", m.get("frequency")))
+        if freq is not None and freq > 0:
             reward += 1.0
 
     return reward
