@@ -1,0 +1,258 @@
+{
+  "random_search": {
+    "n_topologies": 34,
+    "n_trials": 200,
+    "avg_reward": 6.0345,
+    "per_topology": {
+      "buck": {
+        "reward": 7.352
+      },
+      "boost": {
+        "reward": 7.878
+      },
+      "buck_boost": {
+        "reward": 7.171
+      },
+      "cuk": {
+        "reward": 7.581
+      },
+      "sepic": {
+        "reward": 7.069
+      },
+      "flyback": {
+        "reward": 7.18
+      },
+      "forward": {
+        "reward": 7.902
+      },
+      "inverting_amp": {
+        "reward": 7.0
+      },
+      "noninverting_amp": {
+        "reward": 7.0
+      },
+      "instrumentation_amp": {
+        "reward": 7.0
+      },
+      "differential_amp": {
+        "reward": 7.0
+      },
+      "sallen_key_lowpass": {
+        "reward": 8.0
+      },
+      "sallen_key_highpass": {
+        "reward": 7.0
+      },
+      "sallen_key_bandpass": {
+        "reward": 8.0
+      },
+      "wien_bridge": {
+        "reward": 7.0
+      },
+      "colpitts": {
+        "reward": 7.0
+      },
+      "common_emitter": {
+        "reward": 8.0
+      },
+      "common_collector": {
+        "reward": 6.672
+      },
+      "common_base": {
+        "reward": 7.368
+      },
+      "cascode": {
+        "reward": 8.0
+      },
+      "current_mirror": {
+        "reward": 2.0
+      },
+      "twin_t_notch": {
+        "reward": 7.0
+      },
+      "state_variable_filter": {
+        "reward": 8.0
+      },
+      "hartley": {
+        "reward": 7.0
+      },
+      "phase_shift": {
+        "reward": 5.0
+      },
+      "shunt_regulator": {
+        "reward": 2.0
+      },
+      "series_regulator": {
+        "reward": 2.0
+      },
+      "inverting_summing_amp": {
+        "reward": 7.0
+      },
+      "transimpedance_amp": {
+        "reward": 8.0
+      },
+      "half_bridge": {
+        "reward": 2.0
+      },
+      "push_pull": {
+        "reward": 2.0
+      },
+      "charge_pump": {
+        "reward": 2.0
+      },
+      "voltage_doubler": {
+        "reward": 2.0
+      },
+      "zeta_converter": {
+        "reward": 2.0
+      }
+    }
+  },
+  "ga": {
+    "n_topologies": 34,
+    "pop_size": 30,
+    "generations": 20,
+    "sim_success_rate": 1.0,
+    "sim_valid_rate": 1.0,
+    "avg_reward": 6.1207095839895995,
+    "wall_time": 6355.553548812866,
+    "per_topology": {
+      "boost": {
+        "reward": 7.963915889507093,
+        "valid": 1.0
+      },
+      "buck": {
+        "reward": 7.911685784679112,
+        "valid": 1.0
+      },
+      "buck_boost": {
+        "reward": 7.717760303633353,
+        "valid": 1.0
+      },
+      "cascode": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "charge_pump": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "colpitts": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "common_base": {
+        "reward": 7.392980666666666,
+        "valid": 1.0
+      },
+      "common_collector": {
+        "reward": 6.673044333333333,
+        "valid": 1.0
+      },
+      "common_emitter": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "cuk": {
+        "reward": 7.745058165754574,
+        "valid": 1.0
+      },
+      "current_mirror": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "differential_amp": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "flyback": {
+        "reward": 7.963277977029738,
+        "valid": 1.0
+      },
+      "forward": {
+        "reward": 7.996476785703868,
+        "valid": 1.0
+      },
+      "half_bridge": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "hartley": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "instrumentation_amp": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "inverting_amp": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "inverting_summing_amp": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "noninverting_amp": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "phase_shift": {
+        "reward": 5.0,
+        "valid": 1.0
+      },
+      "push_pull": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "sallen_key_bandpass": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "sallen_key_highpass": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "sallen_key_lowpass": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "sepic": {
+        "reward": 7.73992594933864,
+        "valid": 1.0
+      },
+      "series_regulator": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "shunt_regulator": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "state_variable_filter": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "transimpedance_amp": {
+        "reward": 8.0,
+        "valid": 1.0
+      },
+      "twin_t_notch": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "voltage_doubler": {
+        "reward": 2.0,
+        "valid": 1.0
+      },
+      "wien_bridge": {
+        "reward": 7.0,
+        "valid": 1.0
+      },
+      "zeta_converter": {
+        "reward": 2.0,
+        "valid": 1.0
+      }
+    }
+  }
+}

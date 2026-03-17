@@ -257,23 +257,24 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 
 ## Results
 
-### Full Comparison (160 conditioned specs, all 34 topologies)
+### Full Comparison (34 conditioned specs, all 34 topologies)
 
 | Method | Params | Sims/Design | Sim Success | Sim Valid | Avg Reward | Wall Time/Design |
 |--------|--------|-------------|-------------|-----------|------------|------------------|
-| Random Search (N=200) | — | 200 | 100.0% | 81.2% | 7.28/8.0 | 58.8s |
-| Genetic Algorithm (30×20) | — | 630 | 100.0% | 80.0% | 7.48/8.0 | 271.2s |
-| ARCS Baseline (SL) | 6.5M | 1 | 66.2% | 45.6% | 3.38/8.0 | ~0.02s |
-| ARCS Baseline + RL | 6.5M | 1 | 71.2% | 55.0% | 3.64/8.0 | ~0.02s |
-| ARCS Two-Head (SL) | 6.8M | 1 | 79.4% | 61.9% | 4.23/8.0 | ~0.02s |
-| **ARCS Graph Transformer (SL)** | **6.83M** | **1** | **85.0%** | **71.9%** | **4.55/8.0** | **~0.02s** |
-| ARCS Graph Transformer + RL | 6.83M | 1 | 86.9% | 55.0% | 4.35/8.0 | ~0.02s |
-| ValidCircuitGen (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
+| Random Search (N=200) | — | 200 | 100.0% | 100.0% | 6.04/8.0 | ~75s |
+| Genetic Algorithm (30×20) | — | 630 | 100.0% | 100.0% | 6.12/8.0 | ~187s |
+| ARCS Graph Transformer v2 (SL) | 6.83M | 1 | — | — | —/8.0 | ~0.02s |
+| ValidCircuitGen v3 (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
 
 †VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 34/34 topologies.
 
+> **Note**: Baseline rewards are lower on 34 topologies vs. the original 16 because
+> 8 newer topologies (regulators, extended power, current mirror) score 2.0 due to
+> limited simulation template coverage. On the original 7 Tier-1 power topologies,
+> GA achieves 7.86 avg reward, and RS achieves 7.45.
+
 **Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
-20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **2,941-13,560x
+20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **3,750-9,350x
 faster** at inference. The baselines also have an unfair advantage: they search directly
 in parameter space with the correct topology and component count given, while ARCS must
 predict everything from scratch using only the target specification.
