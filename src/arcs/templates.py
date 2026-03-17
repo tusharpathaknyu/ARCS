@@ -866,9 +866,14 @@ Rload vout 0 1e6
 
 def _wien_bridge_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
     """Wien bridge oscillator. f_osc = 1/(2*pi*R*C) (when R1=R2, C1=C2).
-    
+
     Uses a non-inverting amplifier with gain = 3 (Rf = 2*Rg) at resonance.
-    We use slightly higher gain for reliable startup.
+    Slightly higher gain for reliable startup. Uses a rail-limited opamp
+    (behavioral source clipping at ±15V) to provide amplitude limiting,
+    since oscillation requires nonlinear amplitude control.
+
+    Initial kick: capacitor IC on C2 (parallel cap in Wien network) instead
+    of a voltage source that would short the feedback path.
     """
     R = params["r_freq"]
     C = params["c_freq"]
@@ -883,23 +888,24 @@ def _wien_bridge_netlist(params: dict[str, float], conditions: dict[str, float])
 * ARCS Wien Bridge Oscillator
 * f_osc ~ {f_osc:.1f} Hz, Gain = {1 + Rf/Rg:.2f}
 
-{_OPAMP_SUBCKT}
+* Rail-limited ideal op-amp (clips at ±15V like real supply rails)
+.subckt OPAMP_RAILED inp inn out
+Rin inp inn 1e12
+B1 out 0 V = min(15, max(-15, 1e5*V(inp,inn)))
+.ends OPAMP_RAILED
 
 * Feedback network (Wien bridge): series RC from output to non-inv
 R1 vout n1 {R:.6e}
 C1 n1 noninv {C:.6e}
-* Parallel RC from non-inv to ground
+* Parallel RC from non-inv to ground (IC on C2 provides startup kick)
 R2 noninv 0 {R:.6e}
-C2 noninv 0 {C:.6e}
+C2 noninv 0 {C:.6e} IC=0.1
 
 * Gain-setting resistors
 Rf vout inv {Rf:.6e}
 Rg inv 0 {Rg:.6e}
 
-XU1 noninv inv vout IDEAL_OPAMP
-
-* Small initial kick to start oscillation
-Vkick noninv 0 PULSE(0.01 0 0 1n 1n 1n 1)
+XU1 noninv inv vout OPAMP_RAILED
 
 .tran {sim_time/5000:.10e} {sim_time:.10e} UIC
 
@@ -1490,7 +1496,11 @@ def _phase_shift_netlist(params: dict[str, float], conditions: dict[str, float])
 * ARCS Phase Shift Oscillator (3-stage RC)
 * f_osc ~ {f_osc:.1f} Hz, Gain = 29
 
-{_OPAMP_SUBCKT}
+* Rail-limited ideal op-amp (clips at +-15V like real supply rails)
+.subckt OPAMP_RAILED inp inn out
+Rin inp inn 1e12
+B1 out 0 V = min(15, max(-15, 1e5*V(inp,inn)))
+.ends OPAMP_RAILED
 
 * Feedback from output through 3 RC stages
 R1 vout n1 {R1:.6e}
@@ -1504,12 +1514,13 @@ C3 vminus 0 {C3:.6e}
 Rf vout vminus {Rf:.6e}
 
 * Op-amp: non-inv=GND (0), inv=vminus, out=vout
-XU1 0 vminus vout IDEAL_OPAMP
+XU1 0 vminus vout OPAMP_RAILED
 
 Rload vout 0 1e6
 
-* Initial kick to start oscillation
-Vkick vminus 0 PULSE(0.1 0 0 1n 1n 1u 1)
+* Initial kick through high-impedance to avoid shorting vminus
+Rkick kick_node vminus 100e3
+Vkick kick_node 0 PULSE(1 0 0 1n 1n 1u 1)
 
 .tran {sim_time/5000:.10e} {sim_time:.10e} UIC
 
@@ -1874,10 +1885,16 @@ Vsense load_mid 0 DC 0
 def _zeta_converter_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
     """Zeta (inverse-SEPIC) converter.
 
-    Non-inverting, can step up or down. Uses two inductors and a coupling cap
-    like SEPIC but with different topology arrangement.
-    Switch ON: energy stored in L1, Cc charges L2 through load.
-    Switch OFF: L1 charges Cc, L2 freewheels through diode.
+    Non-inverting, can step up or down. Dual of the SEPIC:
+    - Series switch (S1) from input to switch node
+    - L1 from switch node to ground (stores energy when S1 on)
+    - Coupling cap (Cc) from switch node to coupling node
+    - Diode from ground to coupling node (freewheeling)
+    - L2 from coupling node to output
+
+    Vout/Vin = D/(1-D), same transfer function as SEPIC.
+    Switch ON: Vin charges L1 through S1, Cc discharges through L2 to output.
+    Switch OFF: L1 energy transfers through D to charge Cc and output.
     """
     vin = conditions.get("vin", 12.0)
     vout_target = conditions.get("vout", 5.0)
@@ -1905,25 +1922,23 @@ def _zeta_converter_netlist(params: dict[str, float], conditions: dict[str, floa
 
 Vin input 0 DC {vin}
 
-* Main MOSFET switch
+* Series MOSFET switch from input
 Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
 S1 input sw_node pwm_ctrl 0 SMOD
 .model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
 
-* Coupling capacitor from switch node
+* Input inductor from switch node to ground
+L1 sw_node 0 {L1:.6e} IC=0
+
+* Coupling capacitor from switch node to coupling node
 Cc sw_node cb {C_couple:.6e} IC={vin}
 
-* Second inductor from coupling cap to output
-L2 cb vout {L2:.6e} IC=0
-
-* Diode from ground to switch node (freewheeling)
-Dzeta 0 sw_node DSCHOTTKY
+* Diode from ground to coupling node (freewheeling)
+Dzeta 0 cb DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=60 CJO=100p)
 
-* Input inductor from input to ground (through diode path)
-L1 input l1_mid {L1:.6e} IC=0
-Dzeta2 l1_mid cb DSCHOTTKY2
-.model DSCHOTTKY2 D(IS=1e-6 RS=0.03 N=1.05 BV=60 CJO=100p)
+* Output inductor from coupling node to output
+L2 cb vout {L2:.6e} IC=0
 
 * Output cap and load
 Resr vout cap_node {R_esr}
@@ -1986,10 +2001,10 @@ SIGNAL_CIRCUIT_BOUNDS = {
         ComponentBounds("c2", "F", 10e-12, 10e-6, log_scale=True),
     ],
     "wien_bridge": [
-        ComponentBounds("r_freq", "Ω", 100, 100e3, log_scale=True, description="Frequency-setting R"),
-        ComponentBounds("c_freq", "F", 100e-12, 10e-6, log_scale=True, description="Frequency-setting C"),
-        ComponentBounds("r_feedback", "Ω", 1e3, 100e3, log_scale=True, description="Gain Rf"),
-        ComponentBounds("r_ground", "Ω", 1e3, 100e3, log_scale=True, description="Gain Rg"),
+        ComponentBounds("r_freq", "Ω", 1e3, 100e3, log_scale=True, description="Frequency-setting R"),
+        ComponentBounds("c_freq", "F", 1e-9, 1e-6, log_scale=True, description="Frequency-setting C"),
+        ComponentBounds("r_feedback", "Ω", 4e3, 100e3, log_scale=True, description="Gain Rf (need Rf >= 2*Rg for oscillation)"),
+        ComponentBounds("r_ground", "Ω", 1e3, 33e3, log_scale=True, description="Gain Rg (gain = 1 + Rf/Rg >= 3)"),
     ],
     "colpitts": [
         ComponentBounds("inductance", "H", 1e-6, 10e-3, log_scale=True, description="Tank inductor"),

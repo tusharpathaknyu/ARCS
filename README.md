@@ -72,7 +72,7 @@ For each topology (Buck, Boost, Flyback, Sallen-Key, Colpitts, ...):
 | Tier 1: Power converters | 7 | 35,000 | 16,400 | 82,000 |
 | Tier 2: Amplifiers, filters, oscillators | 9 | 18,000 | 15,842 | 79,210 |
 | Tier 2b: BJT, regulators, power (Phase 14+17) | 18 | 27,000 | 27,000 | 135,000 |
-| **Combined v2 (re-validated)** | **34** | **89,000** | **59,360** | **~297,000** |
+| **Combined v2 (re-validated)** | **34** | **89,000** | **61,760** | **~297,000** |
 
 Phase 17 balanced the dataset: all Tier-2b topologies expanded from 500→2000 samples each to eliminate mode collapse in VCG training. Phase 22 re-validated all samples with corrected per-topology validation (18 topologies previously fell through to `len(metrics)>0`). Note: zeta_converter has 0 valid samples (vout_error consistently >86%) and wien_bridge has only 54 valid (oscillation hard to achieve with random sweeps) — both need targeted data generation.
 
@@ -619,7 +619,10 @@ Example output:
 - [x] **Datagen validation overhaul**: 18/27 Tier-2 topologies had fallthrough to `len(metrics)>0`
   - Extended power topos (half_bridge, push_pull, etc.) now routed through `_is_valid_power`
   - BJT amps, filters, oscillators, current mirrors all get proper topology-specific validation
-  - Data re-labeled: 67,456→59,360 valid samples (8,643 incorrectly labeled samples fixed)
+  - Data re-labeled: 67,456→59,360→61,760 valid samples after template fixes
+  - **Zeta converter**: Fixed netlist topology (L1/diode placement) — 0→1,218 valid (61%)
+  - **Wien bridge**: Fixed opamp (rail-limited, removed shorting Vkick) — 54→1,306 valid (65%)
+  - **Phase shift**: Fixed opamp + kick injection — 1,251→1,181 valid (59%, now real oscillation)
   - Derived metrics (efficiency, vout_error_pct) re-computed for 5 extended power topologies
 - [x] **Reward function fixes**:
   - 6 IC-level opamps + differential_pair added to `_signal_reward` amp_types (were getting reward=0)
