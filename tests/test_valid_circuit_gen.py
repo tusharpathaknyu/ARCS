@@ -1066,10 +1066,11 @@ class TestTopologyExpectedComponents:
             )
 
     def test_multi_component_topologies(self):
-        """wien_bridge, instrumentation_amp, colpitts have 2 components."""
+        """wien_bridge, instrumentation_amp, colpitts, hartley have 2 components."""
         assert TOPOLOGY_EXPECTED_COMPONENTS["wien_bridge"] == 2
         assert TOPOLOGY_EXPECTED_COMPONENTS["instrumentation_amp"] == 2
         assert TOPOLOGY_EXPECTED_COMPONENTS["colpitts"] == 2
+        assert TOPOLOGY_EXPECTED_COMPONENTS["hartley"] == 2
 
     def test_index_lookup_matches(self):
         """EXPECTED_COMPONENTS_BY_IDX should match the dict."""

@@ -473,7 +473,7 @@ Example output:
 - [x] Graph transformer: topology-aware causal attention with adjacency bias for all 16 topologies
 - [x] Model factory: `create_model` / `load_model` with automatic type detection from checkpoints
 - [x] Unified `--model-type` flag across train, RL, evaluate, and demo scripts
-- [x] 733 tests across 15 test files (Phase 17: +278 parametric integration tests)
+- [x] 751 tests across 18 test files (Phase 17: +278 parametric; Phase 18: +18 smoke tests)
 
 ### Phase 6: Enhanced Model Training & Evaluation (complete)
 - [x] Two-Head training: 100 epochs, best val_loss=0.954 (vs baseline 1.237)
@@ -650,7 +650,7 @@ PYTHONPATH=src python scripts/run_ablations.py --n-samples 160
 # Baselines
 PYTHONPATH=src python -m arcs.baselines --method ga --n-repeats 10
 
-# Run all 733 tests
+# Run all 751 tests
 PYTHONPATH=src python -m pytest tests/ -v
 ```
 
