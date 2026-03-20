@@ -1137,35 +1137,86 @@ class ARCSRLTrainer:
                 "global_step": self.global_step,
                 "baseline": self.baseline,
                 "history": dict(self.history),
+                "best_topology_macro_sim_valid": self.best_topology_macro_sim_valid,
+                "topology_no_improve_count": self.topology_no_improve_count,
             },
             path,
         )
         return path
 
-    def train(self) -> dict:
-        """Full RL training loop with adaptive KL & validity early stopping."""
+    def resume_from_checkpoint(self, path: str | Path) -> float:
+        """Resume training from a saved RL checkpoint. Returns best_reward."""
+        path = Path(path)
+        logger.info(f"Resuming RL from checkpoint: {path}")
+        ckpt = torch.load(path, map_location=self.device, weights_only=False)
+
+        self.model.load_state_dict(ckpt["model_state_dict"])
+        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        self.global_step = ckpt["global_step"]
+        self.baseline = ckpt.get("baseline", 0.0)
+        self.best_topology_macro_sim_valid = ckpt.get("best_topology_macro_sim_valid", 0.0)
+        self.topology_no_improve_count = ckpt.get("topology_no_improve_count", 0)
+
+        # Restore history
+        saved_history = ckpt.get("history", {})
+        for k, v in saved_history.items():
+            self.history[k] = v
+
+        # Restore KL coeff if adaptive
+        rl_cfg = ckpt.get("rl_config", {})
+        if "kl_coeff" in rl_cfg:
+            self.config.kl_coeff = rl_cfg["kl_coeff"]
+
+        # Derive best_reward from eval history
+        best_reward = float("-inf")
+        for ev in self.history.get("eval", []):
+            r = ev.get("eval_reward_mean", float("-inf"))
+            if r > best_reward:
+                best_reward = r
+
+        logger.info(
+            f"  Resumed at step {self.global_step}, "
+            f"baseline={self.baseline:.3f}, best_reward={best_reward:.3f}"
+        )
+        return best_reward
+
+    def train(self, resume_best_reward: float | None = None) -> dict:
+        """Full RL training loop with adaptive KL & validity early stopping.
+
+        Args:
+            resume_best_reward: If resuming, pass the best reward from the
+                checkpoint so we skip the initial eval and start from the
+                saved global_step.
+        """
         mode = "GRPO" if self.config.grpo else "REINFORCE"
         eff_batch = (
             f"{self.config.n_topos_per_step}×{self.config.group_size}"
             if self.config.grpo
             else str(self.config.batch_size)
         )
+
+        start_step = self.global_step + 1  # 1 for fresh, global_step+1 for resume
+
         logger.info(
-            f"Starting RL training ({mode}): {self.config.n_steps} steps, "
+            f"Starting RL training ({mode}): steps {start_step}..{self.config.n_steps}, "
             f"batch={eff_batch}, lr={self.config.lr}, "
             f"kl={self.config.kl_coeff}, struct_bonus={self.config.struct_bonus}, "
             f"adaptive_kl={self.config.adaptive_kl}, temp={self.config.temperature}"
         )
 
-        # Initial evaluation
-        eval_results = self.evaluate()
-        logger.info(f"Initial eval: {eval_results}")
-        self.history["eval"].append({"step": 0, **eval_results})
+        if resume_best_reward is not None:
+            best_reward = resume_best_reward
+            logger.info(f"Resumed from step {self.global_step}, best_reward={best_reward:.3f}")
+        else:
+            # Initial evaluation
+            eval_results = self.evaluate()
+            logger.info(f"Initial eval: {eval_results}")
+            self.history["eval"].append({"step": 0, **eval_results})
+            best_reward = eval_results["eval_reward_mean"]
 
-        best_reward = eval_results["eval_reward_mean"]
         t0 = time.time()
 
-        for step in range(1, self.config.n_steps + 1):
+        for step in range(start_step, self.config.n_steps + 1):
             self.global_step = step
             if self.config.grpo:
                 stats = self.train_step_grpo()
@@ -1353,6 +1404,8 @@ def main():
                         help="Stop if macro per-topology sim-valid doesn't improve for N eval rounds (0=disabled)")
     parser.add_argument("--per-topology-early-stop-delta", type=float, default=0.0,
                         help="Minimum macro per-topology sim-valid improvement to reset patience")
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Path to RL checkpoint to resume from (e.g. checkpoints/arcs_grpo_v2/rl_checkpoint_step500.pt)")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -1437,7 +1490,12 @@ def main():
     with open(Path(args.output) / "rl_args.json", "w") as f:
         json.dump(vars(args), f, indent=2)
 
-    results = trainer.train()
+    # Resume from RL checkpoint if specified
+    resume_best_reward = None
+    if args.resume:
+        resume_best_reward = trainer.resume_from_checkpoint(args.resume)
+
+    results = trainer.train(resume_best_reward=resume_best_reward)
 
     logger.info(f"\nFinal results: {json.dumps(results, indent=2, default=str)}")
 
