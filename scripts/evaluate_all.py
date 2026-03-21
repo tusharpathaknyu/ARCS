@@ -164,7 +164,7 @@ def evaluate_graph_model(
         tidx = item["topology_idx"].item()
         if tidx not in topo_items:
             topo_items[tidx] = item
-        if len(topo_items) >= 17:
+        if len(topo_items) >= len(TOPOLOGY_TO_IDX):
             break
 
     total_valid = 0
@@ -279,16 +279,14 @@ def main():
 
     # ── Autoregressive models ──
     arcs_models = [
-        ("ARCS-SL (GraphTransformer)", "checkpoints/arcs_graph_transformer/best_model.pt"),
-        ("ARCS-RL (REINFORCE)", "checkpoints/arcs_rl_graph_transformer/best_rl_model.pt"),
-        ("ARCS-GRPO (500 steps)", "checkpoints/arcs_grpo/best_rl_model.pt"),
-        ("ARCS-GRPO (3500 steps)", "checkpoints/arcs_grpo_extended/best_rl_model.pt"),
+        ("ARCS-SL v3 (GraphTransformer)", "checkpoints/arcs_gt_v3/best_model.pt"),
+        ("ARCS-GRPO v2 (3000 steps)", "checkpoints/arcs_grpo_v2/best_rl_model.pt"),
     ]
 
     # ── Graph models ──
     graph_models = [
-        ("VCG (VAE)", "vcg", "checkpoints/vcg/best_model.pt"),
-        ("CCFM (Flow Matching)", "ccfm", "checkpoints/ccfm/best_ccfm.pt"),
+        ("VCG v4 (VAE)", "vcg", "checkpoints/vcg_v4/best_model.pt"),
+        ("CCFM v4 (Flow Matching)", "ccfm", "checkpoints/ccfm_v4/best_ccfm.pt"),
     ]
 
     all_results = []
