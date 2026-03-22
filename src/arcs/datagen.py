@@ -7,12 +7,16 @@ and stores (topology, parameters, metrics) tuples as training data.
 from __future__ import annotations
 
 import json
+import logging
+import math
 import time
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Optional
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 from tqdm import tqdm
 
 from arcs.spice import NGSpiceRunner, SimulationResult
@@ -86,6 +90,12 @@ def _compute_power_metrics(
 
     if pin > 1e-9:
         eff = pout / pin
+        if eff > 1.0:
+            logger.debug(
+                "Over-unity efficiency %.2f (Pout=%.4f, Pin=%.4f) — clamping to 1.0. "
+                "This may indicate a netlist or measurement error.",
+                eff, pout, pin,
+            )
         # Physical upper bound: efficiency cannot exceed 1.0 for passive circuits
         derived["efficiency"] = min(eff, 1.0)
     else:
@@ -146,7 +156,6 @@ def _compute_signal_metrics(
                 # Interpolate (log-frequency, linear dB)
                 if abs(g1 - g2) > 0.01:
                     ratio = (threshold - g1) / (g2 - g1)
-                    import math
                     fc = 10 ** (math.log10(f1) + ratio * (math.log10(f2) - math.log10(f1)))
                 else:
                     fc = (f1 + f2) / 2
@@ -161,7 +170,6 @@ def _compute_signal_metrics(
                 if g1 < threshold and g2 >= threshold:
                     if abs(g2 - g1) > 0.01:
                         ratio = (threshold - g1) / (g2 - g1)
-                        import math
                         fc = 10 ** (math.log10(f1) + ratio * (math.log10(f2) - math.log10(f1)))
                     else:
                         fc = (f1 + f2) / 2

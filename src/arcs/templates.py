@@ -1157,7 +1157,6 @@ def _current_mirror_netlist(params: dict[str, float], conditions: dict[str, floa
 * Vcc={vcc}V, R_ref={R_ref:.1f}Ω, R_e={R_e:.1f}Ω
 
 Vcc vcc 0 DC {vcc}
-Vdummy dummy 0 DC 0
 
 .model QNPN NPN(IS=1e-15 BF=200 VAF=100 RB=100 CJE=20p CJC=10p TF=0.5n)
 
@@ -1177,12 +1176,12 @@ Rsense1 collector1_sense 0 0.001
 Vsense_out collector2 collector2_sense DC 0
 Rsense2 collector2_sense 0 0.001
 
-* === Analysis === (DC sweep to enable .measure extraction)
-.dc Vdummy 0 1 1
+* === Analysis === (transient — consistent with all other topologies)
+.tran 1u 1m 0.5m
 
 * === Measurements ===
-.measure DC iref AVG par('-I(Vsense_ref)')
-.measure DC iout AVG par('-I(Vsense_out)')
+.measure TRAN iref AVG par('-I(Vsense_ref)') FROM=0.5m TO=1m
+.measure TRAN iout AVG par('-I(Vsense_out)') FROM=0.5m TO=1m
 
 .end
 """
@@ -1858,7 +1857,7 @@ Vin input 0 PULSE({-vin} {vin} 0 1n 1n {period/2:.10e} {period:.10e})
 * D1 charges C1 on negative half-cycle
 D1 0 mid DMOD
 .model DMOD D(IS=1e-6 RS={R_d1} N=1.05 BV=100 CJO=100p)
-C1 input mid {C1:.6e}
+C1 input mid {C1:.6e} IC={vin}
 
 * D2 charges C2 on positive half-cycle (stacked)
 D2 mid vout DMOD2

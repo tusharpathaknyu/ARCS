@@ -124,6 +124,7 @@ class FlowMatchingConfig:
     # Training
     sigma_min: float = 1e-4         # minimum noise for stability
     ot_plan: bool = True            # use OT-conditional path (vs VP)
+    consistency_weight: float = 0.1 # weight for consistency regularization loss
 
     # VCG config (for decoder reuse)
     vcg_config: Optional[VCGConfig] = None
@@ -601,7 +602,7 @@ class ConstrainedFlowMatchingModel(nn.Module):
         # Optional: consistency regularization — predicted z_1 should be
         # close to actual z_1 (helps early training convergence)
         z_1_pred = z_t + (1.0 - t_expand) * v_pred  # predicted endpoint
-        consistency_loss = F.mse_loss(z_1_pred, z_1) * 0.1
+        consistency_loss = F.mse_loss(z_1_pred, z_1) * self.flow_config.consistency_weight
 
         total_loss = flow_loss + consistency_loss
 

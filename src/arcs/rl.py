@@ -41,12 +41,14 @@ from arcs.model import ARCSConfig, ARCSModel
 from arcs.model_enhanced import create_model, load_model
 from arcs.simulate import (
     COMPONENT_TO_PARAM,
+    SimulationOutcome,
     components_to_params,
+    compute_reward,
+    simulate_decoded_circuit,
     _get_spec_to_cond,
 )
 from arcs.spice import NGSpiceRunner
 from arcs.templates import (
-    OPERATING_CONDITIONS,
     POWER_CONVERTER_BOUNDS,
     get_topology,
 )
@@ -55,176 +57,10 @@ from arcs.tokenizer import CircuitTokenizer, TokenType
 logger = logging.getLogger(__name__)
 
 
-# components_to_params and COMPONENT_TO_PARAM imported from arcs.simulate
+# simulate_decoded_circuit, SimulationOutcome, compute_reward imported from arcs.simulate
 
 
-# ---------------------------------------------------------------------------
-# SPICE simulation of decoded circuits
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class SimulationOutcome:
-    """Result of simulating a decoded circuit."""
-
-    success: bool
-    metrics: dict[str, float] = field(default_factory=dict)
-    valid: bool = False
-    error: str = ""
-    sim_time: float = 0.0
-
-
-def simulate_decoded_circuit(
-    decoded: DecodedCircuit,
-    runner: NGSpiceRunner | None = None,
-    custom_conditions: dict[str, float] | None = None,
-) -> SimulationOutcome:
-    """Full pipeline: DecodedCircuit → SPICE netlist → simulate → metrics.
-
-    Args:
-        decoded: Decoded circuit with topology, specs, and components
-        runner: NGSpiceRunner instance (creates one if None)
-        custom_conditions: Override operating conditions (uses specs from decoded
-                          circuit if available, else topology defaults)
-
-    Returns:
-        SimulationOutcome with metrics and validity flag
-    """
-    if not decoded.valid_structure or not decoded.topology:
-        return SimulationOutcome(success=False, error="Invalid structure")
-
-    # Get topology template
-    try:
-        template = get_topology(decoded.topology)
-    except ValueError as e:
-        return SimulationOutcome(success=False, error=str(e))
-
-    # Map components back to parameters
-    params = components_to_params(decoded.topology, list(decoded.components))
-    if params is None:
-        return SimulationOutcome(
-            success=False, error="Could not map components to params"
-        )
-
-    # Determine operating conditions
-    conditions = dict(template.operating_conditions)
-    # Override with decoded specs if available
-    spec_to_cond = _get_spec_to_cond(decoded.topology)
-    if decoded.specs:
-        for spec_key, cond_key in spec_to_cond.items():
-            if spec_key in decoded.specs:
-                conditions[cond_key] = decoded.specs[spec_key]
-    if custom_conditions:
-        conditions.update(custom_conditions)
-
-    # Build netlist (need to also pass conditions into the template)
-    # The template.generate_netlist uses self.operating_conditions,
-    # so we temporarily override it
-    old_conds = template.operating_conditions
-    template.operating_conditions = conditions
-    try:
-        netlist = template.generate_netlist(params)
-    except Exception as e:
-        template.operating_conditions = old_conds
-        return SimulationOutcome(success=False, error=f"Netlist error: {e}")
-    finally:
-        template.operating_conditions = old_conds
-
-    # Simulate
-    if runner is None:
-        runner = NGSpiceRunner()
-    try:
-        sim_result = runner.run(netlist, template.metric_names)
-    except Exception as e:
-        return SimulationOutcome(success=False, error=f"Sim error: {e}")
-
-    if not sim_result.success:
-        return SimulationOutcome(
-            success=False,
-            error=sim_result.error_message or "Simulation failed",
-            sim_time=sim_result.sim_time_seconds,
-        )
-
-    # Compute derived metrics
-    try:
-        metrics = compute_derived_metrics(
-            sim_result.metrics, conditions, decoded.topology
-        )
-        valid = is_valid_result(metrics, conditions)
-    except Exception as e:
-        return SimulationOutcome(
-            success=True,
-            metrics=sim_result.metrics,
-            valid=False,
-            error=f"Metric error: {e}",
-            sim_time=sim_result.sim_time_seconds,
-        )
-
-    return SimulationOutcome(
-        success=True,
-        metrics=metrics,
-        valid=valid,
-        sim_time=sim_result.sim_time_seconds,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Reward function
-# ---------------------------------------------------------------------------
-
-
-def compute_reward(
-    decoded: DecodedCircuit,
-    outcome: SimulationOutcome,
-    target_specs: dict[str, float] | None = None,
-    struct_bonus: float = 1.0,
-) -> float:
-    """Compute scalar reward from simulation outcome.
-
-    Reward components (max ≈ 7.0 + struct_bonus):
-        +struct_bonus — valid circuit structure (has topo, components, END)
-        +1.0  — SPICE simulation converges
-        +3.0  — Vout accuracy:  3.0 × max(0, 1 - vout_error/10)
-                (full credit at <1% error, zero at >10% error)
-        +2.0  — Efficiency:     2.0 × efficiency
-                (0.9 eff → 1.8 points)
-        +1.0  — Low ripple:     1.0 × max(0, 1 - ripple_ratio×10)
-                (full credit at <1% ripple, zero at >10%)
-
-    Without simulation (structure-only): max struct_bonus
-    With failed simulation: max struct_bonus + 1.0
-    With successful simulation: max 7.0 + struct_bonus
-    """
-    reward = 0.0
-
-    # Structure reward
-    if decoded.valid_structure:
-        reward += struct_bonus
-    else:
-        return 0.0  # No further reward for broken structure
-
-    # Simulation convergence reward
-    if not outcome.success:
-        return reward  # struct_bonus for structure only
-
-    reward += 1.0  # Sim converged
-
-    # Vout accuracy (max +3.0)
-    vout_error = outcome.metrics.get("vout_error_pct", 100.0)
-    vout_score = max(0.0, 1.0 - vout_error / 10.0)
-    reward += 3.0 * vout_score
-
-    # Efficiency (max +2.0)
-    eff = outcome.metrics.get("efficiency", 0.0)
-    eff = max(0.0, min(1.0, eff))
-    reward += 2.0 * eff
-
-    # Ripple (max +1.0)
-    ripple = outcome.metrics.get("ripple_ratio", 1.0)
-    ripple_score = max(0.0, 1.0 - ripple * 10.0)
-    reward += 1.0 * ripple_score
-
-    return reward
+# compute_reward imported from arcs.simulate (domain-aware: power/signal/mirror/regulator)
 
 
 # ---------------------------------------------------------------------------

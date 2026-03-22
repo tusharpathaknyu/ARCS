@@ -341,10 +341,13 @@ class ARCSModel(nn.Module):
             # Top-p (nucleus)
             if top_p is not None:
                 sorted_logits, sorted_idx = torch.sort(logits, descending=True)
-                cum_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-                remove = cum_probs - F.softmax(sorted_logits, dim=-1) > top_p
+                sorted_probs = F.softmax(sorted_logits, dim=-1)
+                cum_probs = torch.cumsum(sorted_probs, dim=-1)
+                # Shift right so the first token that pushes cumsum > top_p is kept
+                remove = (cum_probs - sorted_probs) > top_p
                 sorted_logits[remove] = float("-inf")
-                logits = sorted_logits.scatter(1, sorted_idx, sorted_logits)
+                # Scatter back to original ordering
+                logits = torch.zeros_like(logits).scatter(1, sorted_idx, sorted_logits)
 
             probs = F.softmax(logits, dim=-1)
             next_tok = torch.multinomial(probs, num_samples=1)
