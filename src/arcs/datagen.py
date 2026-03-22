@@ -19,6 +19,8 @@ import numpy as np
 logger = logging.getLogger(__name__)
 from tqdm import tqdm
 
+from arcs.templates import BANDWIDTH_PROBE_FREQS  # single source of truth
+
 from arcs.spice import NGSpiceRunner, SimulationResult
 from arcs.templates import (
     TopologyTemplate, get_topology, get_all_topologies,
@@ -133,7 +135,7 @@ def _compute_signal_metrics(
         derived["gain_linear"] = 10 ** (gain_db / 20)
 
     # --- Estimate -3 dB bandwidth / cutoff from probe frequencies ---
-    probe_freqs = [10, 100, 1e3, 10e3, 100e3, 1e6, 10e6, 50e6]
+    probe_freqs = BANDWIDTH_PROBE_FREQS
     probe_gains = []
     for i, f in enumerate(probe_freqs):
         v = raw_metrics.get(f"vdb_{i}")
@@ -266,14 +268,20 @@ def _is_valid_signal(
         gain_dc = metrics.get("gain_dc")
         if gain_dc is None:
             return False
+        # Require measurable bandwidth — a filter without detectable -3dB
+        # point provides no useful training signal for bandwidth prediction
         bw = metrics.get("bw_3db")
-        if bw is not None and bw <= 0:
+        if bw is None or bw <= 0:
             return False
         return True
 
     if topology_name in osc_types:
         vosc_pp = metrics.get("vosc_pp", 0)
-        if vosc_pp < 0.1:  # 100mV threshold (above noise floor)
+        if vosc_pp < 0.1:  # 100mV absolute minimum (above noise floor)
+            return False
+        # Also check relative to supply: oscillation should be at least 1% of Vcc
+        vcc = operating_conditions.get("vcc", operating_conditions.get("vin", 12.0))
+        if vcc > 0 and vosc_pp / vcc < 0.01:
             return False
         return True
 

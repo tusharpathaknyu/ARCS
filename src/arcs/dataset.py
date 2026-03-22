@@ -87,10 +87,16 @@ class CircuitDataset(Dataset):
 
         if self.sequences:
             lens = [len(s) for s in self.sequences]
+            n_truncated = sum(1 for l in lens if l > max_seq_len)
             print(
                 f"Sequence lengths: min={min(lens)}, max={max(lens)}, "
                 f"mean={np.mean(lens):.1f}"
             )
+            if n_truncated > 0:
+                logger.warning(
+                    f"{n_truncated}/{len(lens)} sequences ({100*n_truncated/len(lens):.1f}%) "
+                    f"exceed max_seq_len={max_seq_len} and will be truncated"
+                )
 
     def _compute_token_types(self, tokens: list[int]) -> list[int]:
         """Map each token ID to its TokenType enum value (0-indexed)."""

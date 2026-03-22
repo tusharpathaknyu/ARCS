@@ -70,9 +70,34 @@ Post-retrain comprehensive audit (2026-03-22). All items below have been verifie
 
 ---
 
+## Round 2 Audit Fixes (2026-03-22)
+
+### 11. [x] Filter validity now requires measurable bw_3db (`datagen.py`)
+**Bug**: Filters with `gain_dc` but no detectable -3dB bandwidth were marked valid.
+**Impact**: Training on filters without bandwidth provides no signal for bandwidth prediction.
+**Fix**: Changed `if bw is not None and bw <= 0` to `if bw is None or bw <= 0`.
+
+### 12. [x] Oscillator validity uses relative + absolute threshold (`datagen.py`)
+**Bug**: Only checked `vosc_pp < 0.1V` absolute. A 50mV oscillation at 12V supply is noise, not oscillation.
+**Impact**: May have marked noise as valid oscillation for some colpitts/hartley designs.
+**Fix**: Added relative check: `vosc_pp / Vcc >= 1%` in addition to absolute 100mV floor.
+
+### 13. [x] Centralize bandwidth probe frequencies (`templates.py`, `datagen.py`)
+**Bug**: Same 8 probe frequencies hardcoded in two files. Changing one without the other silently breaks bandwidth calculation.
+**Fix**: Defined `BANDWIDTH_PROBE_FREQS` in templates.py, imported into datagen.py.
+
+### 14. [x] Log truncation statistics (`dataset.py`)
+**Bug**: Sequences exceeding max_seq_len are silently truncated, losing component data.
+**Fix**: Added warning log with count/percentage of truncated sequences.
+
+---
+
 ## NOT Issues (False Alarms from Audit)
 
 - **TOPOLOGY_RWPE empty**: Actually populated at line 251 via `_precompute_all_rwpe(TOPOLOGY_ADJACENCY)`
 - **RL resume runs extra steps**: Actually correct — `range(start_step, n_steps+1)` resumes from saved step, doesn't add extra
 - **Position embedding bounds**: Already asserted at `model.py:248`
 - **Loss double-weighting**: Investigated — the per-token cross-entropy is averaged correctly by PyTorch's `F.cross_entropy` with default `reduction='mean'`
+- **Negative spec values (abs())**: By design — topology token disambiguates polarity; entire pipeline consistently uses absolute values
+- **Value encoding for zero**: `value == 0` correctly maps to `VAL_0`; missing metrics aren't encoded as zero (absent from dict)
+- **Bandwidth detection edge case (g1==threshold)**: Standard interpolation; exact equality on floating-point is astronomically rare

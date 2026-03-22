@@ -31,6 +31,10 @@ from dataclasses import dataclass, field
 from typing import Callable
 import numpy as np
 
+# Probe frequencies for AC bandwidth estimation (Hz).
+# Used in _ac_measure_block() and must match datagen.BANDWIDTH_PROBE_FREQS.
+BANDWIDTH_PROBE_FREQS: list[float] = [10, 100, 1e3, 10e3, 100e3, 1e6, 10e6, 50e6]
+
 
 @dataclass
 class ComponentBounds:
@@ -566,8 +570,7 @@ def _ac_measure_block(freq_test: float) -> str:
     when subcircuits are present (without it, ngspice skips AC analysis with
     "no data saved" error).  VP() returns phase in **radians**.
     """
-    # Probe frequencies for bandwidth estimation
-    probes = [10, 100, 1e3, 10e3, 100e3, 1e6, 10e6, 50e6]
+    probes = BANDWIDTH_PROBE_FREQS
     lines = [
         "* Force ngspice to save AC data (required for subcircuit nodes)",
         ".save v(vout)",
