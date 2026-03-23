@@ -46,6 +46,7 @@ from arcs.valid_circuit_gen import (
     IDX_TO_NODE_TYPE,
     TOPOLOGY_TO_IDX,
 )
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -326,6 +327,118 @@ def evaluate_projection_impact(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Unified SPICE Simulation Evaluation
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def evaluate_spice_validity(
+    model: ValidCircuitGenModel,
+    dataset: CircuitGraphDataset,
+    n_samples: int,
+    device: torch.device,
+) -> dict:
+    """Run SPICE simulation on structurally valid VCG-generated circuits.
+
+    Provides apples-to-apples comparison with ARCS autoregressive evaluation
+    which also uses SPICE simulation.  Only structurally valid circuits are
+    simulated; the ``sim_valid_rate`` is the fraction of ALL generated circuits
+    that converge and pass performance checks.
+
+    Returns:
+        dict with keys: n_generated, n_struct_valid, n_sim_valid,
+        struct_valid_rate, sim_valid_rate, avg_reward, per_topology
+    """
+    from arcs.hybrid_pipeline import vcg_graph_to_spice
+    from arcs.spice import NGSpiceRunner
+
+    model.eval()
+    runner = NGSpiceRunner()
+    tokenizer = CircuitTokenizer()
+
+    # Collect one template per topology (same approach as evaluate_validity)
+    topo_items: dict[int, dict] = {}
+    step = max(1, len(dataset) // 1000)
+    for i in range(0, len(dataset), step):
+        item = dataset[i]
+        topo_idx = item["topology_idx"].item()
+        if topo_idx not in topo_items:
+            topo_items[topo_idx] = item
+
+    if not topo_items:
+        return {"n_generated": 0, "sim_valid_rate": 0.0}
+
+    per_topo_count = max(1, n_samples // len(topo_items))
+
+    per_topology: dict[str, dict] = {}
+    total_generated = 0
+    total_struct_valid = 0
+    total_sim_valid = 0
+    total_reward = 0.0
+
+    for topo_idx, template in topo_items.items():
+        topo_name = "unknown"
+        for name, idx in TOPOLOGY_TO_IDX.items():
+            if idx == topo_idx:
+                topo_name = name
+                break
+
+        with torch.no_grad():
+            graphs, _ = model.generate(
+                spec_types=template["spec_types"].unsqueeze(0).to(device),
+                spec_values=template["spec_values"].unsqueeze(0).to(device),
+                spec_mask=template["spec_mask"].unsqueeze(0).to(device),
+                topology_idx=template["topology_idx"].unsqueeze(0).to(device),
+                active_mask=template["active_mask"].unsqueeze(0).to(device),
+                bounds_min=template["value_bounds_min"].unsqueeze(0).to(device),
+                bounds_max=template["value_bounds_max"].unsqueeze(0).to(device),
+                n_samples=per_topo_count,
+            )
+
+        t_gen = 0
+        t_struct = 0
+        t_sim = 0
+        t_reward = 0.0
+
+        for graph in graphs:
+            t_gen += 1
+            validity = check_circuit_validity(graph)
+            if validity["valid"]:
+                t_struct += 1
+                try:
+                    _, outcome, reward = vcg_graph_to_spice(graph, runner, tokenizer)
+                    if outcome.valid:
+                        t_sim += 1
+                        t_reward += reward
+                except Exception:
+                    pass
+
+        per_topology[topo_name] = {
+            "n_generated": t_gen,
+            "n_struct_valid": t_struct,
+            "n_sim_valid": t_sim,
+            "struct_valid_rate": t_struct / max(t_gen, 1),
+            "sim_valid_rate": t_sim / max(t_gen, 1),
+            "avg_reward": t_reward / max(t_sim, 1),
+        }
+        total_generated += t_gen
+        total_struct_valid += t_struct
+        total_sim_valid += t_sim
+        total_reward += t_reward
+
+    runner.cleanup()
+
+    return {
+        "n_generated": total_generated,
+        "n_struct_valid": total_struct_valid,
+        "n_sim_valid": total_sim_valid,
+        "struct_valid_rate": total_struct_valid / max(total_generated, 1),
+        "sim_valid_rate": total_sim_valid / max(total_generated, 1),
+        "avg_reward": total_reward / max(total_sim_valid, 1),
+        "per_topology": per_topology,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Comparison with Autoregressive ARCS
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -350,8 +463,8 @@ def compare_with_arcs(
     results = generate_and_evaluate(
         model, tokenizer, device,
         n_samples=n_samples,
-        temperature=0.8,
-        top_k=50,
+        temperature=DEFAULT_TEMPERATURE,
+        top_k=DEFAULT_TOP_K,
         conditioned=True,
         simulate=False,
     )
@@ -379,6 +492,7 @@ def print_vcg_report(
     projection: dict,
     arcs_comparison: dict | None,
     model: ValidCircuitGenModel,
+    spice_results: dict | None = None,
 ) -> None:
     """Print comprehensive evaluation report."""
     print(f"\n{'='*70}")
@@ -438,10 +552,30 @@ def print_vcg_report(
     print(f"  Time w/ projection:       {projection['with_projection']['avg_gen_time_ms']:.1f}ms")
     print(f"  Time w/o projection:      {projection['without_projection']['avg_gen_time_ms']:.1f}ms")
 
+    # SPICE simulation results
+    if spice_results:
+        print(f"\n{'─'*70}")
+        print("5. UNIFIED SPICE SIMULATION EVALUATION")
+        print(f"{'─'*70}")
+        print(f"  Struct valid rate:   {spice_results['struct_valid_rate']:.1%}")
+        print(f"  Sim valid rate:      {spice_results['sim_valid_rate']:.1%}")
+        print(f"  Avg reward (sim ok): {spice_results['avg_reward']:.3f}")
+        print(f"  n_generated:         {spice_results['n_generated']}")
+        print(f"  n_sim_valid:         {spice_results['n_sim_valid']}")
+        if spice_results.get("per_topology"):
+            print(f"\n  Per-topology SPICE breakdown:")
+            for topo, d in sorted(spice_results["per_topology"].items()):
+                print(
+                    f"    {topo:<25s}: {d['n_sim_valid']:>3d}/{d['n_generated']:>3d} "
+                    f"sim_ok ({d['sim_valid_rate']:.0%}) "
+                    f"struct ({d['struct_valid_rate']:.0%})"
+                )
+
     # ARCS comparison
     if arcs_comparison:
+        sect_num = 6 if spice_results else 5
         print(f"\n{'─'*70}")
-        print("5. COMPARISON WITH AUTOREGRESSIVE ARCS")
+        print(f"{sect_num}. COMPARISON WITH AUTOREGRESSIVE ARCS")
         print(f"{'─'*70}")
 
         header = f"| {'Method':<25s} | {'Params':>8s} | {'Struct Valid':>12s} | {'Time/Sample':>12s} |"
@@ -488,6 +622,14 @@ def main():
     parser.add_argument("--output", type=str, default="results/vcg_evaluation.json")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--device", type=str, default="auto")
+    parser.add_argument(
+        "--spice", action="store_true",
+        help="Run SPICE simulation on generated circuits (unified evaluation mode)",
+    )
+    parser.add_argument(
+        "--n-spice-samples", type=int, default=None,
+        help="Number of circuits to simulate (defaults to --n-samples)",
+    )
     args = parser.parse_args()
 
     # Device
@@ -527,6 +669,13 @@ def main():
         model, dataset, min(args.n_samples, 50), device,
     )
 
+    # Optional unified SPICE evaluation
+    spice_results = None
+    if args.spice:
+        n_spice = args.n_spice_samples or args.n_samples
+        print(f"[+] Running unified SPICE evaluation (n={n_spice})...")
+        spice_results = evaluate_spice_validity(model, dataset, n_spice, device)
+
     # Optional ARCS comparison
     arcs_comparison = None
     if args.arcs_checkpoint:
@@ -538,6 +687,7 @@ def main():
     # Report
     print_vcg_report(
         validity, reconstruction, latent, projection, arcs_comparison, model,
+        spice_results=spice_results,
     )
 
     # Save
@@ -549,6 +699,8 @@ def main():
         "latent_space": latent,
         "projection_impact": projection,
     }
+    if spice_results:
+        all_results["spice_evaluation"] = spice_results
     if arcs_comparison:
         all_results["arcs_comparison"] = arcs_comparison
 
