@@ -269,9 +269,9 @@ ngspice runs a transient simulation of 500 switching cycles (5ms at 100kHz). The
   | boost          |  5,000 | ~4.0K |
   | buck_boost     |  5,000 | ~3.8K |
   | cuk            |  5,000 | ~3.5K |
-  | sepic          |  5,000 | ~1.7K |
-  | flyback        |  5,000 | ~0.9K |
-  | forward        |  5,000 | ~2.1K |
+  | sepic          |  2,000 | ~1.0K |  ← template fixed; 50% yield (was 34%)
+  | flyback        |  5,000 | ~0.9K |  ← template fixed; regen in progress
+  | forward        |  5,000 | ~2.1K |  ← template fixed; regen in progress
   +----------------+--------+-------+
 
   Tier 2 -- Signal Processing (27 topologies):
@@ -290,9 +290,16 @@ ngspice runs a transient simulation of 500 switching cycles (5ms at 100kHz). The
 
 ### Why Some Topologies Have Lower Validity
 
-Not all topologies are equally easy to simulate. The flyback converter, for instance, has only about 18% validity because it uses a transformer with coupled inductors, which creates numerical stiffness in the SPICE simulation. Many random parameter combinations cause ngspice to fail with "timestep too small" errors or produce wildly oscillating outputs. The SEPIC converter has similar issues because of its coupled inductor topology. In contrast, the inverting amplifier has ~95% validity because it is a simple, well-conditioned circuit with only two resistors and an op-amp.
+Not all topologies are equally easy to simulate. The flyback converter originally had only 18% validity because it uses a transformer with coupled inductors, creating numerical stiffness in the SPICE simulation. Many random parameter combinations caused ngspice to fail with "timestep too small" errors or produce wildly oscillating outputs. The SEPIC converter had similar issues.
 
-This variation in validity rates is actually useful for training -- it teaches the neural network that some topologies are more sensitive to parameter choices than others, and it learns to be more conservative with component values for finicky topologies.
+Several low-yield topologies have been fixed with improved template netlists:
+- **Flyback** (18%→improved): Added primary clamp diode to suppress voltage spikes; corrected duty cycle formula to `D = (Vout×N)/(Vin + Vout×N)`; extended simulation to 1000 switching periods.
+- **Forward** (41%→improved): Added tertiary reset winding + reset diode for proper transformer demagnetization; capped duty cycle at 45% for reset margin.
+- **SEPIC** (34%→50%): Tightened coupling capacitor bounds (1–22µF instead of 0.1–100µF); extended to 1000 periods.
+- **Colpitts** (34%→improved): Extended simulation to 500 oscillation cycles minimum; added IC=0.1V on tank capacitor for startup; reduced emitter bypass capacitor.
+- **Cascode** (40%→87%+): Parameterized Q1 base bias resistors (previously hardcoded) so the optimizer explores proper bias points.
+
+In contrast, the inverting amplifier has ~95% validity because it is a simple, well-conditioned circuit with only two resistors and an op-amp. This variation in validity rates teaches the neural network that some topologies are more sensitive to parameter choices than others.
 
 ---
 
