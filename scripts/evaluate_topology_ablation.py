@@ -30,6 +30,7 @@ import torch
 from arcs.evaluate import generate_and_evaluate
 from arcs.model_enhanced import load_model
 from arcs.tokenizer import CircuitTokenizer
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def _pick_device() -> torch.device:
@@ -120,8 +121,8 @@ def main() -> None:
     parser.add_argument("--topo-head-ckpt", type=str, default="checkpoints/arcs_graph_transformer_topo_value/best_model.pt")
     parser.add_argument("--family-moe-ckpt", type=str, default="checkpoints/arcs_graph_transformer_family_moe/best_model.pt")
     parser.add_argument("--n-samples", type=int, default=48)
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=str, default="results/topology_ablation.json")
     args = parser.parse_args()

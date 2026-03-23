@@ -38,6 +38,7 @@ from arcs.simulate import (
 )
 from arcs.spice import NGSpiceRunner
 from arcs.tokenizer import CircuitTokenizer
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def build_prefix(tokenizer: CircuitTokenizer, topo: str, specs: dict) -> torch.Tensor:
@@ -207,8 +208,8 @@ def main():
     parser.add_argument("--checkpoint", type=str, default=None,
                         help="Model checkpoint (uses random init if not given)")
     parser.add_argument("--n-samples", type=int, default=100)
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     parser.add_argument("--tier", type=int, default=None, choices=[1, 2])
     parser.add_argument("--simulate", action="store_true")
     parser.add_argument("--device", type=str, default="auto")

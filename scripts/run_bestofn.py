@@ -27,6 +27,7 @@ from arcs.constrained import ConstraintLevel
 from arcs.model import ARCSConfig, ARCSModel
 from arcs.model_enhanced import load_model
 from arcs.tokenizer import CircuitTokenizer
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def main():
@@ -37,8 +38,8 @@ def main():
     parser.add_argument("--n-specs", type=int, default=160)
     parser.add_argument("--n-values", type=int, nargs="+",
                         default=[1, 3, 5, 10, 20, 50])
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     parser.add_argument("--constraint", type=str, default="topology",
                         choices=["none", "grammar", "topology", "full"])
     parser.add_argument("--simulate", action="store_true")
