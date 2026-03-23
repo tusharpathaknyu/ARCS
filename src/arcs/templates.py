@@ -368,13 +368,13 @@ def _sepic_netlist(params: dict[str, float], conditions: dict[str, float]) -> st
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 500 * period
-    meas_start = 400 * period
+    sim_time = 1000 * period      # SEPIC needs more cycles: two coupled inductors slow transients
+    meas_start = 800 * period
     tstep = period / 100
 
     return f"""\
 * ARCS SEPIC Converter
-* Vin={vin}V, Vout_target={vout_target}V, fsw={fsw/1e3:.0f}kHz
+* Vin={vin}V, Vout_target={vout_target}V, D={duty:.3f}, fsw={fsw/1e3:.0f}kHz
 
 Vin input 0 DC {vin}
 
@@ -415,51 +415,69 @@ Vsense load_mid 0 DC 0
 
 
 def _flyback_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
-    """Flyback converter with coupled inductor (transformer) model."""
+    """Flyback converter with coupled inductor (transformer) model.
+
+    Topology (N = turns_ratio = Np/Ns):
+      - Switch ON:  Primary L_pri stores energy from Vin; secondary diode Dfb reverse-biased.
+      - Switch OFF: Primary field collapses; reflected voltage Vin/N + Vout forward-biases Dfb;
+                    energy transfers to Cout via secondary.
+      - Clamp diode Dclamp (input → sw_drain) suppresses the primary spike when S1 opens,
+        clamping sw_drain to Vin and recycling energy back to source.
+    Vout = Vin * (Ns/Np) * D/(1-D) = Vin/N * D/(1-D)
+    D = (Vout/Vin*N) / (1 + Vout/Vin*N)
+    """
     vin = conditions.get("vin", 12.0)
     vout_target = conditions.get("vout", 5.0)
     iout = conditions.get("iout", 1.0)
     fsw = conditions.get("fsw", 100e3)
 
     Lp = params["inductance_primary"]
-    turns_ratio = params["turns_ratio"]
+    turns_ratio = params["turns_ratio"]   # Np/Ns
     C_out = params["capacitance"]
     R_load = params.get("r_load", vout_target / iout)
     R_esr = params.get("esr", 0.02)
     R_dson = params.get("r_dson", 0.05)
-    duty = max(0.05, min(0.85, vout_target / (vout_target + vin / turns_ratio)))
+
+    # Flyback duty: Vout = (Vin/N) * D/(1-D)  =>  D = (Vout*N) / (Vin + Vout*N)
+    Vout_N = vout_target * turns_ratio   # effective secondary reflected voltage
+    duty = max(0.05, min(0.85, Vout_N / (vin + Vout_N)))
 
     Ls = Lp / (turns_ratio ** 2)
     k = 0.98
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 500 * period
-    meas_start = 400 * period
-    tstep = period / 100
+    sim_time = 1000 * period       # longer: transformer needs more cycles to reach steady state
+    meas_start = 800 * period
+    tstep = period / 200           # finer step for spike capture
 
     return f"""\
 * ARCS Flyback Converter
-* Vin={vin}V, Vout_target={vout_target}V, N={turns_ratio:.2f}, fsw={fsw/1e3:.0f}kHz
+* Vin={vin}V, Vout_target={vout_target}V, N(Np/Ns)={turns_ratio:.2f}, D={duty:.3f}, fsw={fsw/1e3:.0f}kHz
 
 Vin input 0 DC {vin}
 
 * Primary winding
 L_pri input sw_drain {Lp:.6e} IC=0
-* Secondary winding (dot convention: when sw_drain goes low, sec_dot goes positive)
+* Secondary winding (dot at sec_dot; conducts when S1 opens)
 L_sec sec_dot 0 {Ls:.6e} IC=0
 K1 L_pri L_sec {k}
 
 * Primary-side MOSFET switch
 Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
 S1 sw_drain 0 pwm_ctrl 0 SMOD
-.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
+.model SMOD SW(RON={R_dson:.6e} ROFF=1e6 VT=2.5 VH=0.1)
 
-* Secondary-side diode (conducts when switch is off)
+* Primary clamp diode: recycles leakage energy, clamps sw_drain spike to Vin
+* Conducts when sw_drain > Vin (S1 opens and primary field tries to fly high)
+Dclamp sw_drain input DCLAMP
+.model DCLAMP D(IS=1e-8 RS=0.05 N=1.02 BV=200 CJO=50p)
+
+* Secondary-side rectifier (conducts when S1 is off and sec_dot > Vout)
 Dfb sec_dot vout DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
 
-Resr vout cap_node {R_esr}
+Resr vout cap_node {R_esr:.6e}
 C1 cap_node 0 {C_out:.6e} IC={vout_target}
 
 Rload vout load_mid {R_load:.4f}
@@ -477,56 +495,80 @@ Vsense load_mid 0 DC 0
 
 
 def _forward_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
-    """Forward converter template. Isolated buck derivative."""
+    """Forward converter template. Isolated buck derivative.
+
+    Topology (N = turns_ratio = Np/Ns):
+      - Switch ON:  L_pri magnetizes; L_sec delivers Vin/N to output through Dfwd and Lout.
+      - Switch OFF: L_sec current freewheels through Dfw; L_pri MUST demagnetize.
+      - Core reset: Tertiary winding L_ter (1:1 with primary) + Dreset clamp.
+        When S1 opens, Dreset conducts and returns primary magnetizing energy to Vin,
+        resetting core flux to zero within (1-D)/fsw seconds.
+      - Duty limited to 50% for 1:1 reset winding to guarantee full demagnetization.
+    Vout = Vin * (Ns/Np) * D = (Vin/N) * D
+    D = Vout * N / Vin  (capped at 0.45 for reset margin)
+    """
     vin = conditions.get("vin", 48.0)
     vout_target = conditions.get("vout", 12.0)
     iout = conditions.get("iout", 2.0)
     fsw = conditions.get("fsw", 100e3)
 
     Lp = params["inductance_primary"]
-    turns_ratio = params["turns_ratio"]
+    turns_ratio = params["turns_ratio"]   # Np/Ns
     L_out = params["inductance_output"]
     C_out = params["capacitance"]
     R_load = params.get("r_load", vout_target / iout)
     R_esr = params.get("esr", 0.02)
     R_dson = params.get("r_dson", 0.05)
-    duty = max(0.05, min(0.85, vout_target / (vin / turns_ratio)))
 
-    Ls = Lp / (turns_ratio ** 2)
-    k = 0.98
+    # Forward: Vout = (Vin/N) * D  =>  D = Vout*N/Vin  (cap at 0.45 for reset winding margin)
+    duty = max(0.05, min(0.45, vout_target * turns_ratio / vin))
+
+    Ls = Lp / (turns_ratio ** 2)   # secondary inductance
+    Lt = Lp                         # tertiary = primary (1:1 reset winding)
+    k_ps = 0.98                     # primary-secondary coupling
+    k_pt = 0.98                     # primary-tertiary coupling
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 500 * period
-    meas_start = 400 * period
+    sim_time = 1000 * period
+    meas_start = 800 * period
     tstep = period / 100
 
     return f"""\
-* ARCS Forward Converter
-* Vin={vin}V, Vout_target={vout_target}V, N={turns_ratio:.2f}, fsw={fsw/1e3:.0f}kHz
+* ARCS Forward Converter (with tertiary reset winding)
+* Vin={vin}V, Vout_target={vout_target}V, N(Np/Ns)={turns_ratio:.2f}, D={duty:.3f}, fsw={fsw/1e3:.0f}kHz
 
 Vin input 0 DC {vin}
 
 * Primary winding
 L_pri input sw_drain {Lp:.6e} IC=0
-* Secondary winding
+* Secondary winding (dot at sec_out; delivers power during ON time)
 L_sec 0 sec_out {Ls:.6e} IC=0
-K1 L_pri L_sec {k}
+* Tertiary reset winding (1:1 with primary; dot at reset_node same polarity as primary dot)
+L_ter reset_node input {Lt:.6e} IC=0
+K1 L_pri L_sec {k_ps}
+K2 L_pri L_ter {k_pt}
 
 * Primary-side MOSFET switch
 Vpwm pwm_ctrl 0 PULSE(0 5 0 1n 1n {ton:.10e} {period:.10e})
 S1 sw_drain 0 pwm_ctrl 0 SMOD
-.model SMOD SW(RON={R_dson} ROFF=1e6 VT=2.5 VH=0.1)
+.model SMOD SW(RON={R_dson:.6e} ROFF=1e6 VT=2.5 VH=0.1)
 
-* Secondary-side rectifier + freewheeling diode
+* Tertiary reset diode: conducts when S1 opens, clamps primary and resets core
+Dreset 0 reset_node DRESET
+.model DRESET D(IS=1e-8 RS=0.05 N=1.02 BV=200 CJO=50p)
+
+* Secondary-side rectifier
 Dfwd sec_out rect_out DSCHOTTKY
 .model DSCHOTTKY D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
 
+* Output freewheeling diode (allows Lout current to continue when Dfwd is off)
 Dfw 0 rect_out DSCHOTTKY2
 .model DSCHOTTKY2 D(IS=1e-6 RS=0.03 N=1.05 BV=100 CJO=100p)
 
+* Output filter
 Lout rect_out vout {L_out:.6e} IC=0
-Resr vout cap_node {R_esr}
+Resr vout cap_node {R_esr:.6e}
 C1 cap_node 0 {C_out:.6e} IC={vout_target}
 
 Rload vout load_mid {R_load:.4f}
@@ -921,9 +963,16 @@ XU1 noninv inv vout OPAMP_RAILED
 
 def _colpitts_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
     """Colpitts oscillator using BJT common-emitter configuration.
-    
-    f_osc = 1 / (2*pi*sqrt(L * C1*C2/(C1+C2)))
-    Uses capacitive voltage divider (C1, C2) + inductor in feedback.
+
+    Topology:
+      - Tank: L from collector to tank_mid; C1 from tank_mid to base (feedback tap);
+        C2 from tank_mid to ground (return path).
+      - Feedback: AC voltage at tank_mid feeds base through C1 (capacitive divider).
+      - Startup: IC=0.1V on C2 provides initial perturbation to kick oscillation.
+      - Ce bypasses Re at AC, making emitter an AC ground for common-emitter gain.
+
+    f_osc = 1/(2*pi*sqrt(L * Ceq))  where Ceq = C1*C2/(C1+C2)
+    Oscillation condition: Rc/Re >= C2/C1 (loop gain >= 1)
     """
     Vcc = conditions.get("vcc", 12.0)
 
@@ -937,8 +986,13 @@ def _colpitts_netlist(params: dict[str, float], conditions: dict[str, float]) ->
 
     Cseries = C1 * C2 / (C1 + C2)
     f_osc = 1.0 / (2 * np.pi * (L * Cseries) ** 0.5)
-    sim_time = max(100 / f_osc, 1e-3)
-    meas_start = max(60 / f_osc, 0.5e-3)
+
+    # Need at least 500 cycles to confirm sustained oscillation; min 5ms
+    sim_time = max(500 / f_osc, 5e-3)
+    # Measure last 30% of sim (after transient startup)
+    meas_start = 0.7 * sim_time
+    # Step size: at least 200 points per oscillation period
+    tstep = min(1.0 / (f_osc * 200), sim_time / 10000)
 
     return f"""\
 * ARCS Colpitts Oscillator (BJT)
@@ -948,25 +1002,25 @@ Vcc vcc 0 DC {Vcc}
 
 .model QNPN NPN(IS=1e-14 BF=200 VAF=100 CJC=5p CJE=10p TF=0.3n)
 
-* Bias network
+* Bias network: sets quiescent base voltage ~ Vcc*Rb2/(Rb1+Rb2)
 Rb1 vcc base {Rb1:.6e}
 Rb2 base 0 {Rb2:.6e}
 
-* BJT
+* BJT common-emitter stage
 Q1 collector base emitter QNPN
 
 Rc vcc collector {Rc:.6e}
 Re emitter 0 {Re:.6e}
 
-* Tank circuit on collector: L + C1/C2 capacitive divider
+* Tank circuit: L from collector to tap; C1 taps feedback to base; C2 returns to GND
 L1 collector tank_mid {L:.6e} IC=0
-C1 tank_mid base {C1:.6e}
-C2 tank_mid 0 {C2:.6e}
+C1 tank_mid base {C1:.6e} IC=0
+C2 tank_mid 0 {C2:.6e} IC=0.1
 
-* Bypass cap on emitter for AC ground
-Ce emitter 0 100e-6
+* Emitter bypass: AC-grounds emitter for common-emitter gain
+Ce emitter 0 10e-6
 
-.tran {sim_time/5000:.10e} {sim_time:.10e} UIC
+.tran {tstep:.10e} {sim_time:.10e} UIC
 
 .measure TRAN vosc_pp PP V(collector) FROM={meas_start:.10e} TO={sim_time:.10e}
 .measure TRAN vosc_avg AVG V(collector) FROM={meas_start:.10e} TO={sim_time:.10e}
@@ -1099,15 +1153,26 @@ Rload vout 0 1e6
 
 
 def _cascode_netlist(params: dict[str, float], conditions: dict[str, float]) -> str:
-    """Cascode amplifier. Q1 common-emitter, Q2 common-base stacked."""
+    """Cascode amplifier. Q1 common-emitter, Q2 common-base stacked.
+
+    Both transistors' base bias networks are parameterized so the data
+    generator can explore a variety of operating points:
+      - Q1 bias (Rb1_q1/Rb2_q1) sets V_base1 = Vcc * Rb2_q1/(Rb1_q1+Rb2_q1)
+      - Q2 bias (R_bias1/R_bias2) sets V_base2 to keep Q2 in active region
+        above Q1's collector (mid node).
+    Re provides DC stability; Cbias2 AC-grounds Q2 base for common-base operation.
+    """
     vin_amp = conditions.get("vin_amp", 0.1)
     freq_test = conditions.get("freq_test", 1e3)
     vcc = conditions.get("vcc", 12.0)
 
     R_collector = params["r_collector"]
-    R_bias1 = params["r_bias1"]
-    R_bias2 = params["r_bias2"]
+    R_bias1 = params["r_bias1"]      # Q2 base bias upper
+    R_bias2 = params["r_bias2"]      # Q2 base bias lower
     R_emitter = params["r_emitter"]
+    # Q1 bias resistors — parameterized so the generator explores different operating points
+    Rb1_q1 = params.get("r_bias_q1_1", 200e3)
+    Rb2_q1 = params.get("r_bias_q1_2", 100e3)
 
     return f"""\
 * ARCS Cascode Amplifier
@@ -1117,9 +1182,9 @@ Vcc vcc 0 DC {vcc}
 Vin inp 0 DC 0 AC {vin_amp}
 Cin inp base1 1u
 
-* Q1 base bias
-Rb1 vcc base1 200e3
-Rb2 base1 0 100e3
+* Q1 base bias (parameterized for operating-point sweep)
+Rb1 vcc base1 {Rb1_q1:.6e}
+Rb2 base1 0 {Rb2_q1:.6e}
 
 .model QNPN NPN(IS=1e-15 BF=200 VAF=100 RB=100 CJE=20p CJC=10p TF=0.5n)
 
@@ -1127,16 +1192,16 @@ Rb2 base1 0 100e3
 Q1 mid base1 emitter QNPN
 Re emitter 0 {R_emitter:.6e}
 
-* Q2: common-base stage (base bias via R_bias1/R_bias2 divider)
+* Q2: common-base stage (base AC-grounded by Cbias2; sets V_mid operating point)
 Rbias1 vcc base2 {R_bias1:.6e}
 Rbias2 base2 0 {R_bias2:.6e}
-Cbias2 base2 0 100u
+Cbias2 base2 0 10u
 Q2 collector base2 mid QNPN
 
 Rc vcc collector {R_collector:.6e}
 
 Cout collector vout 1u
-Rload vout 0 1e6
+Rload vout 0 100e3
 
 * === Analysis ===
 .ac dec 100 1 100e6
@@ -2033,10 +2098,12 @@ SIGNAL_CIRCUIT_BOUNDS = {
         ComponentBounds("r_emitter", "Ω", 10, 10e3, log_scale=True, description="Emitter resistor"),
     ],
     "cascode": [
-        ComponentBounds("r_collector", "Ω", 100, 100e3, log_scale=True, description="Collector resistor"),
-        ComponentBounds("r_bias1", "Ω", 1e3, 1e6, log_scale=True, description="Q2 bias R1"),
-        ComponentBounds("r_bias2", "Ω", 1e3, 1e6, log_scale=True, description="Q2 bias R2"),
-        ComponentBounds("r_emitter", "Ω", 10, 10e3, log_scale=True, description="Emitter resistor"),
+        ComponentBounds("r_collector", "Ω", 1e3, 100e3, log_scale=True, description="Collector resistor"),
+        ComponentBounds("r_bias1", "Ω", 10e3, 500e3, log_scale=True, description="Q2 bias R1 (upper)"),
+        ComponentBounds("r_bias2", "Ω", 5e3, 200e3, log_scale=True, description="Q2 bias R2 (lower)"),
+        ComponentBounds("r_emitter", "Ω", 100, 5e3, log_scale=True, description="Emitter degeneration"),
+        ComponentBounds("r_bias_q1_1", "Ω", 50e3, 500e3, log_scale=True, description="Q1 bias R1 (upper)"),
+        ComponentBounds("r_bias_q1_2", "Ω", 20e3, 200e3, log_scale=True, description="Q1 bias R2 (lower)"),
     ],
     "current_mirror": [
         ComponentBounds("r_ref", "Ω", 100, 100e3, log_scale=True, description="Reference resistor"),
@@ -2199,27 +2266,27 @@ POWER_CONVERTER_BOUNDS = {
         ComponentBounds("r_dson", "Ω", 0.01, 0.5, log_scale=True),
     ],
     "sepic": [
-        ComponentBounds("inductance_1", "H", 1e-6, 1e-3, log_scale=True),
-        ComponentBounds("inductance_2", "H", 1e-6, 1e-3, log_scale=True),
-        ComponentBounds("cap_coupling", "F", 0.1e-6, 100e-6, log_scale=True),
-        ComponentBounds("capacitance", "F", 1e-6, 1e-2, log_scale=True),
-        ComponentBounds("esr", "Ω", 0.001, 0.5, log_scale=True),
-        ComponentBounds("r_dson", "Ω", 0.01, 0.5, log_scale=True),
+        ComponentBounds("inductance_1", "H", 10e-6, 500e-6, log_scale=True),
+        ComponentBounds("inductance_2", "H", 10e-6, 500e-6, log_scale=True),
+        ComponentBounds("cap_coupling", "F", 1e-6, 22e-6, log_scale=True),  # tighter: 0.1-100uF was too wide
+        ComponentBounds("capacitance", "F", 10e-6, 1e-3, log_scale=True),
+        ComponentBounds("esr", "Ω", 0.005, 0.2, log_scale=True),
+        ComponentBounds("r_dson", "Ω", 0.01, 0.2, log_scale=True),
     ],
     "flyback": [
-        ComponentBounds("inductance_primary", "H", 10e-6, 5e-3, log_scale=True),
-        ComponentBounds("turns_ratio", "", 0.1, 10.0, log_scale=True, description="Np/Ns"),
-        ComponentBounds("capacitance", "F", 1e-6, 1e-2, log_scale=True),
-        ComponentBounds("esr", "Ω", 0.001, 0.5, log_scale=True),
-        ComponentBounds("r_dson", "Ω", 0.01, 0.5, log_scale=True),
+        ComponentBounds("inductance_primary", "H", 50e-6, 2e-3, log_scale=True),
+        ComponentBounds("turns_ratio", "", 0.5, 5.0, log_scale=True, description="Np/Ns"),  # tighter: avoids extreme duty
+        ComponentBounds("capacitance", "F", 10e-6, 1e-3, log_scale=True),
+        ComponentBounds("esr", "Ω", 0.005, 0.2, log_scale=True),
+        ComponentBounds("r_dson", "Ω", 0.01, 0.2, log_scale=True),
     ],
     "forward": [
-        ComponentBounds("inductance_primary", "H", 10e-6, 5e-3, log_scale=True),
-        ComponentBounds("turns_ratio", "", 0.1, 10.0, log_scale=True),
-        ComponentBounds("inductance_output", "H", 1e-6, 1e-3, log_scale=True),
-        ComponentBounds("capacitance", "F", 1e-6, 1e-2, log_scale=True),
-        ComponentBounds("esr", "Ω", 0.001, 0.5, log_scale=True),
-        ComponentBounds("r_dson", "Ω", 0.01, 0.5, log_scale=True),
+        ComponentBounds("inductance_primary", "H", 50e-6, 2e-3, log_scale=True),
+        ComponentBounds("turns_ratio", "", 1.0, 8.0, log_scale=True),  # Np/Ns; Vout=Vin/N*D, D<=0.45
+        ComponentBounds("inductance_output", "H", 5e-6, 500e-6, log_scale=True),
+        ComponentBounds("capacitance", "F", 10e-6, 1e-3, log_scale=True),
+        ComponentBounds("esr", "Ω", 0.005, 0.2, log_scale=True),
+        ComponentBounds("r_dson", "Ω", 0.01, 0.2, log_scale=True),
     ],
 }
 
