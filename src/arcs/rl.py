@@ -53,6 +53,7 @@ from arcs.templates import (
     get_topology,
 )
 from arcs.tokenizer import CircuitTokenizer, TokenType
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 logger = logging.getLogger(__name__)
 
@@ -280,8 +281,8 @@ class RLConfig:
     entropy_coeff: float = 0.01
     reward_baseline_decay: float = 0.99
     max_grad_norm: float = 0.5
-    temperature: float = 0.8
-    top_k: int = 50
+    temperature: float = DEFAULT_TEMPERATURE
+    top_k: int = DEFAULT_TOP_K
     max_gen_tokens: int = 64
     batch_size: int = 8
     n_steps: int = 5000

@@ -43,6 +43,7 @@ from arcs.simulate import (
 )
 from arcs.spice import NGSpiceRunner
 from arcs.templates import _TIER1_NAMES, _TIER2_NAMES
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 # ---------------------------------------------------------------------------
@@ -381,8 +382,8 @@ def generate_and_evaluate(
     tokenizer: CircuitTokenizer,
     device: torch.device,
     n_samples: int = 100,
-    temperature: float = 0.8,
-    top_k: int = 50,
+    temperature: float = DEFAULT_TEMPERATURE,
+    top_k: int = DEFAULT_TOP_K,
     conditioned: bool = True,
     simulate: bool = False,
     tier: int | None = None,

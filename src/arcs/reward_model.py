@@ -540,7 +540,7 @@ class RewardModelTrainer:
         # Optional embedding transfer
         if generator_checkpoint is not None:
             ckpt = torch.load(
-                generator_checkpoint, map_location=self.device, weights_only=True
+                generator_checkpoint, map_location=self.device, weights_only=False
             )
             state = ckpt.get("model_state_dict", ckpt)
             n_transferred = self.model.load_generator_embeddings(state)
@@ -726,7 +726,7 @@ class RewardModelTrainer:
     ) -> tuple["RewardModelTrainer", CircuitRewardModel]:
         """Load a trained reward model from checkpoint."""
         device = torch.device(device) if isinstance(device, str) else device
-        ckpt = torch.load(path, map_location=device, weights_only=True)
+        ckpt = torch.load(path, map_location=device, weights_only=False)
         config = RewardModelConfig.from_dict(ckpt["config"])
         trainer = cls(config, device=device)
         trainer.model.load_state_dict(ckpt["model_state_dict"])

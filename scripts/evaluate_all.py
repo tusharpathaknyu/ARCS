@@ -32,6 +32,7 @@ from arcs.valid_circuit_gen import (
     CircuitGraph, check_circuit_validity, TOPOLOGY_TO_IDX,
 )
 from arcs.flow_matching import ConstrainedFlowMatchingModel
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def evaluate_arcs_model(
@@ -83,8 +84,8 @@ def evaluate_arcs_model(
     results = generate_and_evaluate(
         model, tokenizer, device,
         n_samples=n_samples,
-        temperature=0.8,
-        top_k=50,
+        temperature=DEFAULT_TEMPERATURE,
+        top_k=DEFAULT_TOP_K,
         conditioned=True,
         simulate=True,
     )
