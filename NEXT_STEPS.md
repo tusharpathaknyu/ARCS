@@ -131,16 +131,18 @@ Data regeneration is in progress.
 
 ### Baseline → Expected Improvement
 
-| Topology | Old Yield | Fix Applied | Data Regen |
-|----------|-----------|-------------|------------|
-| flyback | 18% (901/5000) | Primary clamp diode, correct duty formula, 1000-period sim | In progress |
-| forward | 41% (2057/5000) | Tertiary reset winding, duty ≤45%, 1000-period sim | In progress |
-| sepic | 34% (1690/5000) | Tighter coupling cap bounds (1-22µF), 1000-period sim | In progress |
-| colpitts | 34% (687/2000) | 500-cycle min sim, IC=0.1 on C2, smaller Ce | In progress |
-| cascode | 87% (already fixed earlier) | Parameterized Q1 bias, tighter bounds | Done |
+| Topology | Old Yield | Fix Applied | New Yield | Status |
+|----------|-----------|-------------|-----------|--------|
+| flyback | 18% (901/5000) | Primary clamp diode, correct duty formula, 1000-period sim | TBD | Regen in progress |
+| forward | 41% (2057/5000) | Tertiary reset winding, duty ≤45%, 1000-period sim | TBD | Queued |
+| sepic | 34% (1690/5000) | Tighter coupling cap bounds (1-22µF), 1000-period sim | **50% (1000/2000)** ✅ | Done |
+| colpitts | 34% (687/2000) | 500-cycle min sim, IC=0.1 on C2, smaller Ce | TBD | Regen in progress |
+| cascode | 87% (1731/2000) | Parameterized Q1 bias, tighter bounds | TBD | Queued |
 
-Improving these templates should add ~3,000-5,000 more valid samples to
-the dataset, improving model performance on these topologies.
+**SEPIC confirmed**: +16% improvement (34% → 50%) in `data/combined_v2/sepic.jsonl`.
+Flyback and colpitts jobs are still running; forward and cascode are queued.
+New data is written to `data/combined_v2/` — use `--data data/combined_v2` for retraining
+(contains all 34 topologies with improved flyback/forward/sepic/colpitts/cascode once complete).
 
 ---
 
