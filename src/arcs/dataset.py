@@ -451,8 +451,7 @@ def create_dataloaders(
     )
 
     # pin_memory is not supported on MPS — detect and disable
-    import torch as _torch
-    _pin = not _torch.backends.mps.is_available()
+    _pin = not torch.backends.mps.is_available()
 
     train_loader = DataLoader(
         train_ds,
