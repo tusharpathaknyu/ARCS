@@ -75,10 +75,14 @@ The `import math` is at the top of the file, not inline.
 ## Future Improvements — All Fixed ✅
 
 ### 11. ✅ Shared Sampling Constants
-**Fixed**: commit `8fad89b`
+**Fixed**: commits `8fad89b`, `7cd264c`, `1f8d558`, `a24fa65`
 `DEFAULT_TEMPERATURE = 0.8` and `DEFAULT_TOP_K = 50` added to `src/arcs/__init__.py`.
-All three callers (`evaluate.py`, `rl.py` RLConfig default, `scripts/evaluate_all.py`)
-now import from there instead of hardcoding.
+Propagated to **all** callers across the codebase — 13 files updated in total:
+- **src/**: `evaluate.py`, `rl.py` (RLConfig default + argparse), `demo.py`
+- **scripts/**: `evaluate_all.py`, `evaluate_vcg.py`, `evaluate_ccfm.py`, `run_ablations.py`,
+  `compare_architectures.py`, `run_reward_model.py`, `run_ranking_comparison.py`,
+  `warm_start.py`, `run_bestofn.py`, `evaluate_topology_ablation.py`,
+  `run_topology_alpha_sweep.py`, `compare_constrained.py`
 
 ### 12. ✅ Evaluation Fairness — Unified SPICE Mode
 **Fixed**: commit `d3a5305`
@@ -96,6 +100,27 @@ PYTHONPATH=src python scripts/evaluate_vcg.py \
     --spice \
     --output results/vcg_v4_spice_eval.json
 ```
+
+---
+
+## Additional Code Quality Fixes (Session 3)
+
+### ✅ Missing OPERATING_CONDITIONS import in rl.py
+**Fixed**: commit `3f653e2`
+`OPERATING_CONDITIONS` was used in `sample_training_specs()`, `GRPOTrainer.train_step()`,
+and `ARCSRLTrainer.evaluate()` but was never imported from `arcs.templates`. This caused
+a `NameError` at runtime and made 11 unit tests fail. Added to the templates import block.
+
+### ✅ Inline stdlib imports moved to module level
+**Fixed**: commits `4e7c50e`, `8ad8230`, `4aaf47e`
+Four modules had stdlib imports (`math`, `time` ×2, `logging`, `import torch as _torch`)
+placed inside function bodies instead of at module level:
+- `hybrid_pipeline.py`: `import math` inside `_prepare_vcg_input()`
+- `spice.py`: `import time` twice inside `run()`
+- `flow_matching.py`: `import logging` + `import time` inside `train_ccfm()`
+- `dataset.py`: `import torch as _torch` inside `make_dataloaders()` (torch already imported)
+
+All moved to module level. Full test suite: **751/751 tests pass**.
 
 ---
 
