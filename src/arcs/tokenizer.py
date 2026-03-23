@@ -255,6 +255,21 @@ class CircuitTokenizer:
             raise ValueError(f"Token {token.name} is not a value token")
         return token.value
 
+    # Topology template name → token name mapping (abbreviations used in tokenizer)
+    _TOPO_NAME_TO_TOKEN: dict[str, str] = {
+        "sallen_key_lowpass": "TOPO_SALLEN_KEY_LP",
+        "sallen_key_highpass": "TOPO_SALLEN_KEY_HP",
+        "sallen_key_bandpass": "TOPO_SALLEN_KEY_BP",
+    }
+
+    def topology_to_token_name(self, topology: str) -> str:
+        """Convert a template topology name to the corresponding token name.
+
+        Handles special abbreviations (e.g., sallen_key_lowpass → TOPO_SALLEN_KEY_LP).
+        Falls back to TOPO_{NAME.upper()} for all other topologies.
+        """
+        return self._TOPO_NAME_TO_TOKEN.get(topology, f"TOPO_{topology.upper()}")
+
     def encode_component(self, component_type: str) -> int:
         """Get token ID for a component type."""
         key = f"COMP_{component_type.upper()}"

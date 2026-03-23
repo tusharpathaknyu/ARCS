@@ -96,13 +96,8 @@ def generate_circuit(
     # Build spec prefix
     prefix_ids = [tokenizer.start_id]
 
-    # Handle topology token naming
-    _topo_to_token = {
-        "sallen_key_lowpass": "TOPO_SALLEN_KEY_LP",
-        "sallen_key_highpass": "TOPO_SALLEN_KEY_HP",
-        "sallen_key_bandpass": "TOPO_SALLEN_KEY_BP",
-    }
-    topo_key = _topo_to_token.get(topology, f"TOPO_{topology.upper()}")
+    # Handle topology token naming (centralized in tokenizer)
+    topo_key = tokenizer.topology_to_token_name(topology)
 
     if topo_key in tokenizer.name_to_id:
         prefix_ids.append(tokenizer.name_to_id[topo_key])

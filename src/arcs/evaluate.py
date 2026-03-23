@@ -429,13 +429,7 @@ def generate_and_evaluate(
             topo, specs = test_specs[i % len(test_specs)]
             # Build prefix
             prefix_ids = [tokenizer.start_id]
-            topo_key = f"TOPO_{topo.upper()}"
-            # Tokenizer uses LP/HP/BP abbreviations for sallen_key variants.
-            # Derive token name from _TOPO_ALIASES (simulate.py) inverse mapping
-            # so there's a single source of truth for these aliases.
-            from arcs.simulate import _TOPO_ALIASES
-            _template_to_token = {v: f"TOPO_{k.upper()}" for k, v in _TOPO_ALIASES.items()}
-            topo_key = _template_to_token.get(topo, topo_key)
+            topo_key = tokenizer.topology_to_token_name(topo)
 
             if topo_key in tokenizer.name_to_id:
                 prefix_ids.append(tokenizer.name_to_id[topo_key])
