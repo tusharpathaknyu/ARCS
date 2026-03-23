@@ -95,7 +95,7 @@ At inference time, the user provides a specification (e.g., "buck converter, 12V
 | VCG (VAE) | 4.00M | Structurally valid one-shot graph generation |
 | CCFM (Flow Matching) | 7.66M | Spec-conditioned continuous generation via ODE |
 | Reward Model | ~663K | Proxy reward for fast candidate ranking |
-| Latent Reward Predictor | ~1.7M | Reward prediction in VCG's 64-dim latent space |
+| Latent Reward Predictor | ~148K | Reward prediction in VCG's 64-dim latent space |
 
 ### A Concrete Example: End-to-End in 74ms
 
@@ -909,9 +909,10 @@ The trade-off is speed: VCG generates in a single forward pass (~21ms), while CC
   |     |                                                     |
   |     |    v = FlowNet(z_t, t, spec_embed, topo_idx)        |
   |     |                                                     |
-  |     |    if t > 0.3:  (guidance kicks in)                 |
+  |     |    if t >= 0.2:  (guidance ramps in, t=0.2..0.5)     |
   |     |      g = constraint_gradient(z_t, topo_idx)         |
-  |     |      v = v + lambda * g                             |
+  |     |      ramp = min(1, (t-0.2)/0.3) * lambda            |
+  |     |      v = v + ramp * g                               |
   |     |                                                     |
   |     |    z_{t+dt} = z_t + dt * v                          |
   |     |                                                     |
@@ -943,7 +944,7 @@ The trade-off is speed: VCG generates in a single forward pass (~21ms), while CC
        ||
        || velocity field steers toward circuit structure
        vv
-  Time t=0.3  (Constraint guidance kicks in)
+  Time t=0.3  (Constraint guidance ramping in, strength ~33%)
   z = [0.4, -0.5, 0.2, 0.3, ...]      Decoded: recognizable components
        ||                                        but some violations
        || v = FlowNet(z) + lambda * constraint_grad(z)
@@ -1182,7 +1183,7 @@ GRPO solves this by computing advantages *within groups of the same topology*. F
   |                                                           |
   |  5. Policy gradient with KL penalty:                       |
   |     loss = -advantage * log_prob                           |
-  |         + kl_coeff * KL(policy || reference)               |
+  |         + kl_coeff * KL(reference || policy)                |
   |         - entropy_coeff * entropy                          |
   |                                                           |
   |  Key insight: Z-scoring within topology groups prevents    |
