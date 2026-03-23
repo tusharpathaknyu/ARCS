@@ -49,6 +49,7 @@ from arcs.simulate import (
 )
 from arcs.spice import NGSpiceRunner
 from arcs.templates import (
+    OPERATING_CONDITIONS,
     POWER_CONVERTER_BOUNDS,
     get_topology,
 )
