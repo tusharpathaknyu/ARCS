@@ -133,8 +133,8 @@ Reward Model           ✅ Good   663K params, proxy reward
 RL / GRPO              ✅ Good   3000 steps, reward 3.80
 Hybrid Pipeline        ✅ Good   94.1% sim valid, reward 6.59
 SPICE Simulation       ✅ Good   ngspice subprocess, temp cleanup
-Templates (34)         ⚠️ Fair   5 low-yield topologies
-Evaluation             ✅ Good   Comprehensive multi-model eval
+Templates (34)         ✅ Good   All 5 low-yield topologies fixed (e745a8f)
+Evaluation             ✅ Good   Comprehensive multi-model eval + unified SPICE mode
 ```
 
 ---
