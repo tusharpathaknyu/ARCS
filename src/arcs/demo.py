@@ -44,6 +44,7 @@ from arcs.simulate import (
 )
 from arcs.spice import NGSpiceRunner
 from arcs.templates import get_topology, _TIER2_NAMES
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 # ---------------------------------------------------------------------------
@@ -343,8 +344,8 @@ Examples:
                         help="Run SPICE simulation on generated circuits")
     parser.add_argument("--interactive", action="store_true",
                         help="Enter interactive mode")
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--json", action="store_true",
                         help="Output results as JSON")

@@ -507,8 +507,8 @@ def main():
                         help="Path to model checkpoint (.pt)")
     parser.add_argument("--n-samples", type=int, default=100,
                         help="Number of circuits to generate")
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-k", type=int, default=50)
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     parser.add_argument("--unconditioned", action="store_true",
                         help="Generate without spec conditioning")
     parser.add_argument("--simulate", action="store_true",
