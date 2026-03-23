@@ -52,7 +52,9 @@ Parameters: ~1.2M (flow network only, reuses VCG encoder/decoder ~4M)
 from __future__ import annotations
 
 import json
+import logging
 import math
+import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional, Tuple
@@ -835,8 +837,6 @@ def train_flow_matching(
     Returns:
         dict with training history
     """
-    import logging
-    import time
     from torch.utils.data import DataLoader
 
     logger = logging.getLogger(__name__)

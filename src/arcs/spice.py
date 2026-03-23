@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import time
 import os
 import re
 from pathlib import Path
@@ -53,8 +54,6 @@ class NGSpiceRunner:
         Returns:
             SimulationResult with metrics and status.
         """
-        import time
-
         # Write netlist to temp file
         netlist_path = os.path.join(self.temp_dir, f"arcs_sim_{os.getpid()}.cir")
         with open(netlist_path, "w") as f:
@@ -166,8 +165,6 @@ class NGSpiceRunner:
 
         with open(netlist_path, "w") as f:
             f.write(netlist)
-
-        import time
 
         start = time.time()
         try:
