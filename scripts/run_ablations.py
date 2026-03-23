@@ -35,6 +35,7 @@ import torch
 from arcs.model import ARCSModel, ARCSConfig
 from arcs.tokenizer import CircuitTokenizer
 from arcs.evaluate import generate_and_evaluate
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 ABLATION_CONFIGS = [
@@ -99,8 +100,8 @@ def run_ablation(
         tokenizer,
         device,
         n_samples=n_samples,
-        temperature=0.8,
-        top_k=50,
+        temperature=DEFAULT_TEMPERATURE,
+        top_k=DEFAULT_TOP_K,
         conditioned=config["conditioned"],
         simulate=True,
         tier=config["tier"],

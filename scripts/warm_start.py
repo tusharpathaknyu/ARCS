@@ -40,6 +40,7 @@ from arcs.baselines import (
 )
 from arcs.templates import get_topology
 from arcs.spice import NGSpiceRunner
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def _build_prefix(tokenizer, topology: str, specs: dict[str, float]) -> list[int]:
@@ -95,7 +96,7 @@ def generate_arcs_design(
                 prefix_tensor,
                 max_new_tokens=40,
                 temperature=temperature,
-                top_k=50,
+                top_k=DEFAULT_TOP_K,
             )
 
         all_ids = prefix + generated[0].tolist()
@@ -262,7 +263,7 @@ def main():
         t0 = time.time()
         arcs_params, arcs_reward = generate_arcs_design(
             model, tokenizer, topo, specs, device,
-            n_candidates=args.n_candidates, temperature=0.8,
+            n_candidates=args.n_candidates, temperature=DEFAULT_TEMPERATURE,
         )
         arcs_time = time.time() - t0
         print(f"  ARCS: reward={arcs_reward:.3f} ({arcs_time:.1f}s, {args.n_candidates} candidates)")

@@ -17,6 +17,7 @@ from arcs.model import ARCSConfig, ARCSModel
 from arcs.reward_model import RewardModelRanker, RewardModelTrainer
 from arcs.simulate import ALL_TEST_SPECS, compute_reward, simulate_decoded_circuit
 from arcs.tokenizer import CircuitTokenizer
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def run_ranking_for_generator(
@@ -51,7 +52,7 @@ def run_ranking_for_generator(
                     ranking_method="confidence",
                 )
                 result = gen.generate_n(
-                    topo, specs, n=n, temperature=0.8, top_k=50,
+                    topo, specs, n=n, temperature=DEFAULT_TEMPERATURE, top_k=DEFAULT_TOP_K,
                     device=device,
                 )
                 candidates = result.candidates

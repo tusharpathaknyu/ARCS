@@ -53,6 +53,7 @@ from arcs.simulate import (
     simulate_decoded_circuit,
 )
 from arcs.tokenizer import CircuitTokenizer
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 def train_reward_model(
@@ -212,7 +213,7 @@ def compare_ranking_methods(
                 ranking_method="confidence",
             )
             result = gen.generate_n(
-                topo, specs, n=n, temperature=0.8, top_k=50,
+                topo, specs, n=n, temperature=DEFAULT_TEMPERATURE, top_k=DEFAULT_TOP_K,
                 device=torch.device(device),
             )
             candidates = result.candidates

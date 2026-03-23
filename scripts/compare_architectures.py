@@ -24,6 +24,7 @@ import torch
 from arcs.model_enhanced import load_model
 from arcs.tokenizer import CircuitTokenizer
 from arcs.evaluate import generate_and_evaluate
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 
 MODEL_CONFIGS = [
@@ -78,8 +79,8 @@ def run_model_eval(
         tokenizer,
         device,
         n_samples=n_samples,
-        temperature=0.8,
-        top_k=50,
+        temperature=DEFAULT_TEMPERATURE,
+        top_k=DEFAULT_TOP_K,
         conditioned=True,
         simulate=True,
     )
