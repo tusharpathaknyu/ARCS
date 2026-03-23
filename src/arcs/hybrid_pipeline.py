@@ -29,6 +29,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -178,7 +179,6 @@ def _prepare_vcg_input(
         _ALL_BOUNDS, NODE_TYPE_TO_IDX, TOPOLOGY_TO_IDX,
         TOPOLOGY_ADJACENCY, LOG_VAL_MIN, LOG_VAL_MAX,
     )
-    import math
 
     N = config.max_nodes
     S = config.max_specs
