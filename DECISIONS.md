@@ -1,6 +1,6 @@
 # ARCS: Decision Log & Progress Tracker
 
-> Last updated: 2026-03-16
+> Last updated: 2026-03-23
 
 ---
 
@@ -1036,3 +1036,19 @@ Three topologies fail on graph connectivity only:
 - Deduplicated `components_to_params` and `spec_to_cond` mapping from rl.py (was Tier-1 only, now uses comprehensive simulate.py version covering all 34 topologies)
 - Added `logging.getLogger(__name__)` to 4 modules: bestofn, dataset, reward_model, valid_circuit_gen
 - Net code reduction: -113 lines from rl.py deduplication
+
+### Decision 17.9: Comprehensive Sampling Constant Propagation + Bug Fixes (2026-03-23)
+- **Problem 1**: `DEFAULT_TEMPERATURE` and `DEFAULT_TOP_K` constants were added to `arcs/__init__.py`
+  in Decision 17.8 but only 3 of 17+ call sites were updated; the rest still hardcoded 0.8/50.
+- **Solution**: Propagated constants to all remaining call sites — 13 scripts and 3 src modules
+  (evaluate.py argparse, rl.py argparse, demo.py import + argparse). train_v2.py excluded (deprecated,
+  uses `circuitgenie` package with intentionally different `top_k=20`).
+- **Problem 2**: `OPERATING_CONDITIONS` was used in 5 places inside `rl.py` but was never imported
+  from `arcs.templates`. This caused a `NameError` at runtime, silently breaking RL training and
+  failing 11/11 test_rl.py tests.
+- **Solution**: Added `OPERATING_CONDITIONS` to the `arcs.templates` import in `rl.py` (commit `3f653e2`).
+- **Problem 3**: Four modules had stdlib imports (`math`, `time`, `logging`, `torch`) placed inside
+  function bodies instead of at the module level.
+- **Solution**: Moved all to module level: `hybrid_pipeline.py` (math), `spice.py` (time ×2),
+  `flow_matching.py` (logging + time), `dataset.py` (redundant torch alias removed).
+- **Test suite**: **751/751 tests pass** after all fixes.
