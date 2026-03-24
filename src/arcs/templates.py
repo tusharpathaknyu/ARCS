@@ -447,8 +447,8 @@ def _flyback_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 1000 * period       # longer: transformer needs more cycles to reach steady state
-    meas_start = 800 * period
+    sim_time = 300 * period        # transformer with IC set reaches steady state by cycle 200
+    meas_start = 200 * period
     tstep = period / 200           # finer step for spike capture
 
     return f"""\
@@ -530,9 +530,9 @@ def _forward_netlist(params: dict[str, float], conditions: dict[str, float]) -> 
 
     period = 1.0 / fsw
     ton = duty * period
-    sim_time = 1000 * period
-    meas_start = 800 * period
-    tstep = period / 100
+    sim_time = 100 * period      # 100 cycles (3-winding transformer is expensive to simulate)
+    meas_start = 60 * period     # steady-state from cycle 60 (IC on C1 = vout_target)
+    tstep = period / 50          # coarser timestep for 3-winding mutual inductance
 
     return f"""\
 * ARCS Forward Converter (with tertiary reset winding)
