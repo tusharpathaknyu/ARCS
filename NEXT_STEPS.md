@@ -131,18 +131,16 @@ Data regeneration is in progress.
 
 ### Baseline → Expected Improvement
 
-| Topology | Old Yield | Fix Applied | New Yield | Status |
-|----------|-----------|-------------|-----------|--------|
-| flyback | 18% (901/5000) | Primary clamp diode, correct duty formula, 1000-period sim | TBD | Regen in progress |
-| forward | 41% (2057/5000) | Tertiary reset winding, duty ≤45%, 1000-period sim | TBD | Queued |
-| sepic | 34% (1690/5000) | Tighter coupling cap bounds (1-22µF), 1000-period sim | **50% (1000/2000)** ✅ | Done |
-| colpitts | 34% (687/2000) | 500-cycle min sim, IC=0.1 on C2, smaller Ce | TBD | Regen in progress |
-| cascode | 87% (1731/2000) | Parameterized Q1 bias, tighter bounds | TBD | Queued |
+| Topology | Old Yield | Fix Applied | New Yield | Delta |
+|----------|-----------|-------------|-----------|-------|
+| flyback | 18% (901/5000) | Primary clamp diode, correct duty, 300-period sim | **55.2% (2760/5000)** | +37.2% ✅ |
+| forward | 41% (2057/5000) | Tertiary reset winding, duty ≤45%, 100-period sim | In progress | — |
+| sepic | 34% (1690/5000) | Tighter coupling cap bounds (1-22µF) | **50.0% (1000/2000)** | +16.2% ✅ |
+| colpitts | 34% (687/2000) | 200-cycle sim, IC=0.1, 50ms cap, 50k-step cap | **38.5% (770/2000)** | +4.1% ✅ |
+| cascode | 87% (1731/2000) | Parameterized Q1 bias, tighter bounds | **95.5% (1911/2000)** | +8.9% ✅ |
 
-**SEPIC confirmed**: +16% improvement (34% → 50%) in `data/combined_v2/sepic.jsonl`.
-Flyback and colpitts jobs are still running; forward and cascode are queued.
-New data is written to `data/combined_v2/` — use `--data data/combined_v2` for retraining
-(contains all 34 topologies with improved flyback/forward/sepic/colpitts/cascode once complete).
+**Total new valid samples gained**: ~2,803 additional valid samples across 4 completed topologies.
+VCG v5 training started on `data/combined_v2/` (63,180 valid samples across 34 topologies).
 
 ---
 
