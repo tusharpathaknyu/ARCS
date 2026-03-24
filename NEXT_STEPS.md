@@ -140,7 +140,7 @@ Data regeneration is in progress.
 | cascode | 87% (1731/2000) | Parameterized Q1 bias, tighter bounds | **95.5% (1911/2000)** | +8.9% ✅ |
 
 **Total new valid samples gained**: ~2,803 additional valid samples across 4 completed topologies.
-VCG v5 training started on `data/combined_v2/` (63,180 valid samples across 34 topologies).
+All v5 models trained on `data/combined_v2/` (63,180 valid samples across 34 topologies).
 
 ---
 
@@ -149,30 +149,31 @@ VCG v5 training started on `data/combined_v2/` (63,180 valid samples across 34 t
 ```
 Component              Status    Notes
 ─────────────────────  ────────  ────────────────────────────
-Data Pipeline          ✅ Good   61,760 valid / 89,000 total
+Data Pipeline          ✅ Good   63,180 valid / 86,000 total (v2 improved)
 Tokenizer              ✅ Good   706 tokens, clean mapping
 ARCS Graph Transformer ✅ Good   6.84M params, 88% struct
-VCG (VAE)              ✅ Good   4.0M params, 100% struct
-CCFM (Flow Matching)   ✅ Good   7.66M params, 100% struct
-Reward Model           ✅ Good   663K params, proxy reward
+VCG v5 (VAE)           ✅ Good   4.0M params, 100% struct, val_loss=0.834
+CCFM v5 (Flow Match)   ✅ Good   7.66M params, 100% struct, val_loss=0.094
+Latent Reward v5       ✅ Good   148K params, val_loss=0.251, corr=0.94
 RL / GRPO              ✅ Good   3000 steps, reward 3.80
-Hybrid Pipeline        ✅ Good   94.1% sim valid, reward 6.59
+Hybrid v5 Pipeline     ✅ Good   94.1% sim valid, reward 6.37
 SPICE Simulation       ✅ Good   ngspice subprocess, temp cleanup
-Templates (34)         ✅ Good   All 5 low-yield topologies fixed (e745a8f)
+Templates (34)         ✅ Good   4/5 low-yield topologies fixed + sim optimized
 Evaluation             ✅ Good   Comprehensive multi-model eval + unified SPICE mode
 ```
 
 ---
 
-## Training Results (Current v3/v4 Models)
+## Training Results
 
 | Model | Params | Struct% | SimOK% | SimValid% | Reward |
 |-------|--------|---------|--------|-----------|--------|
 | ARCS-SL v3 | 6.84M | 88.0% | 75.0% | 47.0% | 3.77 |
 | ARCS-GRPO v2 | 6.84M | 90.0% | 73.0% | 43.0% | 3.80 |
-| VCG v4 | 4.0M | 100.0% | — | — | — |
-| CCFM v4 | 7.66M | 100.0% | — | — | — |
+| VCG v5 | 4.0M | 100.0% | — | — | — |
+| CCFM v5 | 7.66M | 100.0% | — | — | — |
+| **Hybrid v5** | — | **100.0%** | **97.1%** | **94.1%** | **6.37** |
 
 ---
 
-*Last updated: 2026-03-23*
+*Last updated: 2026-03-24*
