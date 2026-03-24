@@ -987,8 +987,8 @@ def _colpitts_netlist(params: dict[str, float], conditions: dict[str, float]) ->
     Cseries = C1 * C2 / (C1 + C2)
     f_osc = 1.0 / (2 * np.pi * (L * Cseries) ** 0.5)
 
-    # Need at least 500 cycles to confirm sustained oscillation; min 5ms
-    sim_time = max(500 / f_osc, 5e-3)
+    # Need enough cycles to confirm oscillation; min 5ms, cap 50ms for speed
+    sim_time = min(max(500 / f_osc, 5e-3), 50e-3)
     # Measure last 30% of sim (after transient startup)
     meas_start = 0.7 * sim_time
     # Step size: at least 200 points per oscillation period
