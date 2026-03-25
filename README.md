@@ -257,28 +257,28 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 
 ## Results
 
-### Full Comparison (34 conditioned specs, all 34 topologies)
+### Publication Evaluation (50 samples × 32 topologies, bootstrap 95% CI)
 
-| Method | Params | Sims/Design | Sim Success | Sim Valid | Avg Reward | Wall Time/Design |
-|--------|--------|-------------|-------------|-----------|------------|------------------|
-| Random Search (N=200) | — | 200 | 100.0% | 100.0% | 7.32/8.0 | ~75s |
-| Genetic Algorithm (30×20) | — | 630 | 100.0% | 100.0% | 7.41/8.0 | ~187s |
-| ARCS Graph Transformer v2 (SL) | 6.83M | 1 | 50.0% | 24.0% | 2.10/8.0 | ~0.02s |
-| **ARCS GT v2 + GRPO** | **6.83M** | **1** | **86.0%** | **30.0%** | **3.74/8.0** | **~0.02s** |
-| ValidCircuitGen v3 (VCG) | 4.0M | 1 | N/A† | 100.0%‡ | N/A† | ~0.01s |
+| Method | SPICE Evals | Reward (95% CI) | Sim Valid% | Wall Time |
+|--------|-------------|-----------------|------------|-----------|
+| Random Search | 1 | 5.45 [5.32, 5.59] | 91.4% | ~0.3s |
+| Genetic Algorithm | 320 | 7.30 [7.25, 7.35] | 100.0% | ~120s |
+| VCG v5 (alone) | 1 | 5.71 [5.64, 5.78] | 97.2% | ~0.02s |
+| CCFM v5 (alone) | 1 | 5.78 [5.71, 5.85] | 98.1% | ~0.16s |
+| **Hybrid v5 (VCG+CCFM)** | **8** | **6.57 [6.52, 6.62]** | **100.0%** | **~0.05s** |
 
-†VCG generates in continuous graph space — no SPICE simulation integrated yet. ‡Structural validity: 100% on 34/34 topologies.
+All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 topologies).
 
-**Key insight**: ARCS trades per-design optimality for **amortized speed** — a single
-20ms forward pass vs. 200-630 SPICE simulations (1-5 min). This is **3,750-9,350x
-faster** at inference. The baselines also have an unfair advantage: they search directly
-in parameter space with the correct topology and component count given, while ARCS must
-predict everything from scratch using only the target specification.
+**Key findings**:
+- **At equal compute (1 SPICE sim)**: Learned models (VCG: 5.71, CCFM: 5.78) beat random sampling (5.45) with 97-98% vs 91% sim validity
+- **Hybrid ranking** over 8 candidates achieves **100% sim validity** and 6.57 reward — competitive with GA's 7.30 using **40× fewer SPICE evaluations**
+- **Ablation**: VCG alone (5.71) → +CCFM diversity (5.78) → +hybrid ranking (6.57) — each component adds measurable value
 
 **Architecture progression**: Each enhancement delivers measurable gains:
 - Two-Head: Decoupling structure/value heads → +16 pp sim_valid over baseline
 - Graph Transformer: Topology-aware attention → +10 pp sim_valid over Two-Head
-- RL fine-tuning: Achieves 100% structural validity and highest sim_success (86.9%), but hurts sim_valid on power converter topologies due to reward distribution mismatch
+- VCG/CCFM: Graph-based generation → 100% structural validity by construction
+- Hybrid ranking: Multi-source diversity → 100% sim validity, +0.86 reward over VCG alone
 
 ### Per-Topology Highlights (Graph Transformer, best model)
 

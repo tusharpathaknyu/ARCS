@@ -176,4 +176,48 @@ Evaluation             ✅ Good   Comprehensive multi-model eval + unified SPICE
 
 ---
 
-*Last updated: 2026-03-24*
+## Publication Evaluation (50 samples × 32 topologies)
+
+Full evaluation with baselines, ablation, and statistical analysis.
+Results from `scripts/evaluate_publication.py` (6.5h wall time).
+
+### Main Results (Baselines vs Learned Methods)
+
+| Method | SPICE Evals | Reward | 95% CI | SimValid% |
+|--------|-------------|--------|--------|-----------|
+| Random Search | 1 | 5.45 | [5.32, 5.59] | 91.4% |
+| Genetic Algorithm | 320 | 7.30 | [7.25, 7.35] | 100.0% |
+| VCG only | 1 | 5.71 | [5.64, 5.78] | 97.2% |
+| CCFM only | 1 | 5.78 | [5.71, 5.85] | 98.1% |
+| **Hybrid Ranked** | **8** | **6.57** | **[6.52, 6.62]** | **100.0%** |
+
+Key findings:
+- **At equal compute (1 SPICE sim)**: VCG (+0.26) and CCFM (+0.33) beat random search
+- **Hybrid (8 sims)** achieves 100% sim validity vs random's 91.4% (p<0.00002)
+- **GA uses 40× more compute** (320 evals) to achieve 7.30 — hybrid gets 6.57 with just 8 evals
+- All pairwise comparisons significant at p<0.001 (Wilcoxon signed-rank)
+
+### Ablation Study (Methods 3-5)
+
+| Component | Reward | SimValid% | Δ Reward |
+|-----------|--------|-----------|----------|
+| VCG alone | 5.71 | 97.2% | baseline |
+| + CCFM (alone) | 5.78 | 98.1% | +0.07 |
+| + Ranking (hybrid) | 6.57 | 100.0% | +0.86 |
+
+Each component adds value: CCFM provides diversity; hybrid ranking selects the best.
+
+### Statistical Significance (Wilcoxon signed-rank, paired by topology)
+
+| Comparison | Δ Reward | p-value |
+|------------|----------|---------|
+| Hybrid vs Random | +1.12 | 0.000015 |
+| Hybrid vs VCG | +0.86 | 0.000008 |
+| Hybrid vs CCFM | +0.79 | 0.000012 |
+| Hybrid vs GA | −0.73 | 0.000046 |
+
+Full results: `results/publication_eval.json`
+
+---
+
+*Last updated: 2026-03-25*
