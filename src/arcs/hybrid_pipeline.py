@@ -124,6 +124,7 @@ def vcg_graph_to_spice(
     graph: CircuitGraph,
     runner: NGSpiceRunner,
     tokenizer: Optional[CircuitTokenizer] = None,
+    target_specs: Optional[dict[str, float]] = None,
 ) -> tuple[DecodedCircuit, SimulationOutcome, float]:
     """Convert a VCG/CCFM CircuitGraph to SPICE simulation results.
 
@@ -133,6 +134,7 @@ def vcg_graph_to_spice(
         graph: Generated circuit graph
         runner: ngspice runner instance
         tokenizer: CircuitTokenizer (created if not provided)
+        target_specs: Optional target specs for spec-aware reward
 
     Returns:
         decoded: DecodedCircuit with topology, components, etc.
@@ -149,7 +151,7 @@ def vcg_graph_to_spice(
     # Simulate
     if decoded.valid_structure:
         outcome = simulate_decoded_circuit(decoded, runner)
-        reward = compute_reward(decoded, outcome)
+        reward = compute_reward(decoded, outcome, target_specs=target_specs)
     else:
         outcome = SimulationOutcome(
             success=False,
@@ -320,7 +322,9 @@ class HybridGenerator:
 
         return float(score)
 
-    def _simulate_candidate(self, candidate: GeneratedCircuit) -> GeneratedCircuit:
+    def _simulate_candidate(
+        self, candidate: GeneratedCircuit, target_specs: Optional[dict[str, float]] = None,
+    ) -> GeneratedCircuit:
         """Simulate candidate in-place (if not simulated yet) and return it."""
         if candidate.outcome is not None:
             return candidate
@@ -328,7 +332,8 @@ class HybridGenerator:
             return candidate
 
         decoded, outcome, reward = vcg_graph_to_spice(
-            candidate.graph, self.runner, self.tokenizer
+            candidate.graph, self.runner, self.tokenizer,
+            target_specs=target_specs,
         )
         candidate.decoded = decoded
         candidate.outcome = outcome
@@ -378,7 +383,8 @@ class HybridGenerator:
                     n_repaired += 1
             if simulate:
                 decoded, outcome, reward = vcg_graph_to_spice(
-                    graph, self.runner, self.tokenizer
+                    graph, self.runner, self.tokenizer,
+                    target_specs=specs,
                 )
             else:
                 token_ids = graph_to_token_sequence(graph, self.tokenizer)
@@ -473,7 +479,8 @@ class HybridGenerator:
                     n_repaired += 1
             if simulate:
                 decoded, outcome, reward = vcg_graph_to_spice(
-                    graph, self.runner, self.tokenizer
+                    graph, self.runner, self.tokenizer,
+                    target_specs=specs,
                 )
             else:
                 token_ids = graph_to_token_sequence(graph, self.tokenizer)
@@ -556,7 +563,7 @@ class HybridGenerator:
 
             all_candidates.sort(key=lambda c: c.reward, reverse=True)
             shortlisted = all_candidates[: pre_rank_top_k]
-            all_candidates = [self._simulate_candidate(c) for c in shortlisted]
+            all_candidates = [self._simulate_candidate(c, target_specs=specs) for c in shortlisted]
 
         # Rank by (true) reward
         all_candidates.sort(key=lambda c: c.reward, reverse=True)

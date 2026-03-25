@@ -147,7 +147,7 @@ def _simulate_params(
     elif topology in _MIRROR_TOPOS:
         reward += _current_mirror_reward(outcome)
     else:
-        reward += _signal_reward(outcome, topology)
+        reward += _signal_reward(outcome, topology, specs)
 
     return outcome, reward
 

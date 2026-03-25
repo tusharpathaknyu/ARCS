@@ -127,7 +127,7 @@ class TestHybridGenerator:
 
         simulated_ids = []
 
-        def _fake_simulate(candidate):
+        def _fake_simulate(candidate, target_specs=None):
             simulated_ids.append(id(candidate))
             candidate.reward = candidate.gen_time_ms
             return candidate

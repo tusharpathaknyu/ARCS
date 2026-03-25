@@ -510,7 +510,7 @@ def compute_reward(
     elif topology in _MIRROR_TOPOS:
         reward += _current_mirror_reward(outcome)
     else:
-        reward += _signal_reward(outcome, topology)
+        reward += _signal_reward(outcome, topology, target_specs)
 
     return reward
 
@@ -541,15 +541,20 @@ def _power_reward(
 def _signal_reward(
     outcome: SimulationOutcome,
     topology: str,
+    target_specs: dict[str, float] | None = None,
 ) -> float:
     """Signal circuit reward based on domain (max 6.0).
 
-    Amplifiers: reasonable gain + valid measurement
-    Filters:    gain + bandwidth detection
-    Oscillators: oscillation amplitude
+    Spec-aware: when target_specs provides target values, reward accuracy
+    of gain, cutoff frequency, or oscillation frequency against those targets.
+
+    Amplifiers: gain existence (3.0) + gain accuracy vs target (2.0) + bandwidth (1.0)
+    Filters:    gain exists (2.0) + cutoff accuracy vs target (3.0) + passband gain (1.0)
+    Oscillators: oscillation detected (3.0) + amplitude (2.0) + freq accuracy vs target (1.0)
     """
     reward = 0.0
     m = outcome.metrics
+    specs = target_specs or {}
 
     amp_types = {"inverting_amp", "noninverting_amp", "instrumentation_amp", "differential_amp",
                   "common_emitter", "common_collector", "common_base", "cascode",
@@ -569,14 +574,26 @@ def _signal_reward(
         gain_db = m.get("gain_db", m.get("gain_dc"))
         if gain_db is not None and abs(gain_db) <= 120:
             reward += 3.0
-            # Gain magnitude bonus — topology-aware sign check:
-            # Inverting amps should have negative gain, others positive.
-            # Only reward gain in the correct direction.
-            if topology in _inverting_topos:
-                effective_gain = abs(gain_db) if gain_db < 0 else 0.0
+
+            # Gain accuracy vs target spec → up to 2.0
+            target_gain = specs.get("gain")
+            if target_gain is not None:
+                # For inverting amps, compare absolute values
+                if topology in _inverting_topos:
+                    actual = abs(gain_db) if gain_db < 0 else 0.0
+                else:
+                    actual = gain_db if gain_db > 0 else 0.0
+                gain_error = abs(actual - abs(target_gain))
+                # Full 2.0 at 0 error, 0 at ≥20 dB error
+                reward += 2.0 * max(0.0, 1.0 - gain_error / 20.0)
             else:
-                effective_gain = gain_db if gain_db > 0 else 0.0
-            reward += min(2.0, effective_gain / 30.0)
+                # Fallback: reward gain magnitude (old behavior)
+                if topology in _inverting_topos:
+                    effective_gain = abs(gain_db) if gain_db < 0 else 0.0
+                else:
+                    effective_gain = gain_db if gain_db > 0 else 0.0
+                reward += min(2.0, effective_gain / 30.0)
+
             # Has bandwidth measurement → +1.0
             if m.get("bw_3db") is not None and m["bw_3db"] > 0:
                 reward += 1.0
@@ -586,28 +603,39 @@ def _signal_reward(
         gain_dc = m.get("gain_dc")
         if gain_dc is not None:
             reward += 2.0
-        # Has bandwidth / cutoff detected → 3.0
+
+        # Cutoff accuracy vs target → up to 3.0
         bw = m.get("bw_3db")
-        if bw is not None and bw > 0:
+        target_cutoff = specs.get("cutoff_freq")
+        if bw is not None and bw > 0 and target_cutoff is not None and target_cutoff > 0:
+            # Relative error: full 3.0 at 0% error, 0 at ≥100% error
+            cutoff_error = abs(bw - target_cutoff) / target_cutoff
+            reward += 3.0 * max(0.0, 1.0 - cutoff_error)
+        elif bw is not None and bw > 0:
+            # Fallback: bandwidth detected → flat 3.0 (old behavior)
             reward += 3.0
-        # Reasonable passband gain (not too much attenuation, not unstable) → 1.0
-        # Upper bound at +20 dB prevents rewarding unstable/oscillating filters
+
+        # Reasonable passband gain → 1.0
         if gain_dc is not None and -6 < gain_dc < 20:
             reward += 1.0
 
     elif topology in osc_types:
         # Oscillation detected → 3.0
-        # Threshold at 100mV to avoid noise-floor false positives
         vosc = m.get("vosc_pp", 0)
         if vosc >= 0.1:
             reward += 3.0
         # Reasonable amplitude (0.1-20V peak-to-peak) → 2.0
         if 0.1 <= vosc <= 20:
             reward += 2.0
-        # Frequency detected → 1.0
-        # Check both f_peak and f_osc (different templates use different names)
+
+        # Frequency accuracy vs target → up to 1.0
         freq = m.get("f_peak", m.get("f_osc", m.get("frequency")))
-        if freq is not None and freq > 0:
+        target_freq = specs.get("cutoff_freq")  # reused as target_freq
+        if freq is not None and freq > 0 and target_freq is not None and target_freq > 0:
+            freq_error = abs(freq - target_freq) / target_freq
+            reward += 1.0 * max(0.0, 1.0 - freq_error)
+        elif freq is not None and freq > 0:
+            # Fallback: frequency detected → flat 1.0 (old behavior)
             reward += 1.0
 
     return reward
@@ -707,29 +735,41 @@ TIER1_TEST_SPECS = [
 ]
 
 # Tier 2 test specs (signal circuits)
+# Amplifier specs include target gain (dB); filters include target cutoff (Hz);
+# oscillators include target frequency via cutoff_freq (Hz).
 TIER2_TEST_SPECS = [
-    ("inverting_amp", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("noninverting_amp", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("instrumentation_amp", {"vin": 0.01, "cutoff_freq": 1000}),
-    ("differential_amp", {"vin": 0.1, "cutoff_freq": 1000}),
+    # Opamp amplifiers — target 20 dB gain
+    ("inverting_amp", {"vin": 0.1, "cutoff_freq": 1000, "gain": 20.0}),
+    ("noninverting_amp", {"vin": 0.1, "cutoff_freq": 1000, "gain": 20.0}),
+    ("instrumentation_amp", {"vin": 0.01, "cutoff_freq": 1000, "gain": 40.0}),
+    ("differential_amp", {"vin": 0.1, "cutoff_freq": 1000, "gain": 20.0}),
+    # Filters — target 1 kHz cutoff
     ("sallen_key_lowpass", {"cutoff_freq": 1000}),
     ("sallen_key_highpass", {"cutoff_freq": 1000}),
     ("sallen_key_bandpass", {"cutoff_freq": 1000}),
-    ("wien_bridge", {}),
-    ("colpitts", {"vin": 12.0}),
-    ("common_emitter", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("common_collector", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("common_base", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("cascode", {"vin": 0.1, "cutoff_freq": 1000}),
+    # Oscillators — target 10 kHz oscillation frequency
+    ("wien_bridge", {"cutoff_freq": 10000}),
+    ("colpitts", {"vin": 12.0, "cutoff_freq": 10000}),
+    # BJT amplifiers — target 15 dB gain
+    ("common_emitter", {"vin": 0.1, "cutoff_freq": 1000, "gain": 15.0}),
+    ("common_collector", {"vin": 0.1, "cutoff_freq": 1000, "gain": 0.0}),
+    ("common_base", {"vin": 0.1, "cutoff_freq": 1000, "gain": 15.0}),
+    ("cascode", {"vin": 0.1, "cutoff_freq": 1000, "gain": 20.0}),
+    # Current mirror — ratio spec (no gain/freq target)
     ("current_mirror", {"vin": 12.0}),
+    # Notch/state-variable filters — target 1 kHz
     ("twin_t_notch", {"cutoff_freq": 1000}),
     ("state_variable_filter", {"cutoff_freq": 1000}),
-    ("hartley", {"vin": 12.0}),
-    ("phase_shift", {}),
+    # Oscillators — target 10 kHz
+    ("hartley", {"vin": 12.0, "cutoff_freq": 10000}),
+    ("phase_shift", {"cutoff_freq": 10000}),
+    # Regulators
     ("shunt_regulator", {"vin": 12.0}),
     ("series_regulator", {"vin": 12.0}),
-    ("inverting_summing_amp", {"vin": 0.1, "cutoff_freq": 1000}),
-    ("transimpedance_amp", {"cutoff_freq": 1000}),
+    # More amplifiers — target 20 dB
+    ("inverting_summing_amp", {"vin": 0.1, "cutoff_freq": 1000, "gain": 20.0}),
+    ("transimpedance_amp", {"cutoff_freq": 1000, "gain": 20.0}),
+    # Extended power topologies
     ("half_bridge", {"vin": 48.0, "vout": 24.0, "iout": 2.0, "fsw": 100000}),
     ("push_pull", {"vin": 48.0, "vout": 12.0, "iout": 2.0, "fsw": 100000}),
     ("charge_pump", {"vin": 5.0, "vout": 10.0, "iout": 0.1, "fsw": 100000}),
