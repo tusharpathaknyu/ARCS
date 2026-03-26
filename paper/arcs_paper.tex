@@ -873,9 +873,9 @@ highest-reward candidate per topology and reaches 100\% sim-validity.}
 \toprule
 Method & Struct & SimSuccess & SimValid & Reward \\
 \midrule
-VCG-only    & 100\% & 95.6\% & 94.0\% & 5.28 \\
-CCFM-only   & 100\% & 97.1\% & 95.7\% & 5.42 \\
-\textbf{Hybrid (VCG+CCFM)} & \textbf{100\%} & \textbf{97.1\%} & \textbf{99.9\%} & \textbf{6.33} \\
+VCG-only    & 100\% & 95.6\% & 85.3\% & 5.53 \\
+CCFM-only   & 100\% & 97.1\% & 85.3\% & 5.50 \\
+\textbf{Hybrid (VCG+CCFM)} & \textbf{100\%} & \textbf{97.1\%} & \textbf{94.1\%} & \textbf{6.37} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -883,8 +883,8 @@ CCFM-only   & 100\% & 97.1\% & 95.7\% & 5.42 \\
 Table~\ref{tab:hybrid} shows that multi-source ranking is strongly
 complementary: each source occasionally dominates on different
 topologies, and selecting by SPICE reward closes the remaining
-sim-validity gap while improving average reward by +1.05 over VCG-only
-and +0.91 over CCFM-only.
+sim-validity gap while improving average reward by +0.84 over VCG-only
+and +0.87 over CCFM-only.
 
 \subsection{Statistical Evaluation with Baselines}
 

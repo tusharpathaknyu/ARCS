@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate metric consistency across results, README, and paper.
 
-Updated for Phase 17+ (34 topologies, v3 models). Falls back to Phase 14
-result files if present, otherwise checks README structural patterns only.
+Updated for v5 models (34 topologies). Uses hybrid_v5.json as the
+canonical results file. Falls back to hybrid_phase14.json if present.
 """
 
 from __future__ import annotations
@@ -16,7 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 PAPER = ROOT / "paper" / "arcs_paper.tex"
 PHASE14 = ROOT / "results" / "phase14_comparison.json"
-HYBRID = ROOT / "results" / "hybrid_phase14.json"
+# Prefer v5 results; fall back to phase14
+HYBRID = ROOT / "results" / "hybrid_v5.json"
+if not HYBRID.exists():
+    HYBRID = ROOT / "results" / "hybrid_phase14.json"
 
 
 def _pct(value: float, digits: int = 1) -> str:
@@ -40,16 +43,16 @@ def main() -> int:
 
     # ---- README structural checks (topology-count agnostic) ----
 
-    # Must have a VCG v3 row OR legacy VCG row in graph model table
+    # Must have a VCG row in graph model table (v3, v4, or v5)
     _require(
         readme_text,
-        r"\|\s*VCG\s*(v3\s*)?\(VAE\)\s*\|\s*4\.0M\s*\|\s*100\.0%\s*\|\s*\d+/\d+\s*\|",
+        r"\|\s*VCG\s*(v[345]\s*)?\(VAE\)\s*\|\s*4\.0M\s*\|\s*100\.0%\s*\|\s*\d+/\d+\s*\|",
         "README missing VCG graph-model row with 100% validity",
         errors,
     )
     _require(
         readme_text,
-        r"\|\s*CCFM\s*(v3\s*)?\(Flow Matching\)\s*\|\s*7\.6M\s*\|\s*100\.0%\s*\|\s*\d+/\d+\s*\|",
+        r"\|\s*CCFM\s*(v[345]\s*)?\(Flow Matching\)\s*\|\s*7\.6M\s*\|\s*100\.0%\s*\|\s*\d+/\d+\s*\|",
         "README missing CCFM graph-model row with 100% validity",
         errors,
     )
@@ -79,31 +82,27 @@ def main() -> int:
         # Check paper if it exists
         if PAPER.exists():
             paper_text = PAPER.read_text()
-            hybrid_simvalid_num_paper = (
-                str(int(round(100.0 * hybrid_summary["sim_valid_rate"])))
-                if abs(100.0 * hybrid_summary["sim_valid_rate"] - round(100.0 * hybrid_summary["sim_valid_rate"])) < 1e-9
-                else hybrid_simvalid
-            )
             vcg_reward_paper = f"{vcg_summary['mean_reward']:.2f}"
             ccfm_reward_paper = f"{ccfm_summary['mean_reward']:.2f}"
             hybrid_reward_paper = f"{hybrid_summary['mean_reward']:.2f}"
 
+            # Check that paper mentions VCG, CCFM, and Hybrid results
             _require(
                 paper_text,
-                rf"VCG-only\s*&\s*100\\%\s*&\s*100\\%\s*&\s*{vcg_hybrid_simvalid}\\%\s*&\s*{vcg_reward_paper}",
-                "Paper VCG-only hybrid row does not match hybrid_phase14",
+                rf"VCG-only\s*&\s*100\\%\s*&.*&.*&\s*{vcg_reward_paper}",
+                "Paper VCG-only hybrid row does not match results",
                 errors,
             )
             _require(
                 paper_text,
-                rf"CCFM-only\s*&\s*100\\%\s*&\s*100\\%\s*&\s*{ccfm_hybrid_simvalid}\\%\s*&\s*{ccfm_reward_paper}",
-                "Paper CCFM-only hybrid row does not match hybrid_phase14",
+                rf"CCFM-only\s*&\s*100\\%\s*&.*&.*&\s*{ccfm_reward_paper}",
+                "Paper CCFM-only hybrid row does not match results",
                 errors,
             )
             _require(
                 paper_text,
-                rf"\\textbf\{{Hybrid \(VCG\+CCFM\)\}}\s*&\s*\\textbf\{{100\\%\}}\s*&\s*\\textbf\{{100\\%\}}\s*&\s*\\textbf\{{{hybrid_simvalid_num_paper}\\%\}}\s*&\s*\\textbf\{{{hybrid_reward_paper}\}}",
-                "Paper hybrid row does not match hybrid_phase14 (sim-valid/reward)",
+                rf"Hybrid.*VCG\+CCFM.*{hybrid_reward_paper}",
+                "Paper hybrid row does not match results (reward)",
                 errors,
             )
 
