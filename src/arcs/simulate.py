@@ -616,7 +616,15 @@ def _signal_reward(
             reward += 3.0
 
         # Reasonable passband gain → 1.0
-        if gain_dc is not None and -6 < gain_dc < 20:
+        # For highpass/bandpass, DC gain is intentionally very negative;
+        # use peak_gain_db instead of gain_dc for passband check.
+        _hp_bp_types = {"sallen_key_highpass", "sallen_key_bandpass",
+                        "state_variable_filter", "twin_t_notch"}
+        if topology in _hp_bp_types:
+            passband_gain = m.get("peak_gain_db", gain_dc)
+        else:
+            passband_gain = gain_dc
+        if passband_gain is not None and -6 < passband_gain < 20:
             reward += 1.0
 
     elif topology in osc_types:
@@ -624,8 +632,9 @@ def _signal_reward(
         vosc = m.get("vosc_pp", 0)
         if vosc >= 0.1:
             reward += 3.0
-        # Reasonable amplitude (0.1-20V peak-to-peak) → 2.0
-        if 0.1 <= vosc <= 20:
+        # Reasonable amplitude (0.1-40V peak-to-peak) → 2.0
+        # Upper bound 40V accommodates dual-supply opamp oscillators (±15V → 30Vpp)
+        if 0.1 <= vosc <= 40:
             reward += 2.0
 
         # Frequency accuracy vs target → up to 1.0
