@@ -1942,17 +1942,17 @@ This section compares all models and baselines on the same evaluation framework.
   |                                                                   |
   |  Model              Params  Valid   100% Topos   Total           |
   |  ─────────────────  ──────  ──────  ──────────   ─────           |
-  |  VCG v4 (VAE)       4.0M   100.0%    34/34      340/340         |
-  |  CCFM v4 (Flow)     7.7M   100.0%    34/34      340/340         |
+  |  VCG v5 (VAE)       4.0M   100.0%    34/34      340/340         |
+  |  CCFM v5 (Flow)     7.7M   100.0%    34/34      340/340         |
   |                                                                   |
   +-----------------------------------------------------------------+
   |                    HYBRID (VCG + CCFM + SPICE)                    |
   |                                                                   |
   |  Path       Samples  Sim Valid  Reward   Gen Time                |
   |  ─────────  ───────  ─────────  ──────   ────────                |
-  |  VCG          136      95.6%    5.717    21.5ms                  |
-  |  CCFM         136      91.2%    5.579    191.6ms                 |
-  |  Hybrid        34      94.1%    6.593    73.9ms                  |
+  |  VCG          136      94.0%    5.283    21.8ms                  |
+  |  CCFM         136      95.7%    5.415    162.1ms                 |
+  |  Hybrid        34      99.9%    6.326    51.1ms                  |
   |                                                                   |
   +-----------------------------------------------------------------+
   |                       BASELINES                                   |

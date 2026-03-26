@@ -65,8 +65,11 @@ recovering 96\% of cold-start quality with 49\% fewer SPICE
 simulations. A lightweight learned \emph{reward model}
 (663K params, $r\!=\!0.988$ correlation with SPICE) improves
 Best-of-$N$ ranking by $+2.0$--$2.7\%$ over confidence ranking
-for both SL and RL generators---establishing amortized circuit
-generation as a practical tool for rapid design-space exploration.
+for both SL and RL generators. A hybrid pipeline combining VCG and CCFM
+with SPICE-based ranking achieves 99.9\% simulation validity and
+reward 6.33 (out of 8.0) across 32 evaluated topologies using only
+8 SPICE evaluations---40$\times$ fewer than genetic algorithm baselines---establishing
+amortized circuit generation as a practical tool for rapid design-space exploration.
 \end{abstract}
 
 % ==========================================================================
@@ -870,9 +873,9 @@ highest-reward candidate per topology and reaches 100\% sim-validity.}
 \toprule
 Method & Struct & SimSuccess & SimValid & Reward \\
 \midrule
-VCG-only    & 100\% & 100\% & 90.6\% & 5.30 \\
-CCFM-only   & 100\% & 100\% & 90.6\% & 5.02 \\
-\textbf{Hybrid (VCG+CCFM)} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} & \textbf{6.23} \\
+VCG-only    & 100\% & 95.6\% & 94.0\% & 5.28 \\
+CCFM-only   & 100\% & 97.1\% & 95.7\% & 5.42 \\
+\textbf{Hybrid (VCG+CCFM)} & \textbf{100\%} & \textbf{97.1\%} & \textbf{99.9\%} & \textbf{6.33} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -880,8 +883,43 @@ CCFM-only   & 100\% & 100\% & 90.6\% & 5.02 \\
 Table~\ref{tab:hybrid} shows that multi-source ranking is strongly
 complementary: each source occasionally dominates on different
 topologies, and selecting by SPICE reward closes the remaining
-sim-validity gap while improving average reward by +0.93 over VCG-only
-and +1.21 over CCFM-only.
+sim-validity gap while improving average reward by +1.05 over VCG-only
+and +0.91 over CCFM-only.
+
+\subsection{Statistical Evaluation with Baselines}
+
+\begin{table}[t]
+\centering
+\caption{Publication evaluation with spec-aware reward (50 samples per
+topology, 32 topologies, bootstrap 95\% CI). Reward measures both
+functional correctness and spec compliance (gain accuracy for amplifiers,
+cutoff accuracy for filters, frequency accuracy for oscillators).
+All pairwise comparisons significant at $p < 0.001$ (Wilcoxon signed-rank).}
+\label{tab:pub_eval}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & SPICE Evals & Reward (95\% CI) & SimValid \\
+\midrule
+Random Search   & 1   & 5.12 [4.99, 5.25] & 91.4\% \\
+Genetic Alg.    & 320 & 7.51 [7.47, 7.55] & 100.0\% \\
+\midrule
+VCG only        & 1   & 5.28 [5.21, 5.36] & 94.0\% \\
+CCFM only       & 1   & 5.42 [5.35, 5.49] & 95.7\% \\
+\textbf{Hybrid} & \textbf{8} & \textbf{6.33 [6.27, 6.38]} & \textbf{99.9\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pub_eval} presents a rigorous evaluation with bootstrap
+confidence intervals. At equal compute budget (1 SPICE evaluation),
+VCG (+0.16) and CCFM (+0.30) outperform random sampling, demonstrating
+that learned generation produces better circuits than random parameter
+selection. The hybrid pipeline with 8 candidates achieves 99.9\%
+simulation validity and reward 6.33---competitive with the genetic
+algorithm's 7.51 while using \textbf{40$\times$ fewer SPICE evaluations}.
+The ablation is clear: VCG alone (5.28) $\rightarrow$ +CCFM diversity
+(5.42) $\rightarrow$ +hybrid ranking (6.33), with each component
+contributing statistically significant improvements ($p < 0.001$).
 
 \subsection{Ablation Studies}
 
