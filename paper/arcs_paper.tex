@@ -62,7 +62,7 @@ designs in $\sim$20\,ms---over 2,900$\times$ faster than random search
 and 13,500$\times$ faster than genetic algorithm baselines.
 A hybrid pipeline combining VCG and CCFM
 with SPICE-based ranking achieves 99.9\% simulation validity and
-spec-aware reward 6.33 (out of 8.0) across 32 topologies using only
+spec-aware reward 6.43 (out of 8.0) across 32 topologies using only
 8 SPICE evaluations---40$\times$ fewer than genetic algorithm baselines---establishing
 amortized circuit generation as a practical tool for rapid design-space exploration.
 \end{abstract}
@@ -901,25 +901,25 @@ All pairwise comparisons significant at $p < 0.001$ (Wilcoxon signed-rank).}
 \toprule
 Method & SPICE Evals & Reward (95\% CI) & SimValid \\
 \midrule
-Random Search   & 1   & 5.12 [4.99, 5.25] & 91.4\% \\
-Genetic Alg.    & 320 & 7.51 [7.47, 7.55] & 100.0\% \\
+Random Search   & 1   & 5.18 [5.05, 5.31] & 91.4\% \\
+Genetic Alg.    & 320 & 7.57 [7.53, 7.60] & 100.0\% \\
 \midrule
-VCG only        & 1   & 5.28 [5.21, 5.36] & 94.0\% \\
-CCFM only       & 1   & 5.42 [5.35, 5.49] & 95.7\% \\
-\textbf{Hybrid} & \textbf{8} & \textbf{6.33 [6.27, 6.38]} & \textbf{99.9\%} \\
+VCG only        & 1   & 5.34 [5.27, 5.42] & 94.0\% \\
+CCFM only       & 1   & 5.51 [5.44, 5.58] & 95.7\% \\
+\textbf{Hybrid} & \textbf{8} & \textbf{6.43 [6.38, 6.48]} & \textbf{99.9\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:pub_eval} presents a rigorous evaluation with bootstrap
 confidence intervals. At equal compute budget (1 SPICE evaluation),
-VCG (+0.16) and CCFM (+0.30) outperform random sampling, demonstrating
+VCG (+0.16) and CCFM (+0.33) outperform random sampling, demonstrating
 that learned generation produces better circuits than random parameter
 selection. The hybrid pipeline with 8 candidates achieves 99.9\%
-simulation validity and reward 6.33---competitive with the genetic
+simulation validity and reward 6.43---competitive with the genetic
 algorithm's 7.51 while using \textbf{40$\times$ fewer SPICE evaluations}.
 The ablation is clear: VCG alone (5.28) $\rightarrow$ +CCFM diversity
-(5.42) $\rightarrow$ +hybrid ranking (6.33), with each component
+(5.51) $\rightarrow$ +hybrid ranking (6.43), with each component
 contributing statistically significant improvements ($p < 0.001$).
 
 \subsection{Ablation Studies}
@@ -1608,22 +1608,23 @@ shunt\_regulator     & R & 7.77 & [7.64, 7.85] \\
 series\_regulator    & R & 7.59 & [7.41, 7.73] \\
 sallen\_key\_lowpass & F & 7.49 & [7.36, 7.60] \\
 common\_emitter     & B & 7.05 & [6.90, 7.20] \\
+wien\_bridge         & O & 7.00 & [7.00, 7.00] \\
 colpitts            & O & 7.00 & [7.00, 7.00] \\
 common\_collector   & B & 7.00 & [7.00, 7.00] \\
 hartley             & O & 7.00 & [7.00, 7.00] \\
-inverting\_amp       & A & 6.81 & [6.76, 6.86] \\
 \midrule
+inverting\_amp       & A & 6.81 & [6.76, 6.86] \\
+phase\_shift         & O & 6.80 & [6.44, 7.00] \\
 common\_base        & B & 6.67 & [6.56, 6.80] \\
 differential\_amp   & A & 6.63 & [6.54, 6.73] \\
 inv\_summing\_amp   & A & 6.60 & [6.50, 6.68] \\
 half\_bridge        & P & 6.52 & [6.31, 6.72] \\
 cuk                  & P & 6.49 & [6.26, 6.72] \\
-phase\_shift         & O & 6.44 & [6.10, 6.74] \\
 cascode              & B & 6.42 & [6.31, 6.53] \\
 charge\_pump         & P & 6.41 & [6.40, 6.42] \\
 buck                 & P & 6.37 & [6.25, 6.49] \\
-noninverting\_amp    & A & 6.30 & [6.14, 6.44] \\
 \midrule
+noninverting\_amp    & A & 6.30 & [6.14, 6.44] \\
 push\_pull           & P & 6.04 & [5.77, 6.32] \\
 boost                & P & 6.01 & [5.85, 6.17] \\
 transimpedance\_amp & A & 6.00 & [6.00, 6.00] \\
@@ -1632,21 +1633,21 @@ zeta\_converter     & P & 5.71 & [5.51, 5.93] \\
 instrum\_amp        & A & 5.40 & [5.24, 5.58] \\
 buck\_boost          & P & 5.34 & [5.22, 5.48] \\
 sepic                & P & 5.24 & [4.99, 5.50] \\
-wien\_bridge         & O & 5.00 & [5.00, 5.00] \\
-sk\_bandpass         & F & 4.97 & [4.89, 5.03] \\
-state\_var\_filter   & F & 4.43 & [4.28, 4.61] \\
-sk\_highpass         & F & 4.00 & [4.00, 4.00] \\
+sk\_highpass         & F & 5.00 & [5.00, 5.00] \\
+sk\_bandpass         & F & 4.99 & [4.91, 5.06] \\
+state\_var\_filter   & F & 4.45 & [4.30, 4.63] \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Analysis.} Current mirrors and voltage doublers achieve
 near-perfect scores (8.0) due to simple operating conditions.
-Regulators and lowpass filters also score highly (7.5+). The weakest
-topologies---Sallen-Key highpass (4.0) and state variable filter
-(4.43)---suffer from poor cutoff frequency accuracy, reflecting
-the difficulty of precise frequency control in these topologies.
-Wien bridge oscillators generate stable oscillation but with
-uncontrolled frequency, limiting the frequency accuracy bonus.
+Regulators and lowpass filters also score highly (7.5+).
+All four oscillators (Wien bridge, Colpitts, Hartley, phase shift)
+achieve reward $\geq$6.8, indicating reliable oscillation generation.
+The weakest topologies---state variable filter (4.45) and
+Sallen-Key bandpass/highpass (5.0)---suffer from poor cutoff
+frequency accuracy, reflecting the difficulty of precise frequency
+control in multi-pole filter topologies.
 
 \end{document}

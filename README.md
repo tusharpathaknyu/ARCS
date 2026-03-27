@@ -261,25 +261,25 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 
 | Method | SPICE Evals | Reward (95% CI) | Sim Valid% | Wall Time |
 |--------|-------------|-----------------|------------|-----------|
-| Random Search | 1 | 5.12 [4.99, 5.25] | 91.4% | ~0.3s |
-| Genetic Algorithm | 320 | 7.51 [7.47, 7.55] | 100.0% | ~120s |
-| VCG v5 (alone) | 1 | 5.28 [5.21, 5.36] | 94.0% | ~0.02s |
-| CCFM v5 (alone) | 1 | 5.42 [5.35, 5.49] | 95.7% | ~0.16s |
-| **Hybrid v5 (VCG+CCFM)** | **8** | **6.33 [6.27, 6.38]** | **99.9%** | **~0.05s** |
+| Random Search | 1 | 5.18 [5.05, 5.31] | 91.4% | ~0.3s |
+| Genetic Algorithm | 320 | 7.57 [7.53, 7.60] | 100.0% | ~120s |
+| VCG v5 (alone) | 1 | 5.34 [5.27, 5.42] | 94.0% | ~0.02s |
+| CCFM v5 (alone) | 1 | 5.51 [5.44, 5.58] | 95.7% | ~0.16s |
+| **Hybrid v5 (VCG+CCFM)** | **8** | **6.43 [6.38, 6.48]** | **99.9%** | **~0.05s** |
 
 All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 topologies).
 
 **Key findings**:
-- **At equal compute (1 SPICE sim)**: Learned models (VCG: 5.28, CCFM: 5.42) beat random sampling (5.12) with 94-96% vs 91% sim validity
-- **Hybrid ranking** over 8 candidates achieves **99.9% sim validity** and 6.33 reward — competitive with GA's 7.51 using **40× fewer SPICE evaluations**
-- **Ablation**: VCG alone (5.28) → +CCFM diversity (5.42) → +hybrid ranking (6.33) — each component adds measurable value
+- **At equal compute (1 SPICE sim)**: Learned models (VCG: 5.34, CCFM: 5.51) beat random sampling (5.18) with 94-96% vs 91% sim validity
+- **Hybrid ranking** over 8 candidates achieves **99.9% sim validity** and 6.43 reward — competitive with GA's 7.57 using **40× fewer SPICE evaluations**
+- **Ablation**: VCG alone (5.34) → +CCFM diversity (5.51) → +hybrid ranking (6.43) — each component adds measurable value
 - **Spec-aware reward**: Signal circuits now measured on gain/cutoff/frequency accuracy vs target specs, not just functional correctness
 
 **Architecture progression**: Each enhancement delivers measurable gains:
 - Two-Head: Decoupling structure/value heads → +16 pp sim_valid over baseline
 - Graph Transformer: Topology-aware attention → +10 pp sim_valid over Two-Head
 - VCG/CCFM: Graph-based generation → 100% structural validity by construction
-- Hybrid ranking: Multi-source diversity → 100% sim validity, +0.86 reward over VCG alone
+- Hybrid ranking: Multi-source diversity → 99.9% sim validity, +1.09 reward over VCG alone
 
 ### Per-Topology Highlights (Graph Transformer, best model)
 

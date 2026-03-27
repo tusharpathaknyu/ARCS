@@ -185,25 +185,26 @@ Results from `scripts/evaluate_publication.py` (6.5h wall time).
 
 | Method | SPICE Evals | Reward | 95% CI | SimValid% |
 |--------|-------------|--------|--------|-----------|
-| Random Search | 1 | 5.45 | [5.32, 5.59] | 91.4% |
-| Genetic Algorithm | 320 | 7.30 | [7.25, 7.35] | 100.0% |
-| VCG only | 1 | 5.71 | [5.64, 5.78] | 97.2% |
-| CCFM only | 1 | 5.78 | [5.71, 5.85] | 98.1% |
-| **Hybrid Ranked** | **8** | **6.57** | **[6.52, 6.62]** | **100.0%** |
+| Random Search | 1 | 5.18 | [5.05, 5.31] | 91.4% |
+| Genetic Algorithm | 320 | 7.57 | [7.53, 7.60] | 100.0% |
+| VCG only | 1 | 5.34 | [5.27, 5.42] | 94.0% |
+| CCFM only | 1 | 5.51 | [5.44, 5.58] | 95.7% |
+| **Hybrid Ranked** | **8** | **6.43** | **[6.38, 6.48]** | **99.9%** |
 
 Key findings:
-- **At equal compute (1 SPICE sim)**: VCG (+0.26) and CCFM (+0.33) beat random search
-- **Hybrid (8 sims)** achieves 100% sim validity vs random's 91.4% (p<0.00002)
-- **GA uses 40× more compute** (320 evals) to achieve 7.30 — hybrid gets 6.57 with just 8 evals
+- **At equal compute (1 SPICE sim)**: VCG (+0.16) and CCFM (+0.33) beat random search
+- **Hybrid (8 sims)** achieves 99.9% sim validity vs random's 91.4% (p<0.000006)
+- **GA uses 40× more compute** (320 evals) to achieve 7.57 — hybrid gets 6.43 with just 8 evals
 - All pairwise comparisons significant at p<0.001 (Wilcoxon signed-rank)
+- **Spec-aware reward**: gains, cutoff freq, oscillation freq measured against target specs
 
 ### Ablation Study (Methods 3-5)
 
 | Component | Reward | SimValid% | Δ Reward |
 |-----------|--------|-----------|----------|
-| VCG alone | 5.71 | 97.2% | baseline |
-| + CCFM (alone) | 5.78 | 98.1% | +0.07 |
-| + Ranking (hybrid) | 6.57 | 100.0% | +0.86 |
+| VCG alone | 5.34 | 94.0% | baseline |
+| + CCFM (alone) | 5.51 | 95.7% | +0.17 |
+| + Ranking (hybrid) | 6.43 | 99.9% | +1.09 |
 
 Each component adds value: CCFM provides diversity; hybrid ranking selects the best.
 
@@ -211,12 +212,12 @@ Each component adds value: CCFM provides diversity; hybrid ranking selects the b
 
 | Comparison | Δ Reward | p-value |
 |------------|----------|---------|
-| Hybrid vs Random | +1.12 | 0.000015 |
-| Hybrid vs VCG | +0.86 | 0.000008 |
-| Hybrid vs CCFM | +0.79 | 0.000012 |
-| Hybrid vs GA | −0.73 | 0.000046 |
+| Hybrid vs Random | +1.25 | 0.000006 |
+| Hybrid vs VCG | +1.09 | 0.000003 |
+| Hybrid vs CCFM | +0.93 | 0.000004 |
+| Hybrid vs GA | −1.13 | 0.000010 |
 
-Full results: `results/publication_eval.json`
+Full results: `results/publication_eval_v3.json`
 
 ---
 
