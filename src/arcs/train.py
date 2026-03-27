@@ -299,7 +299,11 @@ def main():
                         help="Initialize topology expert value heads from the shared value head (avoids random init noise)")
     args = parser.parse_args()
 
-    # --- Seed ---
+    # --- Seed (all RNGs for reproducibility) ---
+    import random
+    import numpy as np
+    random.seed(args.seed)
+    np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
     # --- Device ---
