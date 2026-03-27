@@ -275,11 +275,11 @@ All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 to
 - **Ablation**: VCG alone (5.34) → +CCFM diversity (5.51) → +hybrid ranking (6.43) — each component adds measurable value
 - **Spec-aware reward**: Signal circuits now measured on gain/cutoff/frequency accuracy vs target specs, not just functional correctness
 
-**Architecture progression** (unified evaluation, 160 samples, seed 42):
-- Baseline GPT: 39.4% sim_valid, 84.4% struct, reward 3.27
-- Two-Head: 48.8% sim_valid (+9.4 pp over baseline)
-- Graph Transformer SL: 45.6% sim_valid (+6.2 pp over baseline)
-- **GT + GRPO (500 steps)**: 58.8% sim_valid (+14.4 pp over REINFORCE)
+**Architecture progression** (unified evaluation, 160 samples, 5 seeds):
+- Baseline GPT: 40.1±0.7% sim_valid, 86.0±1.9% struct, reward 3.37±0.06
+- Two-Head: 50.4±2.2% sim_valid (+10.3 pp over baseline)
+- Graph Transformer SL: 45.4±3.0% sim_valid (+5.3 pp over baseline)
+- **GT + GRPO (500 steps)**: 53.1±3.1% sim_valid (+9.6 pp over REINFORCE)
 - VCG/CCFM: 100% structural validity by construction
 - Hybrid ranking: 99.9% sim validity, reward 6.43 [6.38, 6.48]
 
@@ -287,8 +287,8 @@ All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 to
 
 | Dimension | AnalogGenie | ARCS |
 |-----------|-------------|------|
-| **Structural validity** | 93.2% (after PPO) | 96.9% (GRPO) / 100% (constrained) |
-| **Sim validity** | N/A (no SPICE eval) | 58.8% (GRPO) / 99.9% (hybrid) |
+| **Structural validity** | 93.2% (after PPO) | 96.6±0.5% (GRPO) / 100% (constrained) |
+| **Sim validity** | N/A (no SPICE eval) | 53.1±3.1% (GRPO) / 99.9% (hybrid) |
 | **Topology diversity** | 3,502 unique circuits | 32 template topologies |
 | **Component values** | No (GA post-hoc) | Yes (in generation) |
 | **Spec conditioning** | No | Yes |

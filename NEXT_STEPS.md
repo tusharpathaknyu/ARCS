@@ -151,8 +151,8 @@ Component              Status    Notes
 ─────────────────────  ────────  ────────────────────────────
 Data Pipeline          ✅ Good   63,180 valid / 86,000 total (v2 improved)
 Tokenizer              ✅ Good   706 tokens, clean mapping
-ARCS Graph Transformer ✅ Good   6.83M params, 95.6% struct, 45.6% sim_valid
-GT + GRPO (500 steps)  ✅ Good   6.83M params, 96.9% struct, 58.8% sim_valid
+ARCS Graph Transformer ✅ Good   6.83M params, 93.2±1.4% struct, 45.4±3.0% sim_valid
+GT + GRPO (500 steps)  ✅ Good   6.83M params, 96.6±0.5% struct, 53.1±3.1% sim_valid
 VCG v5 (VAE)           ✅ Good   4.0M params, 100% struct, val_loss=0.834
 CCFM v5 (Flow Match)   ✅ Good   7.66M params, 100% struct, val_loss=0.094
 Latent Reward v5       ✅ Good   148K params, val_loss=0.251, corr=0.94
@@ -164,16 +164,16 @@ Evaluation             ✅ Good   Comprehensive multi-model eval + unified SPICE
 
 ---
 
-## Training Results (Unified Evaluation, 160 samples, seed 42)
+## Training Results (Unified Evaluation, 160 samples, 5 seeds)
 
 | Model | Params | Struct% | SimValid% | Reward |
 |-------|--------|---------|-----------|--------|
-| Baseline GPT (SL) | 6.50M | 84.4% | 39.4% | 3.27 |
-| Two-Head (SL) | 6.81M | 96.2% | 48.8% | 3.89 |
-| Graph Transformer (SL) | 6.83M | 95.6% | 45.6% | 3.81 |
-| REINFORCE (5000 steps) | 6.50M | 97.5% | 44.4% | 3.77 |
-| **GT + GRPO (500 steps)** | **6.83M** | **96.9%** | **58.8%** | **4.29** |
-| GT + GRPO (3500 steps) | 6.83M | 93.1% | 47.5% | 3.70 |
+| Baseline GPT (SL) | 6.50M | 86.0±1.9% | 40.1±0.7% | 3.37±0.06 |
+| Two-Head (SL) | 6.81M | 96.2±1.0% | 50.4±2.2% | 3.89±0.09 |
+| Graph Transformer (SL) | 6.83M | 93.2±1.4% | 45.4±3.0% | 3.86±0.15 |
+| REINFORCE (5000 steps) | 6.50M | 95.5±1.3% | 43.5±1.2% | 3.74±0.04 |
+| **GT + GRPO (500 steps)** | **6.83M** | **96.6±0.5%** | **53.1±3.1%** | **4.15±0.08** |
+| GT + GRPO (3500 steps) | 6.83M | 92.9±1.3% | 48.8±2.2% | 3.79±0.05 |
 | VCG v5 | 4.0M | 100.0% | — | — |
 | CCFM v5 | 7.66M | 100.0% | — | — |
 | **Hybrid v5** | — | **100.0%** | **94.1%** | **6.37** |

@@ -1,0 +1,1742 @@
+[
+  {
+    "name": "Baseline GPT",
+    "checkpoint": "checkpoints/arcs_combined/best_model.pt",
+    "model_type": "baseline",
+    "n_params": 6504960,
+    "n_samples": 160,
+    "eval_time_s": 91.4,
+    "struct_valid_rate": 0.8875,
+    "sim_success_rate": 0.6125,
+    "sim_valid_rate": 0.40625,
+    "avg_reward": 3.399449947284063,
+    "avg_efficiency": 0.5875955610998326,
+    "avg_vout_error": 42.63507044160162,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 5.26,
+        "avg_efficiency": 0.8863
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 59.76,
+        "avg_efficiency": 0.3322
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 44.66,
+        "avg_efficiency": 0.464
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 43.94,
+        "avg_efficiency": 0.6011
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 59.37,
+        "avg_efficiency": 0.4481
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 55.6,
+        "avg_efficiency": 0.0072
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 15.98
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 21.28
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -23.11
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 14.54
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -114.16
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": 2.72
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -34.3
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.69
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -22.91
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -23.15
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.75
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.75
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 11.38
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 1,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.25,
+        "avg_gain_db": -202.68
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 1,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 8.74,
+        "avg_efficiency": 0.742
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 59.82,
+        "avg_efficiency": 1.0
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 1,
+        "sim_valid": 0,
+        "sim_success_rate": 0.25,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.79,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.75,
+        "avg_vout_error": 14.86,
+        "avg_efficiency": 0.8967
+      }
+    }
+  },
+  {
+    "name": "Two-Head",
+    "checkpoint": "checkpoints/arcs_two_head/best_model.pt",
+    "model_type": "two_head",
+    "n_params": 6811648,
+    "n_samples": 160,
+    "eval_time_s": 31.8,
+    "struct_valid_rate": 0.95,
+    "sim_success_rate": 0.75625,
+    "sim_valid_rate": 0.5125,
+    "avg_reward": 3.8229250337813725,
+    "avg_efficiency": 0.5684325624146089,
+    "avg_vout_error": 71.87310362536583,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 5.44,
+        "avg_efficiency": 0.8842
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 61.17,
+        "avg_efficiency": 0.3078
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.4,
+        "avg_vout_error": 29.26,
+        "avg_efficiency": 0.6721
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 144.32,
+        "avg_efficiency": 0.669
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 27.68,
+        "avg_efficiency": 0.4444
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 55.05,
+        "avg_efficiency": 0.0073
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 308.49,
+        "avg_efficiency": 0.0018
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 8.64
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 3.2
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -9.93
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -15.44
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -5.24
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -26.17
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 1,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.2
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -31.36
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.07
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -11.12
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.54
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -11.99
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -10.94
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.5
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 4.86
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.5,
+        "avg_gain_db": -159.96
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.75,
+        "avg_vout_error": 47.62,
+        "avg_efficiency": 0.3848
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 64.77,
+        "avg_efficiency": 1.0
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_vout_error": 9.45,
+        "avg_efficiency": 0.7501
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.79,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.75,
+        "avg_vout_error": 9.88,
+        "avg_efficiency": 0.9019
+      }
+    }
+  },
+  {
+    "name": "Graph Transformer SL",
+    "checkpoint": "checkpoints/arcs_graph_transformer/best_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 6829296,
+    "n_samples": 160,
+    "eval_time_s": 70.8,
+    "struct_valid_rate": 0.9375,
+    "sim_success_rate": 0.75625,
+    "sim_valid_rate": 0.5,
+    "avg_reward": 4.062733816721019,
+    "avg_efficiency": 0.6265339915531867,
+    "avg_vout_error": 33.92741012838738,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 5.44,
+        "avg_efficiency": 0.8845
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 59.91,
+        "avg_efficiency": 0.3293
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 45.15,
+        "avg_efficiency": 0.4469
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 8.9,
+        "avg_efficiency": 0.8153
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 25.33,
+        "avg_efficiency": 0.3862
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 54.88,
+        "avg_efficiency": 0.0074
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -0.89
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -2.76
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -24.64
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -7.61
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -102.75
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -36.37
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -60.96
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.2
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -60.88
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.13
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -21.12
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -30.31
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -24.23
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -114.2
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.5,
+        "avg_gain_db": 15.38
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -61.39
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 1,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 51.85,
+        "avg_efficiency": 0.4397
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 60.37,
+        "avg_efficiency": 1.0
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_vout_error": 5.26,
+        "avg_efficiency": 0.9865
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.79,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_vout_error": 9.88,
+        "avg_efficiency": 0.9019
+      }
+    }
+  },
+  {
+    "name": "GT + REINFORCE (5000)",
+    "checkpoint": "checkpoints/arcs_rl_v2/best_rl_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 6504960,
+    "n_samples": 160,
+    "eval_time_s": 34.1,
+    "struct_valid_rate": 0.9375,
+    "sim_success_rate": 0.7,
+    "sim_valid_rate": 0.44375,
+    "avg_reward": 3.7525808476627693,
+    "avg_efficiency": 0.5738075835139453,
+    "avg_vout_error": 55.053742479008655,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.4,
+        "avg_vout_error": 24.2,
+        "avg_efficiency": 0.7324
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 61.14,
+        "avg_efficiency": 0.3074
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 56.05,
+        "avg_efficiency": 0.3608
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 95.98,
+        "avg_efficiency": 0.8118
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 52.75,
+        "avg_efficiency": 0.4408
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 72.94,
+        "avg_efficiency": 0.003
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 10.94
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 16.97
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.91
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 9.91
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -1.51
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": 14.95
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -31.62
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -20.58
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -21.3
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -28.61
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2,
+        "avg_gain_db": -23.09
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 0,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.0
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 38.23
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.75,
+        "avg_gain_db": -158.28
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 7.74,
+        "avg_efficiency": 0.668
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 72.95,
+        "avg_efficiency": 0.8357
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.55,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 2,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 38.14,
+        "avg_efficiency": 0.6034
+      }
+    }
+  },
+  {
+    "name": "GT + GRPO (500)",
+    "checkpoint": "checkpoints/arcs_grpo/best_rl_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 6829296,
+    "n_samples": 160,
+    "eval_time_s": 91.3,
+    "struct_valid_rate": 0.96875,
+    "sim_success_rate": 0.8375,
+    "sim_valid_rate": 0.5375,
+    "avg_reward": 4.0982594655137,
+    "avg_efficiency": 0.4206408580792732,
+    "avg_vout_error": 76.16123596974852,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 4.43,
+        "avg_efficiency": 0.7928
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.55,
+        "avg_efficiency": 0.0974
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 55.13,
+        "avg_efficiency": 0.1411
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 141.09,
+        "avg_efficiency": 0.3373
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 99.32,
+        "avg_efficiency": 0.0163
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 54.86,
+        "avg_efficiency": 0.0074
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 9.36
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -0.62
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -5.36
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -4.76
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -47.64
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -64.48
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -187.68
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.2,
+        "sim_valid_rate": 0.2
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -67.19
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -20.23
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -21.32
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -18.11
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -21.65
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -6.59
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 3,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.6
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.75
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 11.53
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -60.12
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 31.96,
+        "avg_efficiency": 0.2115
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 2,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 68.57,
+        "avg_efficiency": 0.75
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_vout_error": 5.26,
+        "avg_efficiency": 0.9865
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 68.79,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 242.95,
+        "avg_efficiency": 0.4997
+      }
+    }
+  },
+  {
+    "name": "GT + GRPO (3500)",
+    "checkpoint": "checkpoints/arcs_grpo_extended/best_rl_model.pt",
+    "model_type": "graph_transformer",
+    "n_params": 6829296,
+    "n_samples": 160,
+    "eval_time_s": 113.1,
+    "struct_valid_rate": 0.90625,
+    "sim_success_rate": 0.75,
+    "sim_valid_rate": 0.53125,
+    "avg_reward": 3.8490584411254885,
+    "avg_efficiency": 0.4827834325764693,
+    "avg_vout_error": 14350.11699557816,
+    "per_topology": {
+      "buck": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 5.25,
+        "avg_efficiency": 0.901
+      },
+      "boost": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 0,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 62.28,
+        "avg_efficiency": 0.2086
+      },
+      "buck_boost": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 33.83,
+        "avg_efficiency": 0.0784
+      },
+      "cuk": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 13.46,
+        "avg_efficiency": 0.032
+      },
+      "sepic": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 47.71,
+        "avg_efficiency": 0.5886
+      },
+      "flyback": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 1,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.2,
+        "avg_vout_error": 55.87,
+        "avg_efficiency": 0.0187
+      },
+      "forward": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 195602.21,
+        "avg_efficiency": 1.0
+      },
+      "inverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -1.01
+      },
+      "noninverting_amp": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 21.76
+      },
+      "instrumentation_amp": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -7.91
+      },
+      "differential_amp": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -6.22
+      },
+      "sallen_key_lowpass": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -23.45
+      },
+      "sallen_key_highpass": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -36.02
+      },
+      "sallen_key_bandpass": {
+        "n": 5,
+        "sim_success": 2,
+        "sim_valid": 2,
+        "sim_success_rate": 0.4,
+        "sim_valid_rate": 0.4,
+        "avg_gain_db": -20.49
+      },
+      "wien_bridge": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 1,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.2
+      },
+      "colpitts": {
+        "n": 5,
+        "sim_success": 0,
+        "sim_valid": 0,
+        "sim_success_rate": 0.0,
+        "sim_valid_rate": 0.0
+      },
+      "common_emitter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -72.93
+      },
+      "common_collector": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -27.65
+      },
+      "common_base": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -24.34
+      },
+      "cascode": {
+        "n": 5,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 0.8,
+        "sim_valid_rate": 0.8,
+        "avg_gain_db": -22.21
+      },
+      "current_mirror": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "twin_t_notch": {
+        "n": 5,
+        "sim_success": 3,
+        "sim_valid": 3,
+        "sim_success_rate": 0.6,
+        "sim_valid_rate": 0.6,
+        "avg_gain_db": -18.64
+      },
+      "state_variable_filter": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -88.07
+      },
+      "hartley": {
+        "n": 5,
+        "sim_success": 5,
+        "sim_valid": 5,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "phase_shift": {
+        "n": 4,
+        "sim_success": 2,
+        "sim_valid": 0,
+        "sim_success_rate": 0.5,
+        "sim_valid_rate": 0.0
+      },
+      "shunt_regulator": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0
+      },
+      "series_regulator": {
+        "n": 4,
+        "sim_success": 1,
+        "sim_valid": 1,
+        "sim_success_rate": 0.25,
+        "sim_valid_rate": 0.25
+      },
+      "inverting_summing_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": 1.01
+      },
+      "transimpedance_amp": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_gain_db": -44.07
+      },
+      "half_bridge": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 1,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 11.52,
+        "avg_efficiency": 0.4263
+      },
+      "push_pull": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 0,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.0,
+        "avg_vout_error": 92.64,
+        "avg_efficiency": 0.2428
+      },
+      "charge_pump": {
+        "n": 4,
+        "sim_success": 4,
+        "sim_valid": 4,
+        "sim_success_rate": 1.0,
+        "sim_valid_rate": 1.0,
+        "avg_vout_error": 20.32,
+        "avg_efficiency": 0.6554
+      },
+      "voltage_doubler": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 1,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.25,
+        "avg_vout_error": 48.17,
+        "avg_efficiency": 1.0
+      },
+      "zeta_converter": {
+        "n": 4,
+        "sim_success": 3,
+        "sim_valid": 2,
+        "sim_success_rate": 0.75,
+        "sim_valid_rate": 0.5,
+        "avg_vout_error": 55.09,
+        "avg_efficiency": 0.2905
+      }
+    }
+  }
+]

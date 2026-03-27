@@ -38,8 +38,8 @@ component-token vocabulary and a topology-aware Graph Transformer with
 circuit-graph inductive bias. We identify a critical failure mode of
 REINFORCE RL---cross-topology reward mismatch---and introduce
 \emph{Group Relative Policy Optimization (GRPO)} with per-topology
-advantage normalization, achieving 58.8\% simulation validity
-(+14.4\,pp over REINFORCE) in only 500 RL steps.
+advantage normalization, achieving 53.1$\pm$3.1\% simulation validity
+(+9.6\,pp over REINFORCE) in only 500 RL steps.
 \emph{Grammar-constrained decoding} guarantees 100\% structural
 validity by construction via topology-aware token masking.
 We additionally propose \emph{Constrained Circuit Flow Matching (CCFM)},
@@ -90,8 +90,8 @@ simultaneously:
     \item \textbf{Group Relative Policy Optimization (GRPO)}: A
     per-topology RL algorithm inspired by Shao~\emph{et~al.}~\cite{shao2024grpo},
     where advantages are z-scored within topology groups, resolving
-    cross-topology reward mismatch and achieving 58.8\% simulation
-    validity (+14.4\,pp over REINFORCE) with 10$\times$ fewer RL steps.
+    cross-topology reward mismatch and achieving 53.1$\pm$3.1\% simulation
+    validity (+9.6\,pp over REINFORCE) with 10$\times$ fewer RL steps.
     \item \textbf{Constrained Circuit Flow Matching (CCFM)}: A
     non-autoregressive generator combining conditional flow matching
     with a circuit VAE and constraint-guided ODE sampling,
@@ -247,7 +247,7 @@ LaMAGIC     & \texttimes & \texttimes & \checkmark & N/A & N/A & Synthetic \\
 CircuitSynth & \checkmark & \texttimes & \texttimes & N/A & $\sim$10\,s & RL only \\
 \textbf{ARCS} & \checkmark & \checkmark & \checkmark & \textbf{100\%}$^\dagger$ & 0.02\,s & Auto \\
 \bottomrule
-\multicolumn{7}{@{}l}{\footnotesize $^\dagger$With grammar-constrained decoding; 58.8\% sim-valid without.}
+\multicolumn{7}{@{}l}{\footnotesize $^\dagger$With grammar-constrained decoding; 53.1\% sim-valid without (best autoregressive).}
 \end{tabular}
 \end{table}
 
@@ -521,9 +521,9 @@ absolute reward scale. The policy gradient becomes:
 \end{equation}
 We use $K\!=\!3$ topologies and $G\!=\!4$ circuits per step.
 With only 500 GRPO steps ($\sim$1 hour, 6,000 SPICE simulations),
-the model achieves 58.8\% simulation validity---surpassing both
-supervised learning (45.6\%) and 5,000-step REINFORCE
-(44.4\%)---validating the hypothesis that per-topology normalization
+the model achieves 53.1$\pm$3.1\% simulation validity---surpassing both
+supervised learning (45.4$\pm$3.0\%) and 5,000-step REINFORCE
+(43.5$\pm$1.2\%)---validating the hypothesis that per-topology normalization
 is essential for multi-topology RL.
 
 \subsection{Constrained Circuit Flow Matching (CCFM)}
@@ -761,9 +761,9 @@ topology). Metrics:
 \begin{table}[t]
 \centering
 \caption{Unified comparison across all methods (160 conditioned specs,
-10 per topology, seed 42). Search baselines have oracle access to the
-correct topology; ARCS generates from scratch. All autoregressive
-models share the same evaluation protocol.}
+10 per topology; autoregressive results averaged over 5 seeds with
+standard deviation). Search baselines have oracle access to the correct
+topology; ARCS generates from scratch.}
 \label{tab:main}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
@@ -772,12 +772,12 @@ Method & Params & Struct & SimValid & Reward \\
 Random Search    & --- & --- & 81.2\% & 7.28 \\
 Genetic Alg.     & --- & --- & 80.0\% & 7.48 \\
 \midrule
-Baseline GPT (SL)      & 6.50M & 84.4\% & 39.4\% & 3.27 \\
-Two-Head (SL)          & 6.81M & 96.2\% & 48.8\% & 3.89 \\
-Graph Trans.\ (SL)     & 6.83M & 95.6\% & 45.6\% & 3.81 \\
-REINFORCE (5000)       & 6.50M & 97.5\% & 44.4\% & 3.77 \\
-\textbf{GT + GRPO (500)}  & \textbf{6.83M} & \textbf{96.9\%} & \textbf{58.8\%} & \textbf{4.29} \\
-GT + GRPO (3500)       & 6.83M & 93.1\% & 47.5\% & 3.70 \\
+Baseline GPT (SL)     & 6.50M & 86.0{\tiny$\pm$1.9}\% & 40.1{\tiny$\pm$0.7}\% & 3.37{\tiny$\pm$0.06} \\
+Two-Head (SL)         & 6.81M & 96.2{\tiny$\pm$1.0}\% & 50.4{\tiny$\pm$2.2}\% & 3.89{\tiny$\pm$0.09} \\
+Graph Trans.\ (SL)    & 6.83M & 93.2{\tiny$\pm$1.4}\% & 45.4{\tiny$\pm$3.0}\% & 3.86{\tiny$\pm$0.15} \\
+REINFORCE (5000)      & 6.50M & 95.5{\tiny$\pm$1.3}\% & 43.5{\tiny$\pm$1.2}\% & 3.74{\tiny$\pm$0.04} \\
+\textbf{GT+GRPO (500)}  & \textbf{6.83M} & \textbf{96.6{\tiny$\pm$0.5}\%} & \textbf{53.1{\tiny$\pm$3.1}\%} & \textbf{4.15{\tiny$\pm$0.08}} \\
+GT+GRPO (3500)        & 6.83M & 92.9{\tiny$\pm$1.3}\% & 48.8{\tiny$\pm$2.2}\% & 3.79{\tiny$\pm$0.05} \\
 \midrule
 VCG (graph VAE)   & 4.0M & \multicolumn{2}{c}{100\% valid} & --- \\
 CCFM (flow match) & 7.7M & \multicolumn{2}{c}{100\% valid} & --- \\
@@ -785,13 +785,14 @@ CCFM (flow match) & 7.7M & \multicolumn{2}{c}{100\% valid} & --- \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:main} shows the unified comparison across all methods.
+Table~\ref{tab:main} shows the unified comparison averaged over 5
+random seeds.
 \textbf{Architecture matters.} The two-head architecture improves
-simulation validity by +9.4\,pp over the baseline by decoupling
+simulation validity by $+10.3$\,pp over the baseline by decoupling
 structural and numerical prediction. The Graph Transformer achieves
-+6.2\,pp over baseline via topology-aware attention biases
+$+5.3$\,pp over baseline via topology-aware attention biases
 (Eq.~\ref{eq:graph_attn}), though the two-head model's simpler
-architecture is surprisingly competitive (+3.2\,pp over GT SL).
+architecture is surprisingly competitive ($+5.0$\,pp over GT SL).
 
 \begin{figure}[t]
 \centering
@@ -816,29 +817,31 @@ architecture is surprisingly competitive (+3.2\,pp over GT SL).
   grid style={dashed, gray!30},
 ]
 \addplot[fill=blue!30] coordinates
-  {(Baseline,39.4) (Two-Head,48.8) (GT SL,45.6) (GT+RL,44.4) (GT+GRPO,58.8) (GT+Constr,100)};
+  {(Baseline,40.1) (Two-Head,50.4) (GT SL,45.4) (GT+RL,43.5) (GT+GRPO,53.1) (GT+Constr,100)};
 \addplot[fill=orange!40] coordinates
-  {(Baseline,84.4) (Two-Head,96.2) (GT SL,95.6) (GT+RL,97.5) (GT+GRPO,96.9) (GT+Constr,100)};
+  {(Baseline,86.0) (Two-Head,96.2) (GT SL,93.2) (GT+RL,95.5) (GT+GRPO,96.6) (GT+Constr,100)};
 \legend{Sim Valid, Structural}
 \end{axis}
 \end{tikzpicture}
 \caption{Simulation and structural validity across model variants
-(unified evaluation, 160 samples). GRPO achieves the best sim-validity
-among autoregressive methods (+14.4\,pp over REINFORCE). Grammar-constrained
+(mean of 5 seeds). GRPO achieves the best sim-validity
+among autoregressive methods ($+9.6$\,pp over REINFORCE). Grammar-constrained
 decoding (GT+Constr) achieves 100\% on both metrics.}
 \label{fig:validity}
 \end{figure}
 
 \textbf{GRPO resolves the RL regression.} REINFORCE slightly degrades
-simulation validity ($-1.2$\,pp vs.\ SL) due to cross-topology reward
-mismatch, while GRPO improves it by $+13.2$\,pp over GT SL and
-$+14.4$\,pp over REINFORCE. GRPO uses only 500 RL steps
+simulation validity ($-1.9$\,pp vs.\ SL) due to cross-topology reward
+mismatch, while GRPO improves it by $+7.7$\,pp over GT SL and
+$+9.6$\,pp over REINFORCE. These differences exceed the $\pm$3\,pp
+standard deviations, confirming significance across seeds.
+GRPO uses only 500 RL steps
 ($\sim$6,000 SPICE simulations, $\sim$1 hour) compared to
 REINFORCE's 5,000 steps ($\sim$40,000 simulations, $\sim$15 hours)
 ---a 10$\times$ reduction in training cost. Extended GRPO training
 (3,500 total steps) shows diminishing returns: sim-validity drops
-to 47.5\%, suggesting that 500 steps is the optimal early-stopping
-point for this model scale.
+to 48.8$\pm$2.2\%, suggesting that 500 steps is the optimal
+early-stopping point for this model scale.
 This confirms our hypothesis
 (Section~\ref{sec:grpo}) that per-topology advantage normalization
 is essential for multi-topology RL.
@@ -884,7 +887,7 @@ is essential for multi-topology RL.
 Table~\ref{tab:main} which uses final checkpoints). REINFORCE (5,000
 steps) fluctuates around the SL baseline (45.6\%, dashed) without
 consistent improvement. GRPO (3,000 steps) steadily improves to 77\%.
-The best GRPO checkpoint (step 500, 58.8\% in Table~\ref{tab:main})
+The best GRPO checkpoint (step 500, 53.1\% mean in Table~\ref{tab:main})
 was selected via a held-out evaluation with 160 conditioned specs.}
 \label{fig:rl_curves}
 \end{figure}
@@ -996,7 +999,7 @@ The Tier~1-only model achieves the highest per-design reward (3.77)
 but covers only 7 topologies. Adding 27 signal-processing and extended
 topologies lowers the average because filters, oscillators, and BJT circuits
 have tighter component constraints. The coverage--quality trade-off is
-worthwhile: 32 topologies with 45.6\% validity (Graph Transformer) is more
+worthwhile: 32 topologies with 45.4\% validity (Graph Transformer) is more
 useful than 7 topologies with higher per-design scores.
 
 \subsection{Per-Topology Analysis}
@@ -1004,7 +1007,8 @@ useful than 7 topologies with higher per-design scores.
 From the unified evaluation (Table~\ref{tab:main}), we observe
 a category-level performance hierarchy. \textbf{Signal circuits}
 (amplifiers, filters, oscillators) show the clearest GRPO advantage:
-69\% sim-validity vs.\ 49\% for REINFORCE and 51\% for SL. Among
+66$\pm$3\% sim-validity vs.\ 50$\pm$3\% for REINFORCE and 56$\pm$4\% for SL
+(averaged over 5 seeds). Among
 signal circuits, amplifiers are the easiest (simple op-amp topologies),
 while filters and oscillators require tighter component sizing.
 \textbf{Power converters} remain the hardest category for all
@@ -1306,10 +1310,10 @@ boost at negligible computational cost.
 
 \textbf{Architecture vs.\ RL vs.\ GRPO.} Our most striking finding
 is the interplay between inductive bias and RL algorithm design.
-Architectural changes (Baseline$\to$Graph Transformer) yield +0.54
+Architectural changes (Baseline$\to$Graph Transformer) yield $+0.49$
 reward purely from inductive bias. REINFORCE RL slightly degrades
-simulation validity ($-1.2$\,pp) due to cross-topology reward
-mismatch, while GRPO \emph{improves} it (+13.2\,pp over SL) with
+simulation validity ($-1.9$\,pp) due to cross-topology reward
+mismatch, while GRPO \emph{improves} it ($+7.7$\,pp over SL) with
 10$\times$ fewer RL steps. This demonstrates that the choice of
 RL algorithm matters as much as the model architecture at this
 scale: per-topology advantage normalization (Eq.~\ref{eq:grpo})
@@ -1339,8 +1343,9 @@ cold-start quality with 49\% fewer simulations.
 RL fine-tuning and grammar-constrained decoding both improve structural
 validity, but through fundamentally different mechanisms.
 RL learns validity \emph{statistically} from reward signals---GRPO
-achieves 96.9\% structural validity after only 500 SPICE-in-the-loop
-steps, while REINFORCE reaches 97.5\% after 5,000 steps.
+achieves 96.6$\pm$0.5\% structural validity after only 500
+SPICE-in-the-loop steps, while REINFORCE reaches 95.5$\pm$1.3\%
+after 5,000 steps.
 Constrained decoding achieves 100\% validity \emph{by construction}
 via token masking, requiring no training and working even with randomly
 initialized weights. The two approaches are complementary: constrained
@@ -1404,13 +1409,13 @@ We presented ARCS, an autoregressive transformer that jointly generates
 analog circuit topology and component values conditioned on target
 specifications. Through a systematic architecture study, we showed that
 a topology-aware Graph Transformer with separate structure and value
-prediction heads improves simulation validity by +6.2\,pp over a
+prediction heads improves simulation validity by $+5.3$\,pp over a
 baseline GPT decoder with only 5\% more parameters. We identified a
 critical failure mode of global-baseline REINFORCE---cross-topology
 reward distribution mismatch---and introduced Group Relative Policy
 Optimization (GRPO) with per-topology advantage normalization, which
-achieves 58.8\% simulation validity (+14.4\,pp over REINFORCE,
-+13.2\,pp over SL) with only 500 RL steps. We additionally proposed Constrained Circuit
+achieves 53.1$\pm$3.1\% simulation validity (+9.6\,pp over REINFORCE,
++7.7\,pp over SL) with only 500 RL steps. We additionally proposed Constrained Circuit
 Flow Matching (CCFM), the first application of conditional flow matching
 to circuit synthesis, achieving 100\% structural validity across
 32 topologies via constraint-guided ODE sampling.

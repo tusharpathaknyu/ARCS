@@ -46,8 +46,9 @@ from scipy import stats as scipy_stats
 from arcs.baselines import run_baseline
 from arcs.flow_matching import ConstrainedFlowMatchingModel
 from arcs.hybrid_pipeline import HybridGenerator, GeneratedCircuit
-from arcs.simulate import ALL_TEST_SPECS, _TIER1_NAMES
+from arcs.simulate import ALL_TEST_SPECS, _TIER1_NAMES, compute_reward
 from arcs.valid_circuit_gen import ValidCircuitGenModel, VCGConfig
+from arcs import DEFAULT_TEMPERATURE, DEFAULT_TOP_K
 
 logging.basicConfig(
     level=logging.INFO,
@@ -282,6 +283,81 @@ def run_learned_method(
 
 
 # ---------------------------------------------------------------------------
+# Autoregressive model evaluation
+# ---------------------------------------------------------------------------
+
+def run_autoregressive_method(
+    checkpoint: str,
+    eval_specs: list,
+    n_samples: int,
+    device: torch.device,
+    seed: int = 42,
+) -> tuple[dict[str, list[float]], dict[str, dict]]:
+    """Run autoregressive ARCS model on spec-aware evaluation."""
+    from arcs.model_enhanced import load_model, create_model, ARCSConfig
+    from arcs.tokenizer import CircuitTokenizer
+    from arcs.simulate import simulate_decoded_circuit
+
+    logger.info(f"Loading autoregressive model from {checkpoint}")
+    tokenizer = CircuitTokenizer()
+
+    # Load model (handle both SL and RL checkpoint formats)
+    try:
+        model, config, mt = load_model(checkpoint, device=device)
+    except RuntimeError:
+        ckpt = torch.load(checkpoint, map_location=device, weights_only=False)
+        state_dict = ckpt.get("model_state_dict", ckpt.get("model", {}))
+        config = ARCSConfig.from_dict(ckpt["config"])
+        mt = ckpt.get("model_type", "graph_transformer")
+        model = create_model(mt, config)
+        model.load_state_dict(state_dict, strict=False)
+        model.to(device)
+        model.eval()
+
+    n_params = sum(p.numel() for p in model.parameters())
+    logger.info(f"  Parameters: {n_params:,}")
+
+    per_topo_rewards: dict[str, list[float]] = defaultdict(list)
+    per_topo_spec_metrics: dict[str, list[dict]] = defaultdict(list)
+    t0 = time.time()
+
+    for spec_idx, (topology, specs) in enumerate(eval_specs):
+        for i in range(n_samples):
+            torch.manual_seed(seed + spec_idx * 10000 + i)
+            np.random.seed(seed + spec_idx * 10000 + i + 1)
+
+            try:
+                # Generate with autoregressive model
+                from arcs.demo import generate_circuit
+                circuit, _dt = generate_circuit(
+                    model, tokenizer, device, topology, specs,
+                    temperature=DEFAULT_TEMPERATURE, top_k=DEFAULT_TOP_K,
+                )
+                if circuit is not None and circuit.valid_structure:
+                    outcome = simulate_decoded_circuit(circuit, topology)
+                    reward = compute_reward(outcome, topology, target_specs=specs)
+                    per_topo_rewards[topology].append(reward)
+                else:
+                    per_topo_rewards[topology].append(0.0)
+            except Exception as e:
+                logger.warning(f"  arcs_grpo/{topology} sample {i}: {e}")
+                per_topo_rewards[topology].append(0.0)
+
+        elapsed = time.time() - t0
+        done = spec_idx + 1
+        remaining = elapsed / done * (len(eval_specs) - done)
+        mean_r = np.mean(per_topo_rewards[topology])
+        logger.info(
+            f"  [{done}/{len(eval_specs)}] {topology}: mean={mean_r:.2f}"
+            f"  ({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)"
+        )
+
+    wall = time.time() - t0
+    logger.info(f"  arcs_grpo done in {wall:.0f}s")
+    return dict(per_topo_rewards), {}
+
+
+# ---------------------------------------------------------------------------
 # LaTeX table formatting
 # ---------------------------------------------------------------------------
 
@@ -332,6 +408,8 @@ def main():
     parser.add_argument("--vcg", type=str, default="checkpoints/vcg_v5/best_model.pt")
     parser.add_argument("--ccfm", type=str, default="checkpoints/ccfm_v5/best_ccfm.pt")
     parser.add_argument("--reward-model", type=str, default=None)
+    parser.add_argument("--arcs-checkpoint", type=str, default=None,
+                        help="Autoregressive ARCS checkpoint for arcs_grpo method")
     parser.add_argument("--n-samples", type=int, default=50,
                         help="Samples per topology for learned methods")
     parser.add_argument("--n-baseline-repeats", type=int, default=20,
@@ -339,8 +417,8 @@ def main():
     parser.add_argument("--rs-trials", type=int, default=50,
                         help="Random search trials per repeat")
     parser.add_argument("--methods", type=str, nargs="+",
-                        default=["random_search", "ga", "vcg_only", "ccfm_only",
-                                 "hybrid_ranked", "hybrid_reward"],
+                        default=["random_search", "ga", "arcs_grpo", "vcg_only",
+                                 "ccfm_only", "hybrid_ranked", "hybrid_reward"],
                         help="Methods to evaluate")
     parser.add_argument("--output", type=str, default="results/publication_eval.json")
     parser.add_argument("--seed", type=int, default=42)
@@ -394,6 +472,15 @@ def main():
                 seed=args.seed,
             )
             per_spec = {}
+        elif method == "arcs_grpo":
+            arcs_ckpt = args.arcs_checkpoint or "checkpoints/arcs_grpo_extended/best_rl_model.pt"
+            per_topo, per_spec = run_autoregressive_method(
+                checkpoint=arcs_ckpt,
+                eval_specs=EVAL_SPECS,
+                n_samples=args.n_samples,
+                device=device,
+                seed=args.seed,
+            )
         else:
             assert hybrid is not None, "Need --vcg and --ccfm for learned methods"
             per_topo, per_spec = run_learned_method(
