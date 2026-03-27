@@ -141,10 +141,10 @@ def evaluate_model(
     }
 
     # Extract per-topology breakdown
-    if hasattr(results, "per_topology") and results.per_topology:
+    if hasattr(results, "per_topology_sim") and results.per_topology_sim:
+        out["per_topology"] = results.per_topology_sim
+    elif hasattr(results, "per_topology") and results.per_topology:
         out["per_topology"] = results.per_topology
-    elif hasattr(results, "topology_results"):
-        out["per_topology"] = results.topology_results
 
     print(f"  Results:")
     print(f"    Structure valid: {out['struct_valid_rate']:.1%}")

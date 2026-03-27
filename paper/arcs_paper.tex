@@ -997,94 +997,19 @@ useful than 7 topologies with higher per-design scores.
 
 \subsection{Per-Topology Analysis}
 
-\begin{table}[t]
-\centering
-\caption{Per-topology simulation validity (\%) for the Graph Transformer
-under SL, REINFORCE (RL), and GRPO (16 core topologies from Tiers 1--2,
-10 samples each). Full 32-topology results in Appendix Table~\ref{tab:per_topo_full}.}
-\label{tab:pertopo}
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lccclccc@{}}
-\toprule
-& \multicolumn{3}{c}{SimValid} & & \multicolumn{3}{c}{SimValid} \\
-\cmidrule{2-4} \cmidrule{6-8}
-Topology & SL & RL & GRPO & Topology & SL & RL & GRPO \\
-\midrule
-Buck       & 100 & 10 & \textbf{90} & Inv.\ Amp     & 90 & 100 & \textbf{100} \\
-Boost      & 90  & 0  & \textbf{80} & Non-inv.\ Amp & 100 & 100 & \textbf{100} \\
-Buck-Boost & 80  & 50 & \textbf{80} & Inst.\ Amp    & 100 & 100 & \textbf{100} \\
-Cuk        & 60  & 40 & \textbf{70} & Diff.\ Amp    & 100 & 100 & \textbf{100} \\
-SEPIC      & 60  & 70 & \textbf{80} & SK Lowpass    & 50 & 70 & \textbf{60} \\
-Flyback    & 40  & 10 & \textbf{50} & SK Highpass   & 70 & 60 & \textbf{70} \\
-Forward    & 70  & 20 & \textbf{60} & SK Bandpass   & 60 & 70 & \textbf{70} \\
-           &     &    &     & Wien Bridge   & 0 & 70 & \textbf{40} \\
-           &     &    &     & Colpitts      & 80 & 10 & \textbf{60} \\
-\bottomrule
-\end{tabular}
-\end{table}
+From the unified evaluation (Table~\ref{tab:main}), we observe
+a category-level performance hierarchy. \textbf{Signal circuits}
+(amplifiers, filters, oscillators) show the clearest GRPO advantage:
+69\% sim-validity vs.\ 49\% for REINFORCE and 51\% for SL. Among
+signal circuits, amplifiers are the easiest (simple op-amp topologies),
+while filters and oscillators require tighter component sizing.
+\textbf{Power converters} remain the hardest category for all
+autoregressive methods due to their sensitivity to inductor/capacitor
+values and switching dynamics; GRPO still outperforms alternatives here.
+Full per-topology results for the hybrid pipeline (50 samples per
+topology, 32 topologies) are in Appendix Table~\ref{tab:per_topo_full}.
 
-Table~\ref{tab:pertopo} reveals a clear performance hierarchy
-(see also Figure~\ref{fig:pertopo}).
-\textbf{Amplifiers} (inverting, non-inverting, instrumentation,
-differential) achieve 90--100\% validity under all three training
-regimes. These have simple structures (two resistors around an op-amp)
-that the model learns easily.
-\textbf{GRPO restores power converter performance:}
-Buck recovers from 10\% (RL) to 90\% (GRPO), Boost from 0\% to 80\%,
-and SEPIC from 70\% to 80\%. Across all 7 power converters, GRPO
-averages 72.9\% sim-validity vs.\ REINFORCE's 28.6\%---a 2.5$\times$
-improvement. This confirms that per-topology advantage normalization
-(Eq.~\ref{eq:grpo}) is essential: when advantages are z-scored within
-topology groups, every circuit family contributes meaningful gradient
-signal regardless of its absolute reward scale.
-\textbf{Complex topologies} (Cuk, SEPIC) and \textbf{oscillators}
-(Wien bridge, Colpitts) show improved but still moderate performance
-under GRPO, reflecting the tighter component sensitivity and more
-challenging SPICE convergence of these circuits.
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  ybar,
-  bar width=3.5pt,
-  width=\columnwidth,
-  height=5.2cm,
-  ylabel={Sim Validity (\%)},
-  symbolic x coords={Buck,Boost,B-B,Cuk,SEPIC,Fly,Fwd,
-    InvA,NInvA,InstA,DiffA,SKLP,SKHP,SKBP,Wien,Colp},
-  xtick=data,
-  x tick label style={font=\tiny, rotate=55, anchor=east},
-  ymin=0, ymax=110,
-  ytick={0,25,50,75,100},
-  enlarge x limits=0.04,
-  legend style={at={(0.98,0.98)}, anchor=north east, font=\tiny,
-    legend columns=2},
-  grid=major,
-  grid style={dashed, gray!20},
-]
-\addplot[fill=blue!35] coordinates
-  {(Buck,100) (Boost,90) (B-B,80) (Cuk,60) (SEPIC,60) (Fly,40) (Fwd,70)
-   (InvA,90) (NInvA,100) (InstA,100) (DiffA,100)
-   (SKLP,50) (SKHP,70) (SKBP,60) (Wien,0) (Colp,80)};
-\addplot[fill=red!35] coordinates
-  {(Buck,10) (Boost,0) (B-B,50) (Cuk,40) (SEPIC,70) (Fly,10) (Fwd,20)
-   (InvA,100) (NInvA,100) (InstA,100) (DiffA,100)
-   (SKLP,70) (SKHP,60) (SKBP,70) (Wien,70) (Colp,10)};
-\addplot[fill=green!40] coordinates
-  {(Buck,90) (Boost,80) (B-B,80) (Cuk,70) (SEPIC,80) (Fly,50) (Fwd,60)
-   (InvA,100) (NInvA,100) (InstA,100) (DiffA,100)
-   (SKLP,60) (SKHP,70) (SKBP,70) (Wien,40) (Colp,60)};
-\legend{SL, RL, GRPO}
-\end{axis}
-\end{tikzpicture}
-\caption{Per-topology simulation validity for Graph Transformer under
-supervised learning (SL), REINFORCE (RL), and GRPO. GRPO restores
-power converter validity (Buck: 10\%$\to$90\%, Boost: 0\%$\to$80\%)
-while maintaining near-perfect amplifier performance, resolving the
-reward distribution mismatch.}
-\label{fig:pertopo}
-\end{figure}
+% Per-topology figure removed: detailed 32-topology breakdown in Appendix
 
 \subsection{Warm-Start Experiment}
 \label{sec:warm-start}
