@@ -245,8 +245,9 @@ of flow matching to analog circuit generation.
 AnalogGenie & \texttimes & \texttimes & \texttimes & 93.2\% & $\sim$1\,s & Manual \\
 LaMAGIC     & \texttimes & \texttimes & \checkmark & N/A & N/A & Synthetic \\
 CircuitSynth & \checkmark & \texttimes & \texttimes & N/A & $\sim$10\,s & RL only \\
-\textbf{ARCS} & \checkmark & \checkmark & \checkmark & \textbf{100\%} & 0.02\,s & Auto \\
+\textbf{ARCS} & \checkmark & \checkmark & \checkmark & \textbf{100\%}$^\dagger$ & 0.02\,s & Auto \\
 \bottomrule
+\multicolumn{7}{@{}l}{\footnotesize $^\dagger$With grammar-constrained decoding; 58.8\% sim-valid without.}
 \end{tabular}
 \end{table}
 
@@ -724,9 +725,12 @@ convergence issues with their coupled-inductor models):
 return the highest-reward design. Total: 200 SPICE simulations per
 spec.
 
-\textbf{Genetic Algorithm (GA)}: Population of 30, 20 generations,
-BLX-$\alpha$ crossover in log-space, Gaussian mutation, tournament
-selection. Total: $\sim$630 SPICE simulations per spec.
+\textbf{Genetic Algorithm (GA)}: BLX-$\alpha$ crossover in log-space,
+Gaussian mutation, tournament selection. For Table~\ref{tab:main}, we
+use population 30, 20 generations ($\sim$630 evals). For the
+statistical evaluation (Table~\ref{tab:pub_eval}), we use 20 repeats
+with population 16 ($\sim$320 evals per spec) to match the compute
+budget of the hybrid pipeline.
 
 Both baselines have a fundamental advantage: they search directly in
 the known parameter space with topology and component count given,
@@ -771,7 +775,7 @@ Genetic Alg.     & --- & --- & 80.0\% & 7.48 \\
 Baseline GPT (SL)      & 6.50M & 84.4\% & 39.4\% & 3.27 \\
 Two-Head (SL)          & 6.81M & 96.2\% & 48.8\% & 3.89 \\
 Graph Trans.\ (SL)     & 6.83M & 95.6\% & 45.6\% & 3.81 \\
-GT + REINFORCE (5000)  & 6.50M & 97.5\% & 44.4\% & 3.77 \\
+REINFORCE (5000)       & 6.50M & 97.5\% & 44.4\% & 3.77 \\
 \textbf{GT + GRPO (500)}  & \textbf{6.83M} & \textbf{96.9\%} & \textbf{58.8\%} & \textbf{4.29} \\
 GT + GRPO (3500)       & 6.83M & 93.1\% & 47.5\% & 3.70 \\
 \midrule
@@ -892,7 +896,7 @@ Using the graph$\to$token$\to$SPICE bridge, both models also reach
 90.6\% simulation validity (58/64) in a 4-candidate-per-topology
 evaluation, demonstrating that constrained continuous-space generation
 can produce high-quality simulatable designs. The CCFM model's flow
-matching objective trains 4$\times$ faster than VCG's VAE objective
+matching objective trains $\sim$3$\times$ faster than VCG's VAE objective
 (25\,s vs.\ 71\,s per epoch) while matching structural validity.
 
 \subsection{Hybrid Multi-Source Ranking}
@@ -1051,7 +1055,8 @@ for search-based design workflows.
 \label{sec:constrained_results}
 
 We evaluate the grammar-constrained decoding scheme described in
-Section~\ref{sec:constrained} across the four constraint levels.
+Section~\ref{sec:constrained} across three constraint levels
+(Grammar, Topology, Full) plus an unconstrained baseline (None).
 To isolate the effect of constrained decoding from model quality,
 we evaluate with a \emph{randomly initialized} model (no training),
 demonstrating that the constraints alone suffice for structural
@@ -1316,7 +1321,7 @@ conditional flow matching is a viable generative paradigm for
 circuit synthesis. By operating in the latent space of a
 pre-trained VAE with constraint-guided ODE integration, CCFM
 achieves 100\% structural validity---matching the VAE itself
-while training 4$\times$ faster per epoch. The flow matching
+while training $\sim$3$\times$ faster per epoch. The flow matching
 objective's straight-line interpolants (vs.\ the VAE's
 KL-constrained posterior) suggest a path toward higher-quality
 non-autoregressive circuit generation, particularly for
@@ -1361,9 +1366,8 @@ probability ranking does not fully align with simulation-based
 quality. Our learned reward model (Section~\ref{sec:reward-model})
 addresses this gap: trained on 53K SPICE-simulated circuits, it
 achieves $r\!=\!0.988$ correlation with ground-truth reward and
-improves Best-of-$N$ selection by up to +10.2\% at $N\!=\!20$,
-breaking through the confidence plateau precisely where it matters
-most.
+improves Best-of-$N$ selection by up to $+2.7\%$ at $N\!=\!10$,
+providing a training-free quality boost at negligible cost.
 
 \textbf{Limitations.}
 \begin{itemize}

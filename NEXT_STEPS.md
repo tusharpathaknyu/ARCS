@@ -151,11 +151,11 @@ Component              Status    Notes
 ─────────────────────  ────────  ────────────────────────────
 Data Pipeline          ✅ Good   63,180 valid / 86,000 total (v2 improved)
 Tokenizer              ✅ Good   706 tokens, clean mapping
-ARCS Graph Transformer ✅ Good   6.84M params, 88% struct
+ARCS Graph Transformer ✅ Good   6.83M params, 95.6% struct, 45.6% sim_valid
+GT + GRPO (500 steps)  ✅ Good   6.83M params, 96.9% struct, 58.8% sim_valid
 VCG v5 (VAE)           ✅ Good   4.0M params, 100% struct, val_loss=0.834
 CCFM v5 (Flow Match)   ✅ Good   7.66M params, 100% struct, val_loss=0.094
 Latent Reward v5       ✅ Good   148K params, val_loss=0.251, corr=0.94
-RL / GRPO              ✅ Good   3000 steps, reward 3.80
 Hybrid v5 Pipeline     ✅ Good   94.1% sim valid, reward 6.37
 SPICE Simulation       ✅ Good   ngspice subprocess, temp cleanup
 Templates (34)         ✅ Good   4/5 low-yield topologies fixed + sim optimized
@@ -164,15 +164,19 @@ Evaluation             ✅ Good   Comprehensive multi-model eval + unified SPICE
 
 ---
 
-## Training Results
+## Training Results (Unified Evaluation, 160 samples, seed 42)
 
-| Model | Params | Struct% | SimOK% | SimValid% | Reward |
-|-------|--------|---------|--------|-----------|--------|
-| ARCS-SL v3 | 6.84M | 88.0% | 75.0% | 47.0% | 3.77 |
-| ARCS-GRPO v2 | 6.84M | 90.0% | 73.0% | 43.0% | 3.80 |
-| VCG v5 | 4.0M | 100.0% | — | — | — |
-| CCFM v5 | 7.66M | 100.0% | — | — | — |
-| **Hybrid v5** | — | **100.0%** | **97.1%** | **94.1%** | **6.37** |
+| Model | Params | Struct% | SimValid% | Reward |
+|-------|--------|---------|-----------|--------|
+| Baseline GPT (SL) | 6.50M | 84.4% | 39.4% | 3.27 |
+| Two-Head (SL) | 6.81M | 96.2% | 48.8% | 3.89 |
+| Graph Transformer (SL) | 6.83M | 95.6% | 45.6% | 3.81 |
+| REINFORCE (5000 steps) | 6.50M | 97.5% | 44.4% | 3.77 |
+| **GT + GRPO (500 steps)** | **6.83M** | **96.9%** | **58.8%** | **4.29** |
+| GT + GRPO (3500 steps) | 6.83M | 93.1% | 47.5% | 3.70 |
+| VCG v5 | 4.0M | 100.0% | — | — |
+| CCFM v5 | 7.66M | 100.0% | — | — |
+| **Hybrid v5** | — | **100.0%** | **94.1%** | **6.37** |
 
 ---
 

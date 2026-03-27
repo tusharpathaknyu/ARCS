@@ -275,42 +275,21 @@ All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 to
 - **Ablation**: VCG alone (5.34) → +CCFM diversity (5.51) → +hybrid ranking (6.43) — each component adds measurable value
 - **Spec-aware reward**: Signal circuits now measured on gain/cutoff/frequency accuracy vs target specs, not just functional correctness
 
-**Architecture progression**: Each enhancement delivers measurable gains:
-- Two-Head: Decoupling structure/value heads → +16 pp sim_valid over baseline
-- Graph Transformer: Topology-aware attention → +10 pp sim_valid over Two-Head
-- VCG/CCFM: Graph-based generation → 100% structural validity by construction
-- Hybrid ranking: Multi-source diversity → 99.9% sim validity, +1.09 reward over VCG alone
-
-### Per-Topology Highlights (Graph Transformer, best model)
-
-| Topology | SL Sim Valid | RL Sim Valid | Key Metric (RL) |
-|----------|-------------|-------------|------------------|
-| Buck | 100% | 10% | verr=6.7% |
-| Boost | 90% | 0% | verr=61.2% |
-| Buck-Boost | 80% | 50% | verr=46.3% |
-| SEPIC | 60% | 70% | verr=13.7%, eff=71% |
-| Cuk | 60% | 40% | verr=81.5% |
-| Flyback | 40% | 10% | verr=49.2% |
-| Forward | 70% | 20% | verr=26.2%, eff=73% |
-| Inverting Amp | 90% | 100% | gain=-22.7dB |
-| Non-inverting Amp | 100% | 100% | gain=-5.2dB |
-| Instrumentation Amp | 100% | 100% | gain=4.5dB |
-| Differential Amp | 100% | 100% | gain=-16.4dB |
-| Sallen-Key LP | 50% | 70% | gain=-52.2dB |
-| Sallen-Key HP | 70% | 60% | gain=-37.0dB |
-| Sallen-Key BP | 60% | 70% | gain=-24.6dB |
-| Wien Bridge | 0% | 70% | oscillating |
-| Colpitts | 80% | 10% | oscillating |
-
-**Observation**: RL dramatically improves signal circuits (Wien Bridge: 0%→70%) but hurts some power converters (Buck: 100%→10%). The reward function favors topologies where sim convergence is easier.
+**Architecture progression** (unified evaluation, 160 samples, seed 42):
+- Baseline GPT: 39.4% sim_valid, 84.4% struct, reward 3.27
+- Two-Head: 48.8% sim_valid (+9.4 pp over baseline)
+- Graph Transformer SL: 45.6% sim_valid (+6.2 pp over baseline)
+- **GT + GRPO (500 steps)**: 58.8% sim_valid (+14.4 pp over REINFORCE)
+- VCG/CCFM: 100% structural validity by construction
+- Hybrid ranking: 99.9% sim validity, reward 6.43 [6.38, 6.48]
 
 ### Honest Assessment: ARCS vs AnalogGenie
 
-| Dimension | AnalogGenie | ARCS (Graph Transformer) |
+| Dimension | AnalogGenie | ARCS |
 |-----------|-------------|------|
-| **Validity** | 93.2% (after PPO) | 71.9% (SL) / 55.0% (RL) |
-| **Sim success** | N/A (no SPICE eval) | 85.0% (SL) / 86.9% (RL) |
-| **Topology diversity** | 3,502 unique circuits | 34 template topologies |
+| **Structural validity** | 93.2% (after PPO) | 96.9% (GRPO) / 100% (constrained) |
+| **Sim validity** | N/A (no SPICE eval) | 58.8% (GRPO) / 99.9% (hybrid) |
+| **Topology diversity** | 3,502 unique circuits | 32 template topologies |
 | **Component values** | No (GA post-hoc) | Yes (in generation) |
 | **Spec conditioning** | No | Yes |
 | **Inference speed** | Minutes (GA sizing) | ~20ms |
