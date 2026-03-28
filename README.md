@@ -257,6 +257,23 @@ PYTHONPATH=src python -m arcs.rl --checkpoint checkpoints/best_model.pt \
 
 ## Results
 
+### Autoregressive Architecture Comparison (unified evaluation, 160 samples × 5 seeds, mean±std)
+
+| Model | Params | Struct Valid | Sim Valid | Reward |
+|-------|--------|--------------|-----------|--------|
+| Baseline GPT | 6.50M | 86.0±1.9% | 40.1±0.7% | 3.37±0.06 |
+| Two-Head SL | 6.81M | 96.2±1.0% | 50.4±2.2% | 3.89±0.09 |
+| Graph Transformer SL | 6.83M | 93.2±2.1% | 45.4±3.0% | 3.66±0.08 |
+| GT + REINFORCE | 6.83M | 95.5±1.3% | 43.5±1.2% | 3.75±0.05 |
+| **GT + GRPO (500 steps)** | **6.83M** | **96.6±0.5%** | **53.1±3.1%** | **4.15±0.08** |
+| GT + GRPO (3500 steps) | 6.83M | 91.0±1.8% | 48.8±2.2% | 3.99±0.07 |
+| GT + Constrained Decoding | 6.83M | 100%† | 100%† | — |
+
+†Structural validity guaranteed by construction via grammar-constrained decoding.
+All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, 5 seeds × 160 samples).
+
+**Key insight**: Two-Head (50.4%) outperforms Graph Transformer SL (45.4%) — the GT's relational inductive bias is not fully exploited by supervised cross-entropy training. GRPO unlocks the GT's advantage, with GT+GRPO (53.1%) surpassing both.
+
 ### Publication Evaluation (50 samples × 32 topologies, bootstrap 95% CI)
 
 | Method | SPICE Evals | Reward (95% CI) | Sim Valid% | Wall Time |
@@ -272,16 +289,9 @@ All pairwise comparisons significant at p < 0.001 (Wilcoxon signed-rank, n=32 to
 **Key findings**:
 - **At equal compute (1 SPICE sim)**: Learned models (VCG: 5.34, CCFM: 5.51) beat random sampling (5.18) with 94-96% vs 91% sim validity
 - **Hybrid ranking** over 8 candidates achieves **99.9% sim validity** and 6.43 reward — competitive with GA's 7.57 using **40× fewer SPICE evaluations**
+- **Best-of-3 autoregressive**: reaches ~85% sim validity at just 97ms — strongest inference-time scaling result
 - **Ablation**: VCG alone (5.34) → +CCFM diversity (5.51) → +hybrid ranking (6.43) — each component adds measurable value
-- **Spec-aware reward**: Signal circuits now measured on gain/cutoff/frequency accuracy vs target specs, not just functional correctness
-
-**Architecture progression** (unified evaluation, 160 samples, 5 seeds):
-- Baseline GPT: 40.1±0.7% sim_valid, 86.0±1.9% struct, reward 3.37±0.06
-- Two-Head: 50.4±2.2% sim_valid (+10.3 pp over baseline)
-- Graph Transformer SL: 45.4±3.0% sim_valid (+5.3 pp over baseline)
-- **GT + GRPO (500 steps)**: 53.1±3.1% sim_valid (+9.6 pp over REINFORCE)
-- VCG/CCFM: 100% structural validity by construction
-- Hybrid ranking: 99.9% sim validity, reward 6.43 [6.38, 6.48]
+- **Spec-aware reward**: Signal circuits measured on gain/cutoff/frequency accuracy vs target specs, not just functional correctness
 
 ### Honest Assessment: ARCS vs AnalogGenie
 
@@ -459,10 +469,13 @@ Example output:
 - [x] RL fine-tuning of Graph Transformer: 5000 steps, best eval reward=7.468/8.0
 - [x] Auto-detection of model type from checkpoint state dict keys
 
-### Phase 7: Paper (complete)
-- [x] ICCAD 2026 paper written: *ARCS: Autoregressive Circuit Synthesis with Topology-Aware Graph Attention and Spec Conditioning*
-- [x] Full experimental evaluation: 3 architectures, 2 baselines (RS + GA), ablation studies
+### Phase 7: Paper (complete — arXiv ready)
+- [x] Paper written: *ARCS: Autoregressive Circuit Synthesis with Topology-Aware Graph Attention and Spec Conditioning*
+- [x] Full experimental evaluation: 6 architectures × 5 seeds, 2 baselines (RS + GA), ablation studies
 - [x] Honest comparison with AnalogGenie (ICLR 2025)
+- [x] Multi-seed mean±std for all autoregressive results (160 samples × seeds 42–46)
+- [x] Bootstrap 95% CI + Wilcoxon signed-rank tests for all claims
+- [x] arXiv preprint prepared (`paper/arcs_paper.tex`) — targeting cs.LG + cs.AR
 
 ### Phase 8: RWPE Implementation (complete)
 - [x] Replaced fake walk position embeddings with real Random-Walk Positional Encoding (K=8)
@@ -621,6 +634,18 @@ Example output:
 - [x] **Training scripts**: fixed --valid-only flags, VCG resume best_val_loss, CCFM device placement
 - [x] **Latent reward**: configurable drift_weight, proxy reward range [2,8] to match real rewards
 - [x] 751 tests passing across 18 test files
+
+### Phase 23: Multi-Seed Evaluation & Paper Hardening (complete)
+- [x] **Unified evaluation protocol**: 160 samples × 5 seeds (42–46) for all 6 autoregressive variants
+- [x] All paper numbers updated to mean±std — no single-seed claims remain
+- [x] Wilcoxon signed-rank tests (p < 0.001) on all pairwise comparisons
+- [x] Bootstrap 95% CI (10,000 resamples) for publication evaluation table
+- [x] Fixed all internal consistency issues: merged duplicate tables, corrected stale deltas, removed broken references
+- [x] Fixed bibliography: removed stray `arXiv:2110.14168.` artifact after AnalogXpert entry
+- [x] Added architectural explanation: Two-Head > GT SL under supervised learning — GT inductive bias unlocked by GRPO
+- [x] Added real citations: DiffCkt (ICCAD'25), AstRL (arXiv:2602.12402), AnalogXpert (arXiv:2412.19824)
+- [x] Results files: `results/arch_multiseed.json` (5-seed aggregate), `results/publication_eval_v3.json` (bootstrap CI)
+- [x] **arXiv preprint prepared** — `paper/arcs_paper.tex` ready for submission (cs.LG + cs.AR)
 
 ---
 

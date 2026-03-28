@@ -31,25 +31,28 @@ Topology-Aware Graph Attention and Spec Conditioning}
 
 % ==========================================================================
 \begin{abstract}
-We present ARCS, an autoregressive transformer that generates complete
-analog circuits---topology \emph{and} component values---in a single
-forward pass conditioned on target specifications. ARCS uses a native
-component-token vocabulary and a topology-aware Graph Transformer with
-circuit-graph inductive bias. We identify a critical failure mode of
-REINFORCE RL---cross-topology reward mismatch---and introduce
-\emph{Group Relative Policy Optimization (GRPO)} with per-topology
-advantage normalization, achieving 53.1$\pm$3.1\% simulation validity
-(+9.6\,pp over REINFORCE) in only 500 RL steps.
-\emph{Grammar-constrained decoding} guarantees 100\% structural
-validity by construction via topology-aware token masking.
-We additionally propose \emph{Constrained Circuit Flow Matching (CCFM)},
-a non-autoregressive generator achieving 100\% structural validity
-across 32 topologies. A hybrid pipeline combining learned generators
-with SPICE-based ranking achieves 99.9\% simulation validity and
-spec-aware reward 6.43/8.0 using only 8 SPICE evaluations---40$\times$
-fewer than genetic algorithms. ARCS generates designs in $\sim$20\,ms
-(generation only; SPICE verification adds $\sim$1\,s), over three orders
-of magnitude faster than search-based alternatives.
+We present ARCS, a system for \emph{amortized} analog circuit generation
+that produces complete, SPICE-simulatable designs---topology and component
+values---in milliseconds rather than the minutes required by search-based
+methods. A hybrid pipeline combining two learned generators (a graph VAE
+and a flow-matching model) with SPICE-based ranking achieves
+\textbf{99.9\% simulation validity} (reward 6.43/8.0) across 32
+topologies using only 8 SPICE evaluations---40$\times$ fewer than
+genetic algorithms. For single-model inference, a topology-aware Graph
+Transformer with Best-of-3 candidate selection reaches \textbf{85\%
+simulation validity in 97\,ms}---over 600$\times$ faster than random
+search. The key technical contribution is \emph{Group Relative Policy
+Optimization (GRPO)}: we identify a critical failure mode of
+REINFORCE---cross-topology reward distribution mismatch---and resolve it
+with per-topology advantage normalization, improving simulation validity
+by +9.6\,pp over REINFORCE in only 500 RL steps ($10\times$ fewer).
+\emph{Grammar-constrained decoding} additionally guarantees 100\%
+structural validity by construction via topology-aware token masking.
+ARCS does not yet match the per-design quality of search-based
+optimization (5.48 vs.\ 7.48 reward), but its $>$1000$\times$ speed
+advantage enables rapid prototyping, design-space exploration, and
+warm-starting search methods (recovering 96.6\% of GA quality with
+49\% fewer simulations).
 \end{abstract}
 
 % ==========================================================================
@@ -77,39 +80,37 @@ predict characters, not circuit components, leading to syntax errors in
 generated netlists and no semantic understanding of component values.
 
 \textbf{This work.} We propose ARCS (Figure~\ref{fig:overview}), which addresses all three gaps
-simultaneously:
+simultaneously. Given one of 32 parameterized topology templates and a
+target specification, ARCS generates complete component-value assignments
+in a single forward pass. Our three core contributions are:
 \begin{enumerate}
-    \item \textbf{Native component-token vocabulary with topology-aware
-    Graph Transformer}: Each token represents a circuit element paired
-    with a discretized value, and a Graph Transformer injects
-    circuit-graph structure via learned adjacency biases and RWPE,
-    improving simulation validity by +6.2\,pp over the baseline.
+    \item \textbf{Group Relative Policy Optimization (GRPO) for
+    multi-topology RL}: We identify a critical failure mode of
+    REINFORCE---cross-topology reward distribution mismatch---where
+    easy topologies dominate gradient updates and hard topologies
+    are abandoned. GRPO resolves this via per-topology advantage
+    normalization (Eq.~\ref{eq:grpo}), achieving 53.1$\pm$3.1\%
+    simulation validity (+9.6\,pp over REINFORCE) with 10$\times$
+    fewer RL steps.
     \item \textbf{Grammar-constrained decoding}: A state-machine-based
     token masking scheme guarantees 100\% structural validity \emph{by
-    construction}, without RL training or post-hoc filtering.
-    \item \textbf{Group Relative Policy Optimization (GRPO)}: A
-    per-topology RL algorithm inspired by Shao~\emph{et~al.}~\cite{shao2024grpo},
-    where advantages are z-scored within topology groups, resolving
-    cross-topology reward mismatch and achieving 53.1$\pm$3.1\% simulation
-    validity (+9.6\,pp over REINFORCE) with 10$\times$ fewer RL steps.
-    \item \textbf{Constrained Circuit Flow Matching (CCFM)}: A
-    non-autoregressive generator combining conditional flow matching
-    with a circuit VAE and constraint-guided ODE sampling,
-    achieving 100\% structural validity on 32 topologies.
-    \item \textbf{Hybrid pipeline with inference-time scaling}:
-    Multi-source ranking (VCG + CCFM + learned reward model) achieves
-    99.9\% simulation validity and reward 6.43/8.0 with only 8 SPICE
-    evaluations---40$\times$ fewer than genetic algorithm baselines.
+    construction}, without RL training or post-hoc filtering. Combined
+    with Best-of-3 candidate selection, this yields 85\% simulation
+    validity in 97\,ms.
+    \item \textbf{Hybrid multi-source ranking}: A pipeline combining
+    two complementary generators---a graph-structured VAE (VCG) and a
+    Constrained Circuit Flow Matching model (CCFM)---with SPICE-based
+    ranking achieves 99.9\% simulation validity and reward 6.43/8.0
+    with only 8 SPICE evaluations (40$\times$ fewer than GA).
 \end{enumerate}
 
-The key contribution of ARCS is not higher per-design quality than
-search-based methods, but rather \emph{amortized inference}: a trained
+The key contribution of ARCS is \emph{amortized inference}: a trained
 model that produces reasonable first-shot designs in $\sim$20\,ms,
 enabling rapid prototyping and design-space exploration at a cost
-$>$10,000$\times$ lower than conventional search. We additionally show
-that ARCS-generated designs can seed search methods (warm-start GA),
-reducing simulation budgets by 49\% while retaining 96\% of the
-optimality achieved by cold-start search.
+$>$1000$\times$ lower than conventional search. ARCS does not yet match
+the per-design quality of search baselines (5.48 vs.\ 7.48 reward), but
+we show the paradigms are complementary: ARCS-seeded GA recovers 96.6\%
+of cold-start quality with 49\% fewer simulations.
 
 \begin{figure*}[t]
 \centering
@@ -194,6 +195,12 @@ LaMAGIC~\cite{lamagic} generates analog IC topologies using language
 models with graph-based representations. While it introduces
 circuit-aware tokenization, it targets transistor-level IC design
 rather than board-level circuits with discrete component values.
+AnalogXpert~\cite{analogxpert} incorporates circuit design expertise
+into large language models for topology synthesis, demonstrating that
+domain knowledge can guide LLM-based generation.
+AstRL~\cite{astrl} applies deep reinforcement learning to analog and
+mixed-signal circuit synthesis, training an RL agent to select
+topologies and size components end-to-end.
 INSIGHT~\cite{insight} uses an autoregressive transformer as a
 fast surrogate for SPICE simulation, achieving near-simulator
 accuracy at orders-of-magnitude lower cost; however, it is a
@@ -216,6 +223,10 @@ surrogate model for power converter topologies, achieving strong
 prediction accuracy but focusing on evaluation rather than generation.
 FALCON~\cite{falcon} combines GNN-based prediction with layout
 co-optimization but is not generative for new topologies.
+DiffCkt~\cite{diffckt} applies diffusion models to transistor-level
+analog circuit generation via a hybrid neural network framework,
+demonstrating that generative models beyond VAEs and autoregressive
+approaches can produce valid circuit topologies.
 
 \subsection{Flow-Based Generative Models}
 
@@ -245,16 +256,24 @@ of flow matching to analog circuit generation.
 AnalogGenie & \texttimes & \texttimes & \texttimes & 93.2\% & $\sim$1\,s & Manual \\
 LaMAGIC     & \texttimes & \texttimes & \checkmark & N/A & N/A & Synthetic \\
 CircuitSynth & \checkmark & \texttimes & \texttimes & N/A & $\sim$10\,s & RL only \\
+AstRL       & \checkmark & \checkmark & \texttimes & N/A & N/A & RL only \\
+DiffCkt     & \checkmark & \texttimes & \checkmark & N/A & N/A & Synthetic \\
 \textbf{ARCS} & \checkmark & \checkmark & \checkmark & \textbf{100\%}$^\dagger$ & 0.02\,s & Auto \\
 \bottomrule
-\multicolumn{7}{@{}l}{\footnotesize $^\dagger$With grammar-constrained decoding; 53.1\% sim-valid without (best autoregressive).}
+\multicolumn{7}{@{}l}{\footnotesize $^\dagger$Structural validity with grammar-constrained decoding.}\\
+\multicolumn{7}{@{}l}{\footnotesize Sim-validity: 85\% (Best-of-3), 99.9\% (hybrid pipeline).}
 \end{tabular}
 \end{table}
 
 ARCS is, to our knowledge, the first system that jointly generates
-topology, component values, \emph{and} conditions on target
-specifications while incorporating circuit-graph inductive bias
-(Table~\ref{tab:related}). AnalogGenie generates diverse topologies but
+component values conditioned on both topology and target specifications
+while incorporating circuit-graph inductive bias
+(Table~\ref{tab:related}). We emphasize that ARCS performs
+\emph{conditioned component sizing} across 32 predefined topology
+templates---not topology \emph{discovery}. The topology is selected
+from a known library; the model's task is to predict all component
+values that satisfy the target specification.
+AnalogGenie generates diverse topologies but
 outputs only graph structure without component values. ARCS produces
 immediately simulatable netlists, closing the gap between generation
 and verification.
@@ -733,8 +752,14 @@ with population 16 ($\sim$320 evals per spec) to match the compute
 budget of the hybrid pipeline.
 
 Both baselines have a fundamental advantage: they search directly in
-the known parameter space with topology and component count given,
-while ARCS must predict everything from a short spec prefix.
+the known parameter space by evaluating hundreds of value combinations,
+while ARCS produces values in a single forward pass from a spec prefix.
+Note that ARCS \emph{is} given the correct topology token in its input
+prefix (making it a topology-conditioned generation task, not topology
+discovery), so the information asymmetry lies in the \emph{search budget},
+not topology access. This makes the comparison meaningful: given the same
+topology, can a learned model's single-shot prediction compete with
+iterative search?
 
 \subsection{Evaluation Protocol}
 
@@ -791,8 +816,11 @@ random seeds.
 simulation validity by $+10.3$\,pp over the baseline by decoupling
 structural and numerical prediction. The Graph Transformer achieves
 $+5.3$\,pp over baseline via topology-aware attention biases
-(Eq.~\ref{eq:graph_attn}), though the two-head model's simpler
-architecture is surprisingly competitive ($+5.0$\,pp over GT SL).
+(Eq.~\ref{eq:graph_attn}). Notably, the two-head model (50.4\%) outperforms
+the Graph Transformer under supervised learning alone (45.4\%): the GT's
+relational inductive bias is not fully exploited by cross-entropy training
+on fixed data, but becomes decisive when combined with GRPO
+reinforcement learning, where GT+GRPO (53.1\%) surpasses both.
 
 \begin{figure}[t]
 \centering
@@ -883,12 +911,17 @@ is essential for multi-topology RL.
 \legend{REINFORCE, GRPO}
 \end{axis}
 \end{tikzpicture}
-\caption{RL training dynamics (per-step eval, separate from
-Table~\ref{tab:main} which uses final checkpoints). REINFORCE (5,000
-steps) fluctuates around the SL baseline (45.6\%, dashed) without
-consistent improvement. GRPO (3,000 steps) steadily improves to 77\%.
-The best GRPO checkpoint (step 500, 53.1\% mean in Table~\ref{tab:main})
-was selected via a held-out evaluation with 160 conditioned specs.}
+\caption{RL training dynamics. \textbf{Important}: these curves show
+\emph{in-training} validation on small stochastic batches (high
+variance); Table~\ref{tab:main} reports held-out evaluation on 160
+conditioned specs averaged over 5 seeds (lower variance, different
+numbers). REINFORCE (5,000 steps) fluctuates around the SL baseline
+(45.6\%, dashed) without consistent improvement. GRPO (3,000 steps)
+steadily improves to 77\% in-training. The best GRPO checkpoint (step
+500, 53.1$\pm$3.1\% in Table~\ref{tab:main}) was selected via the
+held-out protocol; the gap between in-training (77\%) and held-out
+(48.8\%) at step 3000 reflects overfitting to the training topology
+distribution.}
 \label{fig:rl_curves}
 \end{figure}
 
@@ -1405,30 +1438,23 @@ are available at \url{https://github.com/tusharpathaknyu/ARCS}.
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented ARCS, an autoregressive transformer that jointly generates
-analog circuit topology and component values conditioned on target
-specifications. Through a systematic architecture study, we showed that
-a topology-aware Graph Transformer with separate structure and value
-prediction heads improves simulation validity by $+5.3$\,pp over a
-baseline GPT decoder with only 5\% more parameters. We identified a
-critical failure mode of global-baseline REINFORCE---cross-topology
-reward distribution mismatch---and introduced Group Relative Policy
-Optimization (GRPO) with per-topology advantage normalization, which
-achieves 53.1$\pm$3.1\% simulation validity (+9.6\,pp over REINFORCE,
-+7.7\,pp over SL) with only 500 RL steps. We additionally proposed Constrained Circuit
-Flow Matching (CCFM), the first application of conditional flow matching
-to circuit synthesis, achieving 100\% structural validity across
-32 topologies via constraint-guided ODE sampling.
-Grammar-constrained decoding guarantees 100\% structural validity
-by construction through topology-aware token masking.
-A hybrid pipeline combining VCG and CCFM with SPICE-based
-ranking achieves 99.9\% simulation validity with spec-aware reward
-6.43 (out of 8.0) across 32 topologies---competitive with genetic
-algorithms while using 40$\times$ fewer SPICE evaluations.
-ARCS generates complete, SPICE-simulatable
-designs in $\sim$20\,ms, over three orders of magnitude faster than
-search-based alternatives, establishing amortized circuit generation
-as a practical tool for rapid design-space exploration.
+We presented ARCS, a system for amortized analog circuit generation
+that produces complete, SPICE-simulatable designs conditioned on target
+specifications across 32 topology templates. Our main finding is that
+per-topology advantage normalization (GRPO) is essential for RL in
+multi-topology settings: it resolves the cross-topology reward mismatch
+that causes REINFORCE to regress, improving simulation validity by
++9.6\,pp with 10$\times$ fewer RL steps. Grammar-constrained decoding
+guarantees 100\% structural validity by construction, and Best-of-3
+candidate selection reaches 85\% simulation validity in 97\,ms. A hybrid
+pipeline combining complementary generators with SPICE-based ranking
+achieves 99.9\% simulation validity (reward 6.43/8.0) with only
+8 SPICE evaluations---40$\times$ fewer than genetic algorithms.
+While per-design quality remains below search baselines (5.48 vs.\ 7.48
+reward), ARCS's $>$1000$\times$ speed advantage enables rapid prototyping,
+and warm-start experiments show the paradigms are complementary (96.6\%
+of GA quality with 49\% fewer simulations). ARCS establishes amortized
+circuit generation as a practical tool for design-space exploration.
 
 % ==========================================================================
 \bibliographystyle{IEEEtran}
@@ -1496,7 +1522,23 @@ K.~Cobbe, V.~Kosaraju, M.~Bavarian, M.~Chen, H.~Jun, L.~Kaiser,
 M.~Plappert, J.~Tworek, J.~Hilton, R.~Nakano, C.~Hesse, and
 J.~Schulman,
 ``Training verifiers to solve math word problems,'' 2021.
-arXiv:2110.14168.
+
+\bibitem{diffckt}
+C.~Liu, J.~Li, Y.~Feng, W.~Huang, W.~Chen, Y.~Du, J.~Yang, and L.~Du,
+``{DiffCkt}: A diffusion model-based hybrid neural network framework for
+automatic transistor-level generation of analog circuits,''
+in \emph{Proc.\ IEEE/ACM ICCAD}, 2025.
+
+\bibitem{astrl}
+F.~B.~Guo, K.~T.~Ho, A.~Vladimirescu, and B.~Nikolic,
+``{AstRL}: Analog and mixed-signal circuit synthesis with deep
+reinforcement learning,'' 2026. arXiv:2602.12402.
+
+\bibitem{analogxpert}
+H.~Zhang, S.~Sun, Y.~Lin, R.~Wang, and J.~Bian,
+``{AnalogXpert}: Automating analog topology synthesis by incorporating
+circuit design expertise into large language models,'' 2024.
+arXiv:2412.19824.
 
 \bibitem{insight}
 S.~Poddar, R.~Dey, and S.~Dasgupta,
