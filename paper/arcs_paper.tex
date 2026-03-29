@@ -317,10 +317,11 @@ seven semantic categories:
 
 Each circuit is encoded as a flat sequence:
 \[
-\texttt{START} \!\to\! \texttt{TOPO}_\tau \!\to\! \texttt{SEP} \!\to\!
-\underbrace{s_1, v_{s_1}, \ldots, s_K, v_{s_K}}_{\text{spec prefix}} \!\to\!
-\texttt{SEP} \!\to\!
-\underbrace{c_1, v_1, \ldots, c_N, v_N}_{\text{components}} \!\to\! \texttt{END}
+\begin{aligned}
+&\texttt{START} \!\to\! \texttt{TOPO}_\tau \!\to\! \texttt{SEP} \!\to\!
+\underbrace{s_1, v_{s_1}, \ldots, s_K, v_{s_K}}_{\text{spec prefix}} \!\to\! \texttt{SEP} \\
+&\quad\to\! \underbrace{c_1, v_1, \ldots, c_N, v_N}_{\text{components}} \!\to\! \texttt{END}
+\end{aligned}
 \]
 
 The log-uniform binning ensures that physically meaningful value ratios
