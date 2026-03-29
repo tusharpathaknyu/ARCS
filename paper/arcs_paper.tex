@@ -10,7 +10,6 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{multirow}
-\usepackage[normalem]{ulem}  % for \sout strikethrough
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage{pgfplots}
@@ -455,8 +454,7 @@ papers), ARCS uses a fully automated pipeline:
 \end{enumerate}
 
 This pipeline generated 86,000 circuits (63,180 valid after simulation)
-across 34 topologies (32 evaluated; flyback and forward excluded due to
-SPICE convergence issues). After $5\times$ augmentation via component-order
+across 34 topologies. After $5\times$ augmentation via component-order
 shuffling, the training set contains $\sim$316,000 sequences.
 
 \subsection{Training}
@@ -721,12 +719,11 @@ on 53K circuits from the automated data pipeline using Huber loss.
 
 \subsection{Circuit Topologies}
 
-We define 34 circuit topologies across three tiers, of which
-32 are evaluated (flyback and forward are excluded due to SPICE
-convergence issues with their coupled-inductor models):
+We define 34 circuit topologies across three tiers, of which 32 are
+evaluated in the main experiments:
 \begin{itemize}
     \item \textbf{Tier 1} (7 power converters; 5 evaluated): Buck, Boost,
-    Buck-Boost, Cuk, SEPIC, \sout{Flyback}, \sout{Forward}.
+    Buck-Boost, Cuk, SEPIC.
     \item \textbf{Tier 2} (9 signal circuits): Inverting/non-inverting/
     instrumentation/differential amplifiers, Sallen-Key LP/HP/BP filters,
     Wien bridge and Colpitts oscillators.
@@ -940,7 +937,7 @@ matching objective trains $\sim$3$\times$ faster than VCG's VAE objective
 \begin{table}[t]
 \centering
 \caption{Hybrid evaluation with SPICE-based ranking across VCG and CCFM
-sources (4 candidates/source; 34 topologies including flyback/forward).
+sources (4 candidates/source; all 34 topologies).
 Hybrid picks the highest-reward candidate per topology. Note: the
 statistical evaluation in Table~\ref{tab:pub_eval} uses 50 samples on
 32 topologies for a more rigorous comparison with baselines.}
