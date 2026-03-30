@@ -40,9 +40,10 @@ topologies using only 8 SPICE evaluations---40$\times$ fewer than
 genetic algorithms. For single-model inference, a topology-aware Graph
 Transformer with Best-of-3 candidate selection reaches \textbf{85\%
 simulation validity in 97\,ms}---over 600$\times$ faster than random
-search. The key technical contribution is \emph{Group Relative Policy
-Optimization (GRPO)}: I identify a critical failure mode of
-REINFORCE---cross-topology reward distribution mismatch---and resolve it
+search. The key technical contribution is adapting \emph{Group Relative
+Policy Optimization} (GRPO)~\cite{shao2024grpo} to multi-topology
+circuit RL: I identify a critical failure mode of
+REINFORCE (cross-topology reward distribution mismatch) and resolve it
 with per-topology advantage normalization, improving simulation validity
 by +9.6\,pp over REINFORCE in only 500 RL steps ($10\times$ fewer).
 \emph{Grammar-constrained decoding} additionally guarantees 100\%
@@ -231,9 +232,9 @@ approaches can produce valid circuit topologies.
 
 Conditional flow matching (CFM)~\cite{lipman2023flow} learns
 continuous-time transport maps between a prior and data distribution
-via optimal-transport velocity fields, avoiding the mode-collapse
-issues of diffusion models and the KL-constrained latent space of
-VAEs. CFM has been applied to molecular generation~\cite{song2024equivariant}
+via optimal-transport velocity fields, offering straighter sampling
+trajectories than diffusion models and avoiding the KL-constrained
+latent space of VAEs. CFM has been applied to molecular generation~\cite{song2024equivariant}
 and protein design but, to the best of my knowledge, not to circuit synthesis.
 For discrete graph generation, DiGress~\cite{vignac2023digress} applies
 discrete denoising diffusion to molecule and planar graphs; however, it
@@ -472,7 +473,7 @@ Training: 100 epochs, batch size 64, AdamW ($\beta_1\!=\!0.9$,
 $\beta_2\!=\!0.95$), cosine LR schedule ($3 \times 10^{-4}$
 peak) with 5-epoch linear warmup.
 
-\textbf{Stage 2: REINFORCE with SPICE reward.}
+\textbf{Stage 2: REINFORCE~\cite{williams1992reinforce} with SPICE reward.}
 I fine-tune the best supervised checkpoint with policy gradient
 optimization, using SPICE simulation as an oracle reward signal:
 \begin{equation}
@@ -1492,7 +1493,7 @@ K.~Settaluri, A.~Haj-Ali, Q.~Huang, C.~Madhow, and B.~Nikolic,
 in \emph{Proc.\ DATE}, 2020.
 
 \bibitem{lamagic}
-H.~Chang \emph{et~al.},
+H.~Chang, Y.~Zhang, Y.~Zhu, G.~Li, H.~Yang, and Y.~Lin,
 ``{LaMAGIC}: Language-model-based topology generation for analog
 integrated circuits,'' 2024. arXiv:2407.18269.
 
@@ -1520,6 +1521,7 @@ K.~Cobbe, V.~Kosaraju, M.~Bavarian, M.~Chen, H.~Jun, L.~Kaiser,
 M.~Plappert, J.~Tworek, J.~Hilton, R.~Nakano, C.~Hesse, and
 J.~Schulman,
 ``Training verifiers to solve math word problems,'' 2021.
+arXiv:2110.14168.
 
 \bibitem{diffckt}
 C.~Liu, J.~Li, Y.~Feng, W.~Huang, W.~Chen, Y.~Du, J.~Yang, and L.~Du,
@@ -1587,6 +1589,12 @@ Y.~Song, J.~Gong, M.~Xu, Z.~Cao, Y.~Lan, S.~Ermon, H.~Zhou,
 and W.-Y.~Ma,
 ``Equivariant flow matching with hybrid probability transport for
 3D molecule generation,'' in \emph{Proc.\ NeurIPS}, 2024.
+
+\bibitem{williams1992reinforce}
+R.~J.~Williams,
+``Simple statistical gradient-following algorithms for connectionist
+reinforcement learning,'' \emph{Machine Learning}, vol.~8,
+no.~3--4, pp.~229--256, 1992.
 
 \end{thebibliography}
 
