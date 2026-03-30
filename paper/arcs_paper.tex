@@ -371,12 +371,12 @@ activations~\cite{shazeer2020glu}, RMSNorm~\cite{zhang2019root}, and
 learned token-type embeddings (7 categories). All models use
 weight-tied language model heads.
 
-\textbf{(A) Baseline GPT} (6,504,960 parameters). A standard
+\textbf{(A) Baseline GPT} ($\sim$6.5M parameters). A standard
 decoder-only transformer with a single weight-tied output head
 over the full vocabulary. This model treats all tokens---structural
 and value---identically.
 
-\textbf{(B) Two-Head Model} (6,811,648 parameters; +4.7\%). I
+\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.8\%). I
 observe that predicting \emph{which component to place} and
 predicting \emph{what value it should have} are fundamentally
 different tasks. The two-head model separates these:
@@ -385,14 +385,15 @@ different tasks. The two-head model separates these:
     embedding) predicts component type, topology, spec, and special
     tokens.
     \item A \emph{value head} (dedicated 2-layer SiLU MLP,
-    $256 \!\to\! 512 \!\to\! 500$) specializes in predicting
-    numerical value tokens.
+    $256 \!\to\! 256 \!\to\! 256$ with residual connection,
+    followed by a linear projection to $|V|$) specializes in
+    predicting numerical value tokens.
 \end{itemize}
 At each timestep, the model selects which head to use based on
 whether the next token is expected to be a value token
 (determined by the preceding component token).
 
-\textbf{(C) Graph Transformer} (6,829,296 parameters; +5.0\%).
+\textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.1\%).
 Circuit components form a graph defined by their electrical
 connectivity. I inject this structure into the transformer via
 two mechanisms:
@@ -454,9 +455,9 @@ papers), ARCS uses a fully automated pipeline:
     stored---the model learns to avoid failure modes.
 \end{enumerate}
 
-This pipeline generated 86,000 circuits (63,180 valid after simulation)
+This pipeline generated 62,000 circuits (41,064 valid after simulation)
 across 34 topologies. After $5\times$ augmentation via component-order
-shuffling, the training set contains $\sim$316,000 sequences.
+shuffling, the training set contains $\sim$205,000 sequences.
 
 \subsection{Training}
 
@@ -483,7 +484,7 @@ p_\theta(x_t \mid x_{<t}) \right] - \beta \,
 \end{equation}
 where $b$ is an exponential moving average baseline and $\beta$ is an
 adaptive KL coefficient~\cite{autocircuitrl} with
-$\text{KL}_\text{target}\!=\!0.1$. The reward function $R$ (max~8.0)
+$\text{KL}_\text{target}\!=\!0.5$. The reward function $R$ (max~8.0)
 decomposes as:
 \begin{equation}
 R = \underbrace{r_\text{struct}}_{\leq 1.0} +
@@ -554,10 +555,10 @@ flow matching~\cite{lipman2023flow}.
 
 \textbf{Architecture.} CCFM operates in the latent space of a
 pre-trained ValidCircuitGen (VCG) encoder---a graph-structured VAE
-(4.0M parameters) trained on 63,180 valid circuits with 5
+(4.0M parameters) trained on 41,064 valid circuits with 5
 differentiable structural constraints (type coherence, adjacency
 symmetry, graph connectivity, degree bounds, value range). The
-flow network (3.7M parameters) consists of 6 DiT-style transformer
+flow network (3.7M parameters) consists of 4 DiT-style transformer
 blocks~\cite{peebles2023dit} with adaptive layer normalization
 conditioned on both time embedding $t$ and specification embedding
 $\mathbf{s}$:
@@ -711,8 +712,8 @@ The architecture uses 2 encoder layers with 128-dim hidden states,
 4 attention heads, and SwiGLU FFN, followed by mean-pooling and
 a 2-layer MLP producing a scalar reward prediction. Token embeddings
 are warm-started from the generator via SVD-based projection when
-the embedding dimensions differ. The 663K-parameter model is trained
-on 53K circuits from the automated data pipeline using Huber loss.
+the embedding dimensions differ. The 666K-parameter model is trained
+on 41K circuits from the automated data pipeline using Huber loss.
 
 % ==========================================================================
 \section{Experimental Setup}
@@ -795,12 +796,12 @@ Method & Params & Struct & SimValid & Reward \\
 Random Search    & --- & --- & 81.2\% & 7.28 \\
 Genetic Alg.     & --- & --- & 80.0\% & 7.48 \\
 \midrule
-Baseline GPT (SL)     & 6.50M & 86.0{\tiny$\pm$1.9}\% & 40.1{\tiny$\pm$0.7}\% & 3.37{\tiny$\pm$0.06} \\
-Two-Head (SL)         & 6.81M & 96.2{\tiny$\pm$1.0}\% & 50.4{\tiny$\pm$2.2}\% & 3.89{\tiny$\pm$0.09} \\
-Graph Trans.\ (SL)    & 6.83M & 93.2{\tiny$\pm$1.4}\% & 45.4{\tiny$\pm$3.0}\% & 3.86{\tiny$\pm$0.15} \\
-REINFORCE (5000)      & 6.50M & 95.5{\tiny$\pm$1.3}\% & 43.5{\tiny$\pm$1.2}\% & 3.74{\tiny$\pm$0.04} \\
-\textbf{GT+GRPO (500)}  & \textbf{6.83M} & \textbf{96.6{\tiny$\pm$0.5}\%} & \textbf{53.1{\tiny$\pm$3.1}\%} & \textbf{4.15{\tiny$\pm$0.08}} \\
-GT+GRPO (3500)        & 6.83M & 92.9{\tiny$\pm$1.3}\% & 48.8{\tiny$\pm$2.2}\% & 3.79{\tiny$\pm$0.05} \\
+Baseline GPT (SL)     & 6.5M & 86.0{\tiny$\pm$1.9}\% & 40.1{\tiny$\pm$0.7}\% & 3.37{\tiny$\pm$0.06} \\
+Two-Head (SL)         & 6.8M & 96.2{\tiny$\pm$1.0}\% & 50.4{\tiny$\pm$2.2}\% & 3.89{\tiny$\pm$0.09} \\
+Graph Trans.\ (SL)    & 6.8M & 93.2{\tiny$\pm$1.4}\% & 45.4{\tiny$\pm$3.0}\% & 3.86{\tiny$\pm$0.15} \\
+REINFORCE (5000)      & 6.5M & 95.5{\tiny$\pm$1.3}\% & 43.5{\tiny$\pm$1.2}\% & 3.74{\tiny$\pm$0.04} \\
+\textbf{GT+GRPO (500)}  & \textbf{6.8M} & \textbf{96.6{\tiny$\pm$0.5}\%} & \textbf{53.1{\tiny$\pm$3.1}\%} & \textbf{4.15{\tiny$\pm$0.08}} \\
+GT+GRPO (3500)        & 6.8M & 92.9{\tiny$\pm$1.3}\% & 48.8{\tiny$\pm$2.2}\% & 3.79{\tiny$\pm$0.05} \\
 \midrule
 VCG (graph VAE)   & 4.0M & \multicolumn{2}{c}{100\% valid} & --- \\
 CCFM (flow match) & 7.7M & \multicolumn{2}{c}{100\% valid} & --- \\
@@ -1249,10 +1250,10 @@ from token sequences without running simulation.
 transformer encoder (128-dim, 4 heads, SwiGLU FFN) with mean-pooling
 over non-padding tokens followed by a 2-layer MLP producing a scalar
 reward prediction. Token embeddings are warm-started from the
-generator via SVD-based projection. The model has 663K
+generator via SVD-based projection. The model has 666K
 parameters---10$\times$ smaller than the generator.
 
-\textbf{Training.} I train on 53K circuits from the automated
+\textbf{Training.} I train on 41K circuits from the automated
 data pipeline. Each tokenized circuit is paired with its ground-truth
 SPICE reward (computed from simulation metrics). Using Huber loss
 with AdamW and cosine annealing, the model converges in 24 epochs
@@ -1260,7 +1261,7 @@ with early stopping (patience\,=\,5).
 
 \begin{table}[t]
 \centering
-\caption{Learned reward model evaluation on 53K SPICE-simulated
+\caption{Learned reward model evaluation on 41K SPICE-simulated
 circuits. The model achieves $r\!=\!0.988$ correlation with ground
 truth and 93.4\% of predictions within $\pm$0.5 of the true reward.}
 \label{tab:reward-model}
@@ -1400,7 +1401,7 @@ log-probability) is a useful but imperfect proxy for SPICE reward.
 Reward peaks at $N\!=\!3$ then plateaus, suggesting that the model's
 probability ranking does not fully align with simulation-based
 quality. The learned reward model (Section~\ref{sec:reward-model})
-addresses this gap: trained on 53K SPICE-simulated circuits, it
+addresses this gap: trained on 41K SPICE-simulated circuits, it
 achieves $r\!=\!0.988$ correlation with ground-truth reward and
 improves Best-of-$N$ selection by up to $+2.7\%$ at $N\!=\!10$,
 providing a training-free quality boost at negligible cost.
