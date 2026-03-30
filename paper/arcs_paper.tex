@@ -301,9 +301,8 @@ seven semantic categories:
     \item \textbf{Component tokens} (20): \texttt{MOSFET\_N},
     \texttt{RESISTOR}, \texttt{CAPACITOR}, \texttt{INDUCTOR},
     \texttt{DIODE}, \texttt{OPAMP}, \texttt{TRANSFORMER}, etc.
-    \item \textbf{Topology tokens} (20): Slots for 19 named circuit
-    types (32 evaluated in this work, plus reserved tokens for
-    future expansion) and 1 reserved token.
+    \item \textbf{Topology tokens} (40): Slots for 34 named circuit
+    topologies plus 6 reserved tokens for future expansion.
     \item \textbf{Spec tokens} (20): \texttt{SPEC\_VIN},
     \texttt{SPEC\_VOUT}, \texttt{SPEC\_IOUT}, \texttt{SPEC\_FSW},
     \texttt{SPEC\_GAIN}, \texttt{SPEC\_BW}, etc.
@@ -1167,11 +1166,11 @@ SPICE reward peaks at $N\!=\!3$. Even $N\!=\!50$ costs only 1.6\,s—still
 \begin{tabular}{@{}rccccc@{}}
 \toprule
 $N$ & Conf. & SimValid & Reward & Time & Speedup \\\midrule
-1  & $-$1.16 & 72.5\% & 5.01 & 35\,ms  & 1,700$\times$ \\
-3  & $-$0.82 & \textbf{85.0\%} & \textbf{5.48} & 97\,ms  & 600$\times$ \\
-5  & $-$0.74 & 85.0\% & 5.40 & 164\,ms & 360$\times$ \\
-10 & $-$0.67 & 77.5\% & 5.14 & 319\,ms & 180$\times$ \\
-20 & $-$0.57 & 82.5\% & 5.18 & 622\,ms & 95$\times$ \\
+1  & $-$1.16 & 72.5\% & 5.01 & 35\,ms  & 1,680$\times$ \\
+3  & $-$0.82 & \textbf{85.0\%} & \textbf{5.48} & 97\,ms  & 606$\times$ \\
+5  & $-$0.74 & 85.0\% & 5.40 & 164\,ms & 359$\times$ \\
+10 & $-$0.67 & 77.5\% & 5.14 & 324\,ms & 181$\times$ \\
+20 & $-$0.57 & 82.5\% & 5.18 & 641\,ms & 92$\times$ \\
 50 & $-$0.52 & 82.5\% & 5.10 & 1.6\,s  & 37$\times$ \\
 \midrule
 RS & --- & 81.2\% & 7.28 & 58.8\,s & 1$\times$ \\
