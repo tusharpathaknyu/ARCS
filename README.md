@@ -96,7 +96,7 @@ Select model type via `--model-type {baseline,two_head,graph_transformer}` in tr
 | Method | SPICE Evals | Reward (95% CI) | Sim Valid% | Wall Time |
 |--------|-------------|-----------------|------------|-----------|
 | Random Search | 1 | 5.18 [5.05, 5.31] | 91.4% | ~0.3s |
-| Genetic Algorithm | 320 | 7.57 [7.53, 7.60] | 100.0% | ~120s |
+| Genetic Algorithm | 320 | 7.56 [7.53, 7.60] | 100.0% | ~120s |
 | VCG v5 (alone) | 1 | 5.34 [5.27, 5.42] | 94.0% | ~0.02s |
 | CCFM v5 (alone) | 1 | 5.51 [5.44, 5.58] | 95.7% | ~0.16s |
 | **Hybrid v5 (VCG+CCFM)** | **8** | **6.43 [6.38, 6.48]** | **99.9%** | **~0.05s** |

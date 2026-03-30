@@ -126,7 +126,7 @@ of cold-start quality with 49\% fewer simulations.
 % Row 1: Training pipeline
 \node[data] (templates) {SPICE\\Templates\\(32 topos)};
 \node[process, right=of templates] (datagen) {Data Gen\\63k circuits};
-\node[data, right=of datagen] (dataset) {Tokenized\\Dataset\\316k seqs};
+\node[data, right=of datagen] (dataset) {Tokenized\\Dataset\\205k seqs};
 \node[model, right=of dataset] (sl) {Supervised\\Pre-train\\(100 epochs)};
 \node[model, right=of sl] (rl) {GRPO\\+ SPICE\\(500 steps)};
 \node[result, right=of rl] (ckpt) {Best\\Checkpoint};
@@ -975,7 +975,7 @@ All pairwise comparisons significant at $p < 0.001$ (Wilcoxon signed-rank).}
 Method & SPICE Evals & Reward (95\% CI) & SimValid \\
 \midrule
 Random Search   & 1   & 5.18 [5.05, 5.31] & 91.4\% \\
-Genetic Alg.    & 320 & 7.57 [7.53, 7.60] & 100.0\% \\
+Genetic Alg.    & 320 & 7.56 [7.53, 7.60] & 100.0\% \\
 \midrule
 VCG only        & 1   & 5.34 [5.27, 5.42] & 94.0\% \\
 CCFM only       & 1   & 5.51 [5.44, 5.58] & 95.7\% \\
@@ -990,7 +990,7 @@ VCG (+0.16) and CCFM (+0.33) outperform random sampling, demonstrating
 that learned generation produces better circuits than random parameter
 selection. The hybrid pipeline with 8 candidates achieves 99.9\%
 simulation validity and reward 6.43---competitive with the genetic
-algorithm's 7.57 while using \textbf{40$\times$ fewer SPICE evaluations}.
+algorithm's 7.56 while using \textbf{40$\times$ fewer SPICE evaluations}.
 The ablation is clear: VCG alone (5.34) $\rightarrow$ +CCFM diversity
 (5.51) $\rightarrow$ +hybrid ranking (6.43), with each component
 contributing statistically significant improvements ($p < 0.001$).
