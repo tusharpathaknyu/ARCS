@@ -124,8 +124,8 @@ of cold-start quality with 49\% fewer simulations.
   lbl/.style={font=\scriptsize, color=black!60}
 ]
 % Row 1: Training pipeline
-\node[data] (templates) {SPICE\\Templates\\(32 topos)};
-\node[process, right=of templates] (datagen) {Data Gen\\63k circuits};
+\node[data] (templates) {SPICE\\Templates\\(34 topos)};
+\node[process, right=of templates] (datagen) {Data Gen\\62k circuits};
 \node[data, right=of datagen] (dataset) {Tokenized\\Dataset\\205k seqs};
 \node[model, right=of dataset] (sl) {Supervised\\Pre-train\\(100 epochs)};
 \node[model, right=of sl] (rl) {GRPO\\+ SPICE\\(500 steps)};
@@ -375,7 +375,7 @@ decoder-only transformer with a single weight-tied output head
 over the full vocabulary. This model treats all tokens---structural
 and value---identically.
 
-\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.8\%). I
+\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.7\%). I
 observe that predicting \emph{which component to place} and
 predicting \emph{what value it should have} are fundamentally
 different tasks. The two-head model separates these:
@@ -392,7 +392,7 @@ At each timestep, the model selects which head to use based on
 whether the next token is expected to be a value token
 (determined by the preceding component token).
 
-\textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.1\%).
+\textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.0\%).
 Circuit components form a graph defined by their electrical
 connectivity. I inject this structure into the transformer via
 two mechanisms:
@@ -1621,7 +1621,7 @@ common\_collector   & B & 7.00 & [7.00, 7.00] \\
 hartley             & O & 7.00 & [7.00, 7.00] \\
 \midrule
 inverting\_amp       & A & 6.81 & [6.76, 6.86] \\
-phase\_shift         & O & 6.80 & [6.44, 7.00] \\
+phase\_shift         & O & 6.80 & [6.50, 7.00] \\
 common\_base        & B & 6.67 & [6.56, 6.80] \\
 differential\_amp   & A & 6.63 & [6.54, 6.73] \\
 inv\_summing\_amp   & A & 6.60 & [6.50, 6.68] \\
