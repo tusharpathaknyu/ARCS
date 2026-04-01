@@ -80,18 +80,18 @@ AutoCircuit-RL~\cite{autocircuitrl} fine-tune large language models
 predict characters, not circuit components, leading to syntax errors in
 generated netlists and no semantic understanding of component values.
 
-\textbf{This work.} I propose ARCS (Figure~\ref{fig:overview}), which addresses all three gaps
+\textbf{This work.} ARCS (Figure~\ref{fig:overview}) addresses all three gaps
 simultaneously. Given one of 32 parameterized topology templates and a
 target specification, ARCS generates complete component-value assignments
 in a single forward pass. The three core contributions are:
 \begin{enumerate}
     \item \textbf{Group Relative Policy Optimization (GRPO) for
-    multi-topology RL}: I identify a critical failure mode of
+    multi-topology RL}: A critical failure mode of
     REINFORCE---cross-topology reward distribution mismatch---where
     easy topologies dominate gradient updates and hard topologies
     are abandoned. GRPO resolves this via per-topology advantage
     normalization (Eq.~\ref{eq:grpo}), achieving 53.1$\pm$3.1\%
-    simulation validity (+9.6\,pp over REINFORCE) with 10$\times$
+    simulation validity (+9.6 percentage points (pp) over REINFORCE) with 10$\times$
     fewer RL steps.
     \item \textbf{Grammar-constrained decoding}: A state-machine-based
     token masking scheme guarantees 100\% structural validity \emph{by
@@ -110,7 +110,7 @@ model that produces reasonable first-shot designs in $\sim$20\,ms,
 enabling rapid prototyping and design-space exploration at a cost
 $>$1000$\times$ lower than conventional search. ARCS does not yet match
 the per-design quality of search baselines (5.48 vs.\ 7.48 reward), but
-I show the paradigms are complementary: ARCS-seeded GA recovers 96.6\%
+the paradigms are complementary: ARCS-seeded GA recovers 96.6\%
 of cold-start quality with 49\% fewer simulations.
 
 \begin{figure*}[t]
@@ -236,7 +236,7 @@ continuous-time transport maps between a prior and data distribution
 via optimal-transport velocity fields, offering straighter sampling
 trajectories than diffusion models and avoiding the KL-constrained
 latent space of VAEs. CFM has been applied to molecular generation~\cite{song2024equivariant}
-and protein design but, to the best of my knowledge, not to circuit synthesis.
+and protein design but not, to date, to circuit synthesis.
 For discrete graph generation, DiGress~\cite{vignac2023digress} applies
 discrete denoising diffusion to molecule and planar graphs; however, it
 does not handle mixed discrete-continuous outputs (topology + values)
@@ -266,10 +266,10 @@ DiffCkt     & \checkmark & \texttimes & \checkmark & N/A & N/A & Synthetic \\
 \end{tabular}
 \end{table}
 
-ARCS is, to the best of my knowledge, the first system that jointly generates
+ARCS is the first system that jointly generates
 component values conditioned on both topology and target specifications
 while incorporating circuit-graph inductive bias
-(Table~\ref{tab:related}). I emphasize that ARCS performs
+(Table~\ref{tab:related}). Notably, ARCS performs
 \emph{conditioned component sizing} across 32 predefined topology
 templates---not topology \emph{discovery}. The topology is selected
 from a known library; the model's task is to predict all component
@@ -295,7 +295,7 @@ specification when simulated.
 
 \subsection{Tokenizer}
 
-I design a domain-specific vocabulary of 706 tokens organized into
+The tokenizer defines a domain-specific vocabulary of 706 tokens organized into
 seven semantic categories:
 \begin{itemize}
     \item \textbf{Special tokens} (5): \texttt{START}, \texttt{END},
@@ -364,7 +364,7 @@ grammar constraints ensure structural validity at each step.}
 \subsection{Model Architecture}
 \label{sec:arch}
 
-I develop three progressively more expressive architectures, all
+Three progressively more expressive architectures are developed, all
 sharing a common GPT-style backbone:
 $d_\text{model}\!=\!256$, $n_\text{layers}\!=\!6$,
 $n_\text{heads}\!=\!4$, $d_\text{ff}\!=\!1024$, SwiGLU
@@ -377,8 +377,7 @@ decoder-only transformer with a single weight-tied output head
 over the full vocabulary. This model treats all tokens---structural
 and value---identically.
 
-\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.7\%). I
-observe that predicting \emph{which component to place} and
+\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.7\%). Predicting \emph{which component to place} and
 predicting \emph{what value it should have} are fundamentally
 different tasks. The two-head model separates these:
 \begin{itemize}
@@ -396,14 +395,14 @@ whether the next token is expected to be a value token
 
 \textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.0\%).
 Circuit components form a graph defined by their electrical
-connectivity. I inject this structure into the transformer via
+connectivity. This structure is injected into the transformer via
 two mechanisms:
 \begin{enumerate}
     \item \textbf{Topology-aware attention bias.} For each of the
-    32 topologies, I precompute a binary adjacency matrix
-    $\mathbf{A}_\tau \in \{0,1\}^{M \times M}$ where $M$ is the
-    maximum number of components. During self-attention, I add a
-    learned scalar bias $b_\tau^{(l)}$ to attention logits for
+    32 topologies, a binary adjacency matrix
+    $\mathbf{A}_\tau \in \{0,1\}^{M \times M}$ is precomputed, where $M$ is the
+    maximum number of components. During self-attention, a
+    learned scalar bias $b_\tau^{(l)}$ is added to attention logits for
     positions $(i,j)$ where $A_{\tau,ij}=1$:
     \begin{equation}
     \text{Attn}(Q,K)_{ij} = \frac{Q_i K_j^\top}{\sqrt{d_k}} +
@@ -475,7 +474,7 @@ $\beta_2\!=\!0.95$), cosine LR schedule ($3 \times 10^{-4}$
 peak) with 5-epoch linear warmup.
 
 \textbf{Stage 2: REINFORCE~\cite{williams1992reinforce} with SPICE reward.}
-I fine-tune the best supervised checkpoint with policy gradient
+The best supervised checkpoint is fine-tuned with policy gradient
 optimization, using SPICE simulation as an oracle reward signal:
 \begin{equation}
 \nabla_\theta J = \mathbb{E}\!\left[ (R - b) \sum_t \nabla_\theta \log
@@ -510,7 +509,7 @@ M3 with MPS acceleration.
 
 \textbf{Stage 3: Group Relative Policy Optimization (GRPO).}
 \label{sec:grpo}
-I identify a critical failure mode of Stage~2: global-baseline
+A critical failure mode of Stage~2 is identified: global-baseline
 REINFORCE suffers from \emph{cross-topology reward distribution
 mismatch}. Power converters have max reward $\sim$8.0 while amplifiers
 reach $\sim$4.0; when the global baseline $b$ settles near the
@@ -523,8 +522,8 @@ GRPO resolves this by computing advantages \emph{within} topology
 groups, inspired by the group-relative advantage estimation of
 Shao~\emph{et~al.}~\cite{shao2024grpo} but applied per-topology
 rather than per-prompt.
-At each RL step, I sample $K$ topologies and generate
-$G$ circuits per topology (a ``group''). Advantages are z-scored
+At each RL step, $K$ topologies are sampled and
+$G$ circuits are generated per topology (a ``group''). Advantages are z-scored
 per group:
 \begin{equation}
 \hat{A}_i^{(\tau)} = \frac{R_i - \mu_\tau}{\sigma_\tau + \epsilon}
@@ -539,7 +538,7 @@ absolute reward scale. The policy gradient becomes:
 \hat{A}_i^{(\tau)} \sum_t \nabla_\theta \log p_\theta(x_t^{(i)})
 - \beta\,\text{KL}(p_\theta \| p_\text{ref})
 \end{equation}
-I use $K\!=\!3$ topologies and $G\!=\!4$ circuits per step.
+The training uses $K\!=\!3$ topologies and $G\!=\!4$ circuits per step.
 With only 500 GRPO steps ($\sim$1 hour, 6,000 SPICE simulations),
 the model achieves 53.1$\pm$3.1\% simulation validity---surpassing both
 supervised learning (45.4$\pm$3.0\%) and 5,000-step REINFORCE
@@ -550,7 +549,7 @@ is essential for multi-topology RL.
 \label{sec:ccfm}
 
 While the autoregressive approach generates circuits token-by-token,
-I additionally explore a \emph{non-autoregressive} generative model
+ARCS additionally includes a \emph{non-autoregressive} generative model
 that generates all circuit components in parallel via conditional
 flow matching~\cite{lipman2023flow}.
 
@@ -572,7 +571,7 @@ is a learned spec projection. Each DiT block applies adaptive LayerNorm
 followed by multi-head self-attention and a SwiGLU feed-forward
 network, with all conditioning applied via scale-and-shift modulation.
 
-\textbf{Training.} I train on optimal-transport conditional flow
+\textbf{Training.} CCFM is trained on optimal-transport conditional flow
 matching~\cite{lipman2023flow}. Given paired samples
 $\mathbf{x}_0 \sim \mathcal{N}(0,I)$ and $\mathbf{x}_1$ from the
 VCG latent space, the interpolant is $\mathbf{x}_t = (1-t)\mathbf{x}_0
@@ -588,7 +587,7 @@ The VCG encoder is frozen during flow matching training. After
 0.14 (from 0.68 initial).
 
 \textbf{Constraint-guided sampling.} During ODE integration
-(Euler method, 50 steps), I project the velocity toward the feasible
+(Euler method, 50 steps), the velocity is projected toward the feasible
 circuit set using learned per-constraint guidance weights
 $\{w_c\}_{c=1}^5$, initialized to zero and trained end-to-end:
 \begin{equation}
@@ -611,13 +610,13 @@ or a wrong component type for the target topology). While RL can
 improve structural validity to $\sim$100\% (Section~\ref{sec:results}),
 it does so statistically, without formal guarantees.
 
-I introduce \emph{grammar-constrained decoding}, which applies a
+ARCS introduces \emph{grammar-constrained decoding}, which applies a
 topology-aware token mask at each autoregressive step, restricting
 the sampling distribution to only structurally valid continuations.
 This provides 100\% structural validity \emph{by construction},
 without RL training or post-hoc filtering.
 
-\textbf{Grammar state machine.} I define a finite-state machine
+\textbf{Grammar state machine.} A finite-state machine is defined
 over the decoder state with two alternating phases:
 \texttt{EXPECT\_COMP} (the next token must be a valid component type
 or the \texttt{END} token) and \texttt{EXPECT\_VAL} (the next token
@@ -655,8 +654,8 @@ value ranges.}
 \label{fig:fsm}
 \end{figure}
 
-\textbf{Constraint levels.} I define three levels of increasing
-strictness:
+\textbf{Constraint levels.} Three levels of increasing
+strictness are defined:
 \begin{enumerate}
     \item \textsc{Grammar}: Enforces the component--value alternation
     pattern. At \texttt{EXPECT\_COMP} steps, only component and special
@@ -672,8 +671,8 @@ strictness:
     [1\,pF, 10\,mF]).
 \end{enumerate}
 
-\textbf{Masked sampling.} At each step $t$, I compute a binary mask
-$\mathbf{m}_t \in \{0, 1\}^{|V|}$ over the vocabulary, then apply it
+\textbf{Masked sampling.} At each step $t$, a binary mask
+$\mathbf{m}_t \in \{0, 1\}^{|V|}$ over the vocabulary is applied
 before the softmax:
 \begin{equation}
 p_\theta(x_t \mid x_{<t}) = \text{softmax}\!\left(
@@ -690,8 +689,7 @@ converges to valid \texttt{END} tokens more quickly, eliminating
 wasted tokens from invalid continuations.
 
 \textbf{Lagrangian constraint loss.} For training with constraint
-awareness, I additionally define a differentiable
-Lagrangian loss:
+awareness, a differentiable Lagrangian loss is defined:
 \begin{equation}
 \mathcal{L}_\text{constr} = \sum_{i} \lambda_i \cdot g_i(\theta)
 \label{eq:lagrangian}
@@ -706,7 +704,7 @@ improving generation quality even when decoding without masks.
 \label{sec:method-reward}
 
 To improve Best-of-$N$ candidate ranking beyond model confidence,
-I train a \emph{learned reward model}---a bidirectional transformer
+A \emph{learned reward model}---a bidirectional transformer
 encoder that predicts SPICE simulation reward from token sequences,
 following the verifier approach of Cobbe~\emph{et~al.}~\cite{cobbe2021verifiers}.
 The architecture uses 2 encoder layers with 128-dim hidden states,
@@ -722,7 +720,7 @@ on 41K circuits from the automated data pipeline using Huber loss.
 
 \subsection{Circuit Topologies}
 
-I define 34 circuit topologies across three tiers, of which 32 are
+ARCS defines 34 circuit topologies across three tiers, of which 32 are
 evaluated in the main experiments:
 \begin{itemize}
     \item \textbf{Tier 1} (7 power converters; 5 evaluated): Buck, Boost,
@@ -745,9 +743,9 @@ return the highest-reward design. Total: 200 SPICE simulations per
 spec.
 
 \textbf{Genetic Algorithm (GA)}: BLX-$\alpha$ crossover in log-space,
-Gaussian mutation, tournament selection. For Table~\ref{tab:main}, I
-use population 30, 20 generations ($\sim$630 evals). For the
-statistical evaluation (Table~\ref{tab:pub_eval}), I use 20 repeats
+Gaussian mutation, tournament selection. For Table~\ref{tab:main}, the
+configuration uses population 30, 20 generations ($\sim$630 evals). For the
+statistical evaluation (Table~\ref{tab:pub_eval}), 20 repeats are used
 with population 16 ($\sim$320 evals per spec) to match the compute
 budget of the hybrid pipeline.
 
@@ -763,7 +761,7 @@ iterative search?
 
 \subsection{Evaluation Protocol}
 
-For each method, I evaluate 160 conditioned test specs (10 per
+For each method, 160 conditioned test specs are evaluated (10 per
 topology). Metrics:
 \begin{itemize}
     \item \textbf{Structural validity}: Well-formed token sequence
@@ -911,29 +909,18 @@ is essential for multi-topology RL.
 \legend{REINFORCE, GRPO}
 \end{axis}
 \end{tikzpicture}
-\caption{RL training dynamics. \textbf{Important}: these curves show
-\emph{in-training} validation on small stochastic batches (high
-variance); Table~\ref{tab:main} reports held-out evaluation on 160
-conditioned specs averaged over 5 seeds (lower variance, different
-numbers). REINFORCE (5,000 steps) fluctuates around the SL baseline
-(45.6\%, dashed) without consistent improvement. GRPO (3,000 steps)
-steadily improves to 77\% in-training. The best GRPO checkpoint (step
-500, 53.1$\pm$3.1\% in Table~\ref{tab:main}) was selected via the
-held-out protocol; the gap between in-training (77\%) and held-out
-(48.8\%) at step 3000 reflects overfitting to the training topology
-distribution.}
+\caption{RL training dynamics (in-training validation; Table~\ref{tab:main}
+reports held-out results). REINFORCE fluctuates around the SL baseline
+(dashed). GRPO steadily improves; the best checkpoint (step 500,
+53.1\% held-out) was selected via early stopping.}
 \label{fig:rl_curves}
 \end{figure}
 
 \textbf{Non-autoregressive alternatives.} VCG and CCFM both achieve
-100\% structural validity (all 32 evaluated topologies at 100\%) via
-graph-structured generation with differentiable constraints.
-Using the graph$\to$token$\to$SPICE bridge, both models reach
-85.3\% simulation validity (116/136) in a 4-candidate-per-topology
-evaluation across all 34 topologies, demonstrating that constrained continuous-space generation
-can produce high-quality simulatable designs. The CCFM model's flow
-matching objective trains $\sim$3$\times$ faster than VCG's VAE objective
-(25\,s vs.\ 71\,s per epoch) while matching structural validity.
+100\% structural validity via differentiable constraints, reaching
+85.3\% simulation validity (116/136) across 34 topologies. CCFM
+trains $\sim$3$\times$ faster than VCG (25\,s vs.\ 71\,s per epoch)
+while matching validity.
 
 \subsection{Hybrid Multi-Source Ranking}
 
@@ -956,11 +943,9 @@ CCFM-only   & 100\% & 97.1\% & 85.3\% & 5.50 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:hybrid} shows that multi-source ranking is strongly
-complementary: each source occasionally dominates on different
-topologies, and selecting by SPICE reward closes the remaining
-sim-validity gap while improving average reward by +0.84 over VCG-only
-and +0.87 over CCFM-only.
+Multi-source ranking is strongly complementary: selecting by SPICE
+reward improves average reward by +0.84 over VCG-only and +0.87 over
+CCFM-only.
 
 \subsection{Statistical Evaluation with Baselines}
 
@@ -986,16 +971,12 @@ CCFM only       & 1   & 5.51 [5.44, 5.58] & 95.7\% \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:pub_eval} presents a rigorous evaluation with bootstrap
-confidence intervals. At equal compute budget (1 SPICE evaluation),
-VCG (+0.16) and CCFM (+0.33) outperform random sampling, demonstrating
-that learned generation produces better circuits than random parameter
-selection. The hybrid pipeline with 8 candidates achieves 99.9\%
-simulation validity and reward 6.43---competitive with the genetic
-algorithm's 7.56 while using \textbf{40$\times$ fewer SPICE evaluations}.
-The ablation is clear: VCG alone (5.34) $\rightarrow$ +CCFM diversity
-(5.51) $\rightarrow$ +hybrid ranking (6.43), with each component
-contributing statistically significant improvements ($p < 0.001$).
+At equal compute (1 SPICE evaluation), both VCG and CCFM outperform
+random sampling. The hybrid pipeline with 8 candidates achieves 99.9\%
+simulation validity and reward 6.43 using \textbf{40$\times$ fewer
+SPICE evaluations} than GA (7.56). Each pipeline component contributes
+significant improvements ($p < 0.001$): VCG (5.34) $\rightarrow$
++CCFM (5.51) $\rightarrow$ +hybrid ranking (6.43).
 
 \subsection{Ablation Studies}
 
@@ -1015,50 +996,26 @@ Tier~1 only (7 topos)  & 100\%  & 20.6\% & 3.77 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ablation} reveals three findings:
+Removing spec conditioning drops reward by $-25.5\%$ and structural
+validity to 58.8\%, confirming that the specification prefix is
+essential. RL improves reward by $+0.25$ and validity by $+5.6$\,pp.
+The Tier~1-only model achieves the highest per-design reward (3.77) but
+covers only 7 topologies; 32 topologies with lower average validity is
+the more useful configuration.
 
-\textbf{Spec conditioning is critical.} Removing spec conditioning
-drops reward by $-0.89$ ($-25.5\%$) and structural validity from
-98.1\% to 58.8\%. The specification prefix provides essential
-context for both topology selection and component sizing.
-
-\textbf{RL helps modestly.} RL improves reward by $+0.25$ and
-simulation validity by $+5.6$\,pp, confirming that REINFORCE with
-KL-constrained updates helps the model learn from SPICE feedback,
-though the gains are smaller than architectural improvements.
-
-\textbf{Topology expansion trades per-design quality for coverage.}
-The Tier~1-only model achieves the highest per-design reward (3.77)
-but covers only 7 topologies. Adding 27 signal-processing and extended
-topologies lowers the average because filters, oscillators, and BJT circuits
-have tighter component constraints. The coverage--quality trade-off is
-worthwhile: 32 topologies with 45.4\% validity (Graph Transformer) is more
-useful than 7 topologies with higher per-design scores.
-
-\subsection{Per-Topology Analysis}
-
-From the unified evaluation (Table~\ref{tab:main}), I observe
-a category-level performance hierarchy. \textbf{Signal circuits}
-(amplifiers, filters, oscillators) show the clearest GRPO advantage:
-66$\pm$3\% sim-validity vs.\ 50$\pm$3\% for REINFORCE and 56$\pm$4\% for SL
-(averaged over 5 seeds). Among
-signal circuits, amplifiers are the easiest (simple op-amp topologies),
-while filters and oscillators require tighter component sizing.
-\textbf{Power converters} remain the hardest category for all
-autoregressive methods due to their sensitivity to inductor/capacitor
-values and switching dynamics; GRPO still outperforms alternatives here.
-Full per-topology results for the hybrid pipeline (50 samples per
-topology, 32 topologies) are in Appendix Table~\ref{tab:per_topo_full}.
-
-% Per-topology figure removed: detailed 32-topology breakdown in Appendix
+Signal circuits show the clearest GRPO advantage
+(66$\pm$3\% sim-validity vs.\ 50$\pm$3\% REINFORCE). Power converters
+remain hardest due to switching dynamics; GRPO still outperforms
+alternatives. Full per-topology results are in
+Appendix~Table~\ref{tab:per_topo_full}.
 
 \subsection{Warm-Start Experiment}
 \label{sec:warm-start}
 
 A natural question is whether ARCS's fast inference can complement
-search-based optimization. I evaluate a \emph{warm-start} strategy:
+search-based optimization. A \emph{warm-start} strategy is evaluated:
 ARCS generates 3 candidate designs, and the best seeds a GA population
-of 20 individuals for 5 generations (113 SPICE simulations). I compare
+of 20 individuals for 5 generations (113 SPICE simulations), compared
 against cold-start GA (20 individuals, 10 generations, 220 simulations).
 
 \begin{table}[t]
@@ -1091,11 +1048,11 @@ for search-based design workflows.
 \subsection{Constrained Decoding}
 \label{sec:constrained_results}
 
-I evaluate the grammar-constrained decoding scheme described in
-Section~\ref{sec:constrained} across three constraint levels
-(Grammar, Topology, Full) plus an unconstrained baseline (None).
-To isolate the effect of constrained decoding from model quality,
-I evaluate with a \emph{randomly initialized} model (no training),
+The grammar-constrained decoding scheme (Section~\ref{sec:constrained})
+is evaluated across three constraint levels (Grammar, Topology, Full)
+plus an unconstrained baseline (None). To isolate the effect of
+constrained decoding from model quality, evaluation uses a
+\emph{randomly initialized} model (no training),
 demonstrating that the constraints alone suffice for structural
 correctness.
 
@@ -1117,41 +1074,22 @@ Level & Struct\,\% & Comp\,\% & Avg Comp & Time \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:constrained} reveals several findings:
-
-\textbf{Validity by construction.} All three constraint levels achieve
-100\% structural validity, compared to 0\% for unconstrained random
-decoding. This holds across all 32 topologies without exception,
-providing a \emph{formal guarantee} that no structurally invalid circuit
-can be generated.
-
-\textbf{Topology constraints ensure component correctness.} At the
-\textsc{Grammar} level, component type correctness is 0\% with a
-random-init model, since the grammar enforces alternation but not
-topology-specific component selection (the model randomly picks among
-all component tokens). Adding \textsc{Topology} constraints raises
-component correctness to 100\%.
-
-\textbf{Constrained decoding is faster.} Counter-intuitively,
-constrained decoding is faster than unconstrained: 25\,ms
-(\textsc{Full}) vs.\ 269\,ms (\textsc{None}). The reason is that
-unconstrained random models generate long, meandering sequences before
-(possibly never) emitting \texttt{END}, while topology constraints
-force the correct number of components and terminate promptly.
-
-\textbf{Orthogonal to model quality.} Constrained decoding works with
-any model architecture---even random initialization---and composes
-with RL fine-tuning. A trained model with \textsc{Topology} constraints
-produces designs that are both structurally valid (guaranteed) and
-semantically meaningful (learned).
+All three constraint levels achieve 100\% structural validity,
+compared to 0\% unconstrained---a \emph{formal guarantee} across all
+32 topologies. \textsc{Topology} constraints additionally ensure 100\%
+component type correctness. Counter-intuitively, constrained decoding
+is faster (25\,ms vs.\ 269\,ms unconstrained) because topology constraints
+terminate sequences promptly instead of generating meandering token
+streams. Since constraints are orthogonal to model quality---working
+even with random initialization---they compose freely with RL fine-tuning.
 
 \subsection{Inference-Time Compute Scaling}
 \label{sec:bestofn}
 
-ARCS generates a circuit in $\sim$30\,ms. A natural question is
-whether generating $N$ candidates and selecting the best---without
-any SPICE simulation---can improve quality by trading minimal
-additional inference cost. I rank candidates by mean log-probability
+ARCS generates a circuit in $\sim$30\,ms. Generating $N$ candidates
+and selecting the best---without any SPICE simulation---can improve
+quality at minimal additional inference cost. Candidates are ranked
+by mean log-probability
 (model confidence), which is computed for free during autoregressive
 sampling. This is analogous to recent ``test-time compute
 scaling''~\cite{snell2024scaling} results in language modeling,
@@ -1180,29 +1118,13 @@ RS & --- & 81.2\% & 7.28 & 58.8\,s & 1$\times$ \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:bestofn} reveals several findings:
+SPICE reward peaks at $N\!=\!3$ (5.48, +9.3\% over single-shot)
+then plateaus, even as model confidence continues improving---indicating
+that log-probability is a useful but imperfect proxy for simulation quality.
+Best-of-3 at 97\,ms remains 600$\times$ faster than random search (58.8\,s).
 
-\textbf{Diminishing returns with a sweet spot at $N\!=\!3$.}
-Model confidence improves monotonically (from $-1.16$ to $-0.52$),
-but SPICE reward peaks at $N\!=\!3$ (5.48) and then plateaus.
-This suggests that the highest-confidence sequence under the model
-is not always the highest-reward circuit under SPICE --- model
-confidence is a useful but imperfect proxy for simulation quality.
-Nevertheless, Best-of-3 improves reward by 9.3\% and simulation
-validity by 12.5\,pp over single-shot generation.
-
-\textbf{Still orders of magnitude faster than search.}
-Best-of-3 uses 97\,ms total — 600$\times$ faster than random
-search (58.8\,s) and 2,800$\times$ faster than GA (271\,s).
-Even the most expensive setting ($N\!=\!50$, 1.6\,s) is 37$\times$
-faster than RS and 170$\times$ faster than GA.
-
-\textbf{Confidence--reward misalignment at high $N$.}
-The non-monotonic reward curve at $N > 5$ indicates that the model's
-log-probability ranking does not perfectly align with SPICE reward.
-This motivates future work on \emph{learned reward models} that
-predict circuit quality without simulation, enabling more effective
-candidate ranking.
+The non-monotonic reward curve at $N > 5$ motivates the learned
+reward model (Section~\ref{sec:reward-model}) for more effective ranking.
 
 \begin{figure}[t]
 \centering
@@ -1242,23 +1164,11 @@ model confidence and SPICE reward.}
 \subsection{Learned Reward Model}
 \label{sec:reward-model}
 
-The confidence--reward misalignment identified in
-Section~\ref{sec:bestofn} motivates a \emph{learned reward model}:
-a lightweight transformer encoder trained to predict SPICE reward
-from token sequences without running simulation.
-
-\textbf{Architecture.} The reward model uses a 2-layer bidirectional
-transformer encoder (128-dim, 4 heads, SwiGLU FFN) with mean-pooling
-over non-padding tokens followed by a 2-layer MLP producing a scalar
-reward prediction. Token embeddings are warm-started from the
-generator via SVD-based projection. The model has 666K
-parameters---10$\times$ smaller than the generator.
-
-\textbf{Training.} I train on 41K circuits from the automated
-data pipeline. Each tokenized circuit is paired with its ground-truth
-SPICE reward (computed from simulation metrics). Using Huber loss
-with AdamW and cosine annealing, the model converges in 24 epochs
-with early stopping (patience\,=\,5).
+To address the confidence--reward misalignment
+(Section~\ref{sec:bestofn}), a 666K-parameter reward model (2-layer
+bidirectional transformer encoder, 128-dim, 4 heads) is trained on
+41K SPICE-simulated circuits using Huber loss. Token embeddings are
+warm-started from the generator via SVD projection.
 
 \begin{table}[t]
 \centering
@@ -1279,13 +1189,10 @@ Within $\pm$1.0 & 97.8\% \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:reward-model} shows the reward model achieves
-strong predictive accuracy: Pearson correlation $r\!=\!0.988$,
-rank correlation $\rho\!=\!0.947$, and MAE of 0.147 on a 0--8
-reward scale. This enables its use as a ranking function in
-Best-of-$N$ generation.
+The reward model achieves $r\!=\!0.988$ correlation with ground-truth
+reward (Table~\ref{tab:reward-model}).
 
-\textbf{Ranking comparison.} I compare confidence-based and
+\textbf{Ranking comparison.} A comparison of confidence-based and
 reward-model-based ranking for Best-of-$N$ candidate selection,
 evaluating the selected circuit via SPICE simulation (16 test
 specs, all topologies).
@@ -1318,94 +1225,39 @@ $N$  & Conf & RM & $\Delta$\%
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ranking-compare} reveals several findings. First, at
-$N\!=\!3$ the reward model consistently outperforms confidence ranking
-for \emph{both} SL and RL generators ($+2.0\%$ and $+2.1\%$,
-respectively), confirming that the learned reward signal captures
-quality aspects that log-probability misses. Second, the RL generator
-shows more stable reward-model gains across $N$ (positive in 3/4
-cases), suggesting that RL-trained models produce candidate
-distributions more amenable to reward-model re-ranking. Third, SL
-results at larger $N$ exhibit high variance ($-6.5\%$ at $N\!=\!5$,
-$-7.2\%$ at $N\!=\!20$), reflecting the limited test topology count
-(16 specs) and the stochastic nature of autoregressive generation.
-
-This finding has a practical implication: \emph{the reward model is
-most reliably valuable at moderate $N$ ($\approx$3)}, where the
-candidate pool is large enough for meaningful re-ranking but small
-enough to avoid noise amplification. Combined with the RL generator,
-reward-model ranking provides a consistent, training-free quality
-boost at negligible computational cost.
+At $N\!=\!3$, the reward model consistently outperforms confidence
+ranking for both SL and RL generators ($+2.0\%$ and $+2.1\%$),
+confirming that the learned reward signal captures quality aspects
+that log-probability misses. The reward model is most reliably
+valuable at moderate $N$ ($\approx$3), providing a consistent,
+training-free quality boost at negligible cost.
 
 % ==========================================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\textbf{Architecture vs.\ RL vs.\ GRPO.} The most striking finding
-is the interplay between inductive bias and RL algorithm design.
-Architectural changes (Baseline$\to$Graph Transformer) yield $+0.49$
-reward purely from inductive bias. REINFORCE RL slightly degrades
-simulation validity ($-1.9$\,pp) due to cross-topology reward
-mismatch, while GRPO \emph{improves} it ($+7.7$\,pp over SL) with
-10$\times$ fewer RL steps. This demonstrates that the choice of
-RL algorithm matters as much as the model architecture at this
-scale: per-topology advantage normalization (Eq.~\ref{eq:grpo})
-is essential when the training distribution spans circuit families
-with heterogeneous reward scales.
-
-\textbf{Flow matching for circuits.} CCFM demonstrates that
-conditional flow matching is a viable generative paradigm for
-circuit synthesis. By operating in the latent space of a
-pre-trained VAE with constraint-guided ODE integration, CCFM
-achieves 100\% structural validity---matching the VAE itself
-while training $\sim$3$\times$ faster per epoch. The flow matching
-objective's straight-line interpolants (vs.\ the VAE's
-KL-constrained posterior) suggest a path toward higher-quality
-non-autoregressive circuit generation, particularly for
-applications requiring parallel generation of many candidates.
+\textbf{Architecture vs.\ RL vs.\ GRPO.} Architectural changes
+(Baseline$\to$Graph Transformer) yield $+0.49$ reward from inductive
+bias alone. REINFORCE degrades validity ($-1.9$\,pp) due to
+cross-topology reward mismatch, while GRPO improves it ($+7.7$\,pp
+over SL) with 10$\times$ fewer steps. Per-topology advantage
+normalization is essential when training spans circuit families with
+heterogeneous reward scales.
 
 \textbf{Amortized vs.\ iterative design.} ARCS and search baselines
-represent fundamentally different paradigms. Search methods achieve
-near-optimal designs at high computational cost. ARCS provides
-reasonable first-shot designs at near-zero marginal cost, and the
-warm-start experiment (Section~\ref{sec:warm-start}) shows these
-paradigms are complementary: ARCS-seeded GA recovers 96.6\% of
-cold-start quality with 49\% fewer simulations.
+are complementary: ARCS-seeded GA recovers 96.6\% of cold-start
+quality with 49\% fewer simulations (Section~\ref{sec:warm-start}).
 
-\textbf{Constrained decoding vs.\ RL for validity.}
-RL fine-tuning and grammar-constrained decoding both improve structural
-validity, but through fundamentally different mechanisms.
-RL learns validity \emph{statistically} from reward signals---GRPO
-achieves 96.6$\pm$0.5\% structural validity after only 500
-SPICE-in-the-loop steps, while REINFORCE reaches 95.5$\pm$1.3\%
-after 5,000 steps.
-Constrained decoding achieves 100\% validity \emph{by construction}
-via token masking, requiring no training and working even with randomly
-initialized weights. The two approaches are complementary: constrained
-decoding guarantees structure, while GRPO optimizes \emph{value quality}
-within the valid subspace with balanced per-topology gradients.
-This decomposition---structure by grammar, semantics by learning---mirrors
-the separation of syntax and semantics in programming language
-design~\cite{hokamp2017lexically}.
+\textbf{Structure by grammar, semantics by learning.}
+Constrained decoding guarantees 100\% structural validity by
+construction; GRPO optimizes \emph{value quality} within the valid
+subspace. This decomposition mirrors the separation of syntax and
+semantics in programming language design~\cite{hokamp2017lexically}.
 
-\textbf{Scalability.} The automated data pipeline means ARCS scales
-to new topologies by writing a single SPICE template---no manual
-circuit curation needed. This contrasts with AnalogGenie's reliance
-on 3,502 manually collected circuits. However, ARCS currently covers
-32 topologies vs.\ AnalogGenie's 3,502 unique structures; extending
-to transistor-level IC circuits requires more templates and likely
+\textbf{Scalability.} ARCS scales to new topologies by writing a
+single SPICE template---no manual curation needed. Extending to
+transistor-level IC circuits requires more templates and likely
 larger models.
-
-\textbf{Inference-time scaling.} Best-of-$N$ experiments
-(Section~\ref{sec:bestofn}) reveal that model confidence (mean
-log-probability) is a useful but imperfect proxy for SPICE reward.
-Reward peaks at $N\!=\!3$ then plateaus, suggesting that the model's
-probability ranking does not fully align with simulation-based
-quality. The learned reward model (Section~\ref{sec:reward-model})
-addresses this gap: trained on 41K SPICE-simulated circuits, it
-achieves $r\!=\!0.988$ correlation with ground-truth reward and
-improves Best-of-$N$ selection by up to $+2.7\%$ at $N\!=\!10$,
-providing a training-free quality boost at negligible cost.
 
 \textbf{Limitations.}
 \begin{itemize}
@@ -1421,15 +1273,9 @@ providing a training-free quality boost at negligible cost.
 \end{itemize}
 
 \textbf{Future work.}
-(1)~Scale model to 50--100M parameters with more diverse training data.
-(2)~Extended GRPO training (3,000+ steps) with curriculum learning
-over topology difficulty.
-(3)~End-to-end CCFM fine-tuning with unfrozen VCG backbone and
-SPICE-in-the-loop flow matching.
-(4)~Extend constrained decoding to enforce electrical connectivity
-constraints (e.g., Kirchhoff's laws) in addition to structural grammar.
-(5)~Multi-fidelity training combining fast analytical models with
-full SPICE simulation for RL.
+Scaling to 50--100M parameters, curriculum learning over topology
+difficulty, end-to-end CCFM fine-tuning with SPICE-in-the-loop, and
+extending constraints to enforce Kirchhoff's laws.
 
 \textbf{Code and data availability.} Code, data, and trained checkpoints
 are available at \url{https://github.com/tusharpathaknyu/ARCS}.
@@ -1438,7 +1284,7 @@ are available at \url{https://github.com/tusharpathaknyu/ARCS}.
 \section{Conclusion}
 \label{sec:conclusion}
 
-I present ARCS, a system for amortized analog circuit generation
+This paper presented ARCS, a system for amortized analog circuit generation
 that produces complete, SPICE-simulatable designs conditioned on target
 specifications across 32 topology templates. The main finding is that
 per-topology advantage normalization (GRPO) is essential for RL in
@@ -1455,6 +1301,67 @@ reward), ARCS's $>$1000$\times$ speed advantage enables rapid prototyping,
 and warm-start experiments show the paradigms are complementary (96.6\%
 of GA quality with 49\% fewer simulations). ARCS establishes amortized
 circuit generation as a practical tool for design-space exploration.
+
+% ==========================================================================
+\appendix
+\section{Per-Topology Results}
+\label{app:per_topology}
+
+Table~\ref{tab:per_topo_full} presents hybrid-ranked results
+for all 32 evaluated topologies (50 samples each, bootstrap 95\% CI),
+sorted by mean reward.
+
+\begin{table}[h]
+\centering
+\caption{Per-topology hybrid-ranked results (50 samples, spec-aware reward).}
+\label{tab:per_topo_full}
+\small
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Topology & Cat & Reward & 95\% CI \\
+\midrule
+current\_mirror      & B & 8.00 & [8.00, 8.00] \\
+voltage\_doubler     & P & 7.96 & [7.96, 7.97] \\
+shunt\_regulator     & R & 7.77 & [7.64, 7.85] \\
+series\_regulator    & R & 7.59 & [7.41, 7.73] \\
+sallen\_key\_lowpass & F & 7.49 & [7.36, 7.60] \\
+common\_emitter     & B & 7.05 & [6.90, 7.20] \\
+wien\_bridge         & O & 7.00 & [7.00, 7.00] \\
+colpitts            & O & 7.00 & [7.00, 7.00] \\
+common\_collector   & B & 7.00 & [7.00, 7.00] \\
+hartley             & O & 7.00 & [7.00, 7.00] \\
+\midrule
+inverting\_amp       & A & 6.81 & [6.76, 6.86] \\
+phase\_shift         & O & 6.80 & [6.50, 7.00] \\
+common\_base        & B & 6.67 & [6.56, 6.80] \\
+differential\_amp   & A & 6.63 & [6.54, 6.73] \\
+inv\_summing\_amp   & A & 6.60 & [6.50, 6.68] \\
+half\_bridge        & P & 6.52 & [6.31, 6.72] \\
+cuk                  & P & 6.49 & [6.26, 6.72] \\
+cascode              & B & 6.42 & [6.31, 6.53] \\
+charge\_pump         & P & 6.41 & [6.40, 6.42] \\
+buck                 & P & 6.37 & [6.25, 6.49] \\
+\midrule
+noninverting\_amp    & A & 6.30 & [6.14, 6.44] \\
+push\_pull           & P & 6.04 & [5.77, 6.32] \\
+boost                & P & 6.01 & [5.85, 6.17] \\
+transimpedance\_amp & A & 6.00 & [6.00, 6.00] \\
+twin\_t\_notch       & F & 5.76 & [5.54, 5.98] \\
+zeta\_converter     & P & 5.71 & [5.51, 5.93] \\
+instrum\_amp        & A & 5.40 & [5.24, 5.58] \\
+buck\_boost          & P & 5.34 & [5.22, 5.48] \\
+sepic                & P & 5.24 & [4.99, 5.50] \\
+sk\_highpass         & F & 5.00 & [5.00, 5.00] \\
+sk\_bandpass         & F & 4.99 & [4.91, 5.06] \\
+state\_var\_filter   & F & 4.45 & [4.30, 4.63] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Current mirrors and voltage doublers achieve near-perfect scores (8.0)
+due to simple operating conditions. The weakest topologies---state variable
+filter (4.45) and Sallen-Key bandpass/highpass (5.0)---reflect the
+difficulty of precise frequency control in multi-pole filters.
 
 % ==========================================================================
 \bibliographystyle{IEEEtran}
@@ -1598,72 +1505,5 @@ reinforcement learning,'' \emph{Machine Learning}, vol.~8,
 no.~3--4, pp.~229--256, 1992.
 
 \end{thebibliography}
-
-\appendix
-\section{Per-Topology Results}
-\label{app:per_topology}
-
-Table~\ref{tab:per_topo_full} shows detailed hybrid-ranked results
-for all 32 evaluated topologies (50 samples each, bootstrap 95\% CI).
-Topologies are sorted by mean reward. Power converters are marked
-with (P), amplifiers with (A), filters with (F), oscillators with (O),
-BJT circuits with (B), and regulators with (R).
-
-\begin{table}[h]
-\centering
-\caption{Per-topology hybrid-ranked results (50 samples, spec-aware reward).}
-\label{tab:per_topo_full}
-\small
-\begin{tabular}{@{}llcc@{}}
-\toprule
-Topology & Cat & Reward & 95\% CI \\
-\midrule
-current\_mirror      & B & 8.00 & [8.00, 8.00] \\
-voltage\_doubler     & P & 7.96 & [7.96, 7.97] \\
-shunt\_regulator     & R & 7.77 & [7.64, 7.85] \\
-series\_regulator    & R & 7.59 & [7.41, 7.73] \\
-sallen\_key\_lowpass & F & 7.49 & [7.36, 7.60] \\
-common\_emitter     & B & 7.05 & [6.90, 7.20] \\
-wien\_bridge         & O & 7.00 & [7.00, 7.00] \\
-colpitts            & O & 7.00 & [7.00, 7.00] \\
-common\_collector   & B & 7.00 & [7.00, 7.00] \\
-hartley             & O & 7.00 & [7.00, 7.00] \\
-\midrule
-inverting\_amp       & A & 6.81 & [6.76, 6.86] \\
-phase\_shift         & O & 6.80 & [6.50, 7.00] \\
-common\_base        & B & 6.67 & [6.56, 6.80] \\
-differential\_amp   & A & 6.63 & [6.54, 6.73] \\
-inv\_summing\_amp   & A & 6.60 & [6.50, 6.68] \\
-half\_bridge        & P & 6.52 & [6.31, 6.72] \\
-cuk                  & P & 6.49 & [6.26, 6.72] \\
-cascode              & B & 6.42 & [6.31, 6.53] \\
-charge\_pump         & P & 6.41 & [6.40, 6.42] \\
-buck                 & P & 6.37 & [6.25, 6.49] \\
-\midrule
-noninverting\_amp    & A & 6.30 & [6.14, 6.44] \\
-push\_pull           & P & 6.04 & [5.77, 6.32] \\
-boost                & P & 6.01 & [5.85, 6.17] \\
-transimpedance\_amp & A & 6.00 & [6.00, 6.00] \\
-twin\_t\_notch       & F & 5.76 & [5.54, 5.98] \\
-zeta\_converter     & P & 5.71 & [5.51, 5.93] \\
-instrum\_amp        & A & 5.40 & [5.24, 5.58] \\
-buck\_boost          & P & 5.34 & [5.22, 5.48] \\
-sepic                & P & 5.24 & [4.99, 5.50] \\
-sk\_highpass         & F & 5.00 & [5.00, 5.00] \\
-sk\_bandpass         & F & 4.99 & [4.91, 5.06] \\
-state\_var\_filter   & F & 4.45 & [4.30, 4.63] \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Analysis.} Current mirrors and voltage doublers achieve
-near-perfect scores (8.0) due to simple operating conditions.
-Regulators and lowpass filters also score highly (7.5+).
-All four oscillators (Wien bridge, Colpitts, Hartley, phase shift)
-achieve reward $\geq$6.8, indicating reliable oscillation generation.
-The weakest topologies---state variable filter (4.45) and
-Sallen-Key bandpass/highpass (5.0)---suffer from poor cutoff
-frequency accuracy, reflecting the difficulty of precise frequency
-control in multi-pole filter topologies.
 
 \end{document}
