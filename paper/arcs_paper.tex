@@ -41,11 +41,11 @@ topologies using only 8 SPICE evaluations---40$\times$ fewer than
 genetic algorithms~(GA). For single-model inference, a topology-aware Graph
 Transformer with Best-of-3 candidate selection reaches \textbf{85\%
 simulation validity in 97\,ms}---over 600$\times$ faster than random
-search. The key technical contribution is adapting \emph{Group Relative
+search. The key technical contribution adapts \emph{Group Relative
 Policy Optimization} (GRPO) to multi-topology circuit reinforcement
-learning: a critical failure mode of REINFORCE---cross-topology reward
-distribution mismatch---is identified and resolved with per-topology
-advantage normalization, improving simulation validity by
+learning, resolving a critical failure mode of REINFORCE---cross-topology
+reward distribution mismatch---through per-topology advantage
+normalization. This improves simulation validity by
 +9.6 percentage~points over REINFORCE in only 500 RL steps ($10\times$ fewer).
 \emph{Grammar-constrained decoding} additionally guarantees 100\%
 structural validity by construction via topology-aware token masking.
@@ -60,11 +60,10 @@ warm-starting search methods (recovering 96.6\% of GA quality with
 \section{Introduction}
 \label{sec:intro}
 
-Analog circuit design remains a manual, expertise-intensive process.
-Engineers select a topology, choose component values, simulate, and
-iterate---a cycle that can take days or weeks. Recent machine learning
-approaches have begun to automate parts of this workflow, but each has
-significant limitations.
+Designing an analog circuit takes days. Engineers select a topology,
+choose component values, simulate, and iterate---a cycle repeated
+until specifications are met. Recent machine learning approaches
+automate parts of this workflow, but each leaves critical gaps.
 
 \textbf{Topology-only generation.} AnalogGenie~\cite{analoggenie}
 generates circuit topologies using an autoregressive transformer over
@@ -86,10 +85,10 @@ target specification, ARCS generates complete component-value assignments
 in a single forward pass. The three core contributions are:
 \begin{enumerate}
     \item \textbf{Group Relative Policy Optimization (GRPO) for
-    multi-topology RL}: A critical failure mode of
-    REINFORCE---cross-topology reward distribution mismatch---where
-    easy topologies dominate gradient updates and hard topologies
-    are abandoned. GRPO resolves this via per-topology advantage
+    multi-topology RL}: REINFORCE suffers from cross-topology reward
+    distribution mismatch, where easy topologies dominate gradient
+    updates and hard topologies are abandoned. GRPO resolves this
+    via per-topology advantage
     normalization (Eq.~\ref{eq:grpo}), achieving 53.1$\pm$3.1\%
     simulation validity (+9.6 percentage points (pp) over REINFORCE) with 10$\times$
     fewer RL steps.
@@ -364,7 +363,7 @@ grammar constraints ensure structural validity at each step.}
 \subsection{Model Architecture}
 \label{sec:arch}
 
-Three progressively more expressive architectures are developed, all
+ARCS explores three progressively more expressive architectures, all
 sharing a common GPT-style backbone:
 $d_\text{model}\!=\!256$, $n_\text{layers}\!=\!6$,
 $n_\text{heads}\!=\!4$, $d_\text{ff}\!=\!1024$, SwiGLU
@@ -395,14 +394,14 @@ whether the next token is expected to be a value token
 
 \textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.0\%).
 Circuit components form a graph defined by their electrical
-connectivity. This structure is injected into the transformer via
+connectivity. The Graph Transformer injects this structure via
 two mechanisms:
 \begin{enumerate}
     \item \textbf{Topology-aware attention bias.} For each of the
-    32 topologies, a binary adjacency matrix
-    $\mathbf{A}_\tau \in \{0,1\}^{M \times M}$ is precomputed, where $M$ is the
+    32 topologies, ARCS precomputes a binary adjacency matrix
+    $\mathbf{A}_\tau \in \{0,1\}^{M \times M}$ where $M$ is the
     maximum number of components. During self-attention, a
-    learned scalar bias $b_\tau^{(l)}$ is added to attention logits for
+    learned scalar bias $b_\tau^{(l)}$ augments the attention logits for
     positions $(i,j)$ where $A_{\tau,ij}=1$:
     \begin{equation}
     \text{Attn}(Q,K)_{ij} = \frac{Q_i K_j^\top}{\sqrt{d_k}} +
@@ -474,7 +473,7 @@ $\beta_2\!=\!0.95$), cosine LR schedule ($3 \times 10^{-4}$
 peak) with 5-epoch linear warmup.
 
 \textbf{Stage 2: REINFORCE~\cite{williams1992reinforce} with SPICE reward.}
-The best supervised checkpoint is fine-tuned with policy gradient
+Stage~2 fine-tunes the best supervised checkpoint with policy gradient
 optimization, using SPICE simulation as an oracle reward signal:
 \begin{equation}
 \nabla_\theta J = \mathbb{E}\!\left[ (R - b) \sum_t \nabla_\theta \log
@@ -509,7 +508,7 @@ M3 with MPS acceleration.
 
 \textbf{Stage 3: Group Relative Policy Optimization (GRPO).}
 \label{sec:grpo}
-A critical failure mode of Stage~2 is identified: global-baseline
+Stage~2 reveals a critical failure mode: global-baseline
 REINFORCE suffers from \emph{cross-topology reward distribution
 mismatch}. Power converters have max reward $\sim$8.0 while amplifiers
 reach $\sim$4.0; when the global baseline $b$ settles near the
@@ -522,8 +521,8 @@ GRPO resolves this by computing advantages \emph{within} topology
 groups, inspired by the group-relative advantage estimation of
 Shao~\emph{et~al.}~\cite{shao2024grpo} but applied per-topology
 rather than per-prompt.
-At each RL step, $K$ topologies are sampled and
-$G$ circuits are generated per topology (a ``group''). Advantages are z-scored
+Each RL step samples $K$ topologies and generates
+$G$ circuits per topology (a ``group''). Advantages are z-scored
 per group:
 \begin{equation}
 \hat{A}_i^{(\tau)} = \frac{R_i - \mu_\tau}{\sigma_\tau + \epsilon}
@@ -571,7 +570,7 @@ is a learned spec projection. Each DiT block applies adaptive LayerNorm
 followed by multi-head self-attention and a SwiGLU feed-forward
 network, with all conditioning applied via scale-and-shift modulation.
 
-\textbf{Training.} CCFM is trained on optimal-transport conditional flow
+\textbf{Training.} CCFM uses optimal-transport conditional flow
 matching~\cite{lipman2023flow}. Given paired samples
 $\mathbf{x}_0 \sim \mathcal{N}(0,I)$ and $\mathbf{x}_1$ from the
 VCG latent space, the interpolant is $\mathbf{x}_t = (1-t)\mathbf{x}_0
@@ -587,7 +586,7 @@ The VCG encoder is frozen during flow matching training. After
 0.14 (from 0.68 initial).
 
 \textbf{Constraint-guided sampling.} During ODE integration
-(Euler method, 50 steps), the velocity is projected toward the feasible
+(Euler method, 50 steps), CCFM projects the velocity toward the feasible
 circuit set using learned per-constraint guidance weights
 $\{w_c\}_{c=1}^5$, initialized to zero and trained end-to-end:
 \begin{equation}
@@ -616,8 +615,8 @@ the sampling distribution to only structurally valid continuations.
 This provides 100\% structural validity \emph{by construction},
 without RL training or post-hoc filtering.
 
-\textbf{Grammar state machine.} A finite-state machine is defined
-over the decoder state with two alternating phases:
+\textbf{Grammar state machine.} The decoder maintains a finite-state machine
+with two alternating phases:
 \texttt{EXPECT\_COMP} (the next token must be a valid component type
 or the \texttt{END} token) and \texttt{EXPECT\_VAL} (the next token
 must be a value token). The state machine transitions deterministically
@@ -654,8 +653,8 @@ value ranges.}
 \label{fig:fsm}
 \end{figure}
 
-\textbf{Constraint levels.} Three levels of increasing
-strictness are defined:
+\textbf{Constraint levels.} ARCS defines three levels of increasing
+strictness:
 \begin{enumerate}
     \item \textsc{Grammar}: Enforces the component--value alternation
     pattern. At \texttt{EXPECT\_COMP} steps, only component and special
@@ -671,8 +670,8 @@ strictness are defined:
     [1\,pF, 10\,mF]).
 \end{enumerate}
 
-\textbf{Masked sampling.} At each step $t$, a binary mask
-$\mathbf{m}_t \in \{0, 1\}^{|V|}$ over the vocabulary is applied
+\textbf{Masked sampling.} At each step $t$, the decoder applies a binary mask
+$\mathbf{m}_t \in \{0, 1\}^{|V|}$ over the vocabulary
 before the softmax:
 \begin{equation}
 p_\theta(x_t \mid x_{<t}) = \text{softmax}\!\left(
@@ -689,7 +688,7 @@ converges to valid \texttt{END} tokens more quickly, eliminating
 wasted tokens from invalid continuations.
 
 \textbf{Lagrangian constraint loss.} For training with constraint
-awareness, a differentiable Lagrangian loss is defined:
+awareness, the model additionally optimizes a differentiable Lagrangian loss:
 \begin{equation}
 \mathcal{L}_\text{constr} = \sum_{i} \lambda_i \cdot g_i(\theta)
 \label{eq:lagrangian}
@@ -704,7 +703,7 @@ improving generation quality even when decoding without masks.
 \label{sec:method-reward}
 
 To improve Best-of-$N$ candidate ranking beyond model confidence,
-A \emph{learned reward model}---a bidirectional transformer
+ARCS also trains a \emph{learned reward model}---a bidirectional transformer
 encoder that predicts SPICE simulation reward from token sequences,
 following the verifier approach of Cobbe~\emph{et~al.}~\cite{cobbe2021verifiers}.
 The architecture uses 2 encoder layers with 128-dim hidden states,
@@ -743,9 +742,8 @@ return the highest-reward design. Total: 200 SPICE simulations per
 spec.
 
 \textbf{Genetic Algorithm (GA)}: BLX-$\alpha$ crossover in log-space,
-Gaussian mutation, tournament selection. For Table~\ref{tab:main}, the
-configuration uses population 30, 20 generations ($\sim$630 evals). For the
-statistical evaluation (Table~\ref{tab:pub_eval}), 20 repeats are used
+Gaussian mutation, tournament selection. Table~\ref{tab:main} uses population 30 over 20 generations ($\sim$630 evals).
+The statistical evaluation (Table~\ref{tab:pub_eval}) uses 20 repeats
 with population 16 ($\sim$320 evals per spec) to match the compute
 budget of the hybrid pipeline.
 
@@ -761,7 +759,7 @@ iterative search?
 
 \subsection{Evaluation Protocol}
 
-For each method, 160 conditioned test specs are evaluated (10 per
+Each method is evaluated on 160 conditioned test specs (10 per
 topology). Metrics:
 \begin{itemize}
     \item \textbf{Structural validity}: Well-formed token sequence
@@ -1013,10 +1011,10 @@ Appendix~Table~\ref{tab:per_topo_full}.
 \label{sec:warm-start}
 
 A natural question is whether ARCS's fast inference can complement
-search-based optimization. A \emph{warm-start} strategy is evaluated:
+search-based optimization. The \emph{warm-start} strategy works as follows:
 ARCS generates 3 candidate designs, and the best seeds a GA population
-of 20 individuals for 5 generations (113 SPICE simulations), compared
-against cold-start GA (20 individuals, 10 generations, 220 simulations).
+of 20 individuals for 5 generations (113 SPICE simulations). The comparison
+is cold-start GA (20 individuals, 10 generations, 220 simulations).
 
 \begin{table}[t]
 \centering
@@ -1048,10 +1046,10 @@ for search-based design workflows.
 \subsection{Constrained Decoding}
 \label{sec:constrained_results}
 
-The grammar-constrained decoding scheme (Section~\ref{sec:constrained})
-is evaluated across three constraint levels (Grammar, Topology, Full)
-plus an unconstrained baseline (None). To isolate the effect of
-constrained decoding from model quality, evaluation uses a
+This section evaluates the grammar-constrained decoding scheme
+(Section~\ref{sec:constrained}) across three constraint levels
+(Grammar, Topology, Full) plus an unconstrained baseline (None).
+To isolate constraints from model quality, the evaluation uses a
 \emph{randomly initialized} model (no training),
 demonstrating that the constraints alone suffice for structural
 correctness.
@@ -1087,9 +1085,9 @@ even with random initialization---they compose freely with RL fine-tuning.
 \label{sec:bestofn}
 
 ARCS generates a circuit in $\sim$30\,ms. Generating $N$ candidates
-and selecting the best---without any SPICE simulation---can improve
-quality at minimal additional inference cost. Candidates are ranked
-by mean log-probability
+and selecting the best---without any SPICE simulation---trades minimal
+additional inference cost for improved quality. The ranker uses mean
+log-probability
 (model confidence), which is computed for free during autoregressive
 sampling. This is analogous to recent ``test-time compute
 scaling''~\cite{snell2024scaling} results in language modeling,
@@ -1284,23 +1282,23 @@ are available at \url{https://github.com/tusharpathaknyu/ARCS}.
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper presented ARCS, a system for amortized analog circuit generation
-that produces complete, SPICE-simulatable designs conditioned on target
-specifications across 32 topology templates. The main finding is that
-per-topology advantage normalization (GRPO) is essential for RL in
-multi-topology settings: it resolves the cross-topology reward mismatch
-that causes REINFORCE to regress, improving simulation validity by
-+9.6\,pp with 10$\times$ fewer RL steps. Grammar-constrained decoding
-guarantees 100\% structural validity by construction, and Best-of-3
-candidate selection reaches 85\% simulation validity in 97\,ms. A hybrid
+ARCS generates complete, SPICE-simulatable analog circuits conditioned
+on target specifications across 32 topologies---in milliseconds rather
+than minutes. Three findings stand out. First, per-topology advantage
+normalization (GRPO) resolves the cross-topology reward mismatch that
+causes REINFORCE to regress, improving simulation validity by +9.6\,pp
+with 10$\times$ fewer RL steps. Second, grammar-constrained decoding
+guarantees 100\% structural validity by construction, reaching 85\%
+simulation validity in 97\,ms with Best-of-3 selection. Third, a hybrid
 pipeline combining complementary generators with SPICE-based ranking
-achieves 99.9\% simulation validity (reward 6.43/8.0) with only
-8 SPICE evaluations---40$\times$ fewer than genetic algorithms.
-While per-design quality remains below search baselines (5.48 vs.\ 7.48
-reward), ARCS's $>$1000$\times$ speed advantage enables rapid prototyping,
-and warm-start experiments show the paradigms are complementary (96.6\%
-of GA quality with 49\% fewer simulations). ARCS establishes amortized
-circuit generation as a practical tool for design-space exploration.
+achieves 99.9\% simulation validity using only 8 SPICE
+evaluations---40$\times$ fewer than genetic algorithms.
+
+Per-design quality remains below search baselines (5.48 vs.\ 7.48
+reward). But ARCS is $>$1000$\times$ faster, and ARCS-seeded GA
+recovers 96.6\% of cold-start quality with 49\% fewer simulations.
+The two paradigms are complementary. Amortized circuit generation is
+not a replacement for search---it is a practical starting point.
 
 % ==========================================================================
 \appendix
