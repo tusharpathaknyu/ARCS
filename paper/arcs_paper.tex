@@ -38,7 +38,7 @@ methods. A hybrid pipeline combining two learned generators (a graph VAE
 and a flow-matching model) with SPICE-based ranking achieves
 \textbf{99.9\% simulation validity} (reward 6.43/8.0) across 32
 topologies using only 8 SPICE evaluations, 40$\times$ fewer than
-genetic algorithms~(GA). For single-model inference, a topology-aware Graph
+genetic algorithms. For single-model inference, a topology-aware Graph
 Transformer with Best-of-3 candidate selection reaches \textbf{85\%
 simulation validity in 97\,ms}, over 600$\times$ faster than random
 search. The key technical contribution adapts \emph{Group Relative
@@ -49,11 +49,6 @@ normalization. This improves simulation validity by
 +9.6 percentage~points over REINFORCE in only 500 RL steps ($10\times$ fewer).
 \emph{Grammar-constrained decoding} additionally guarantees 100\%
 structural validity by construction via topology-aware token masking.
-ARCS does not yet match the per-design quality of search-based
-optimization (5.48 vs.\ 7.48 reward), but its $>$1000$\times$ speed
-advantage enables rapid prototyping, design-space exploration, and
-warm-starting search methods (recovering 96.6\% of GA quality with
-49\% fewer simulations).
 \end{abstract}
 
 % ==========================================================================
