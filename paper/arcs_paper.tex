@@ -30,22 +30,23 @@ Topology-Aware Graph Attention and Spec Conditioning}
 
 % ==========================================================================
 \begin{abstract}
-I present ARCS, a system for \emph{amortized} analog circuit generation
+This paper presents ARCS (\textbf{A}uto\textbf{r}egressive \textbf{C}ircuit \textbf{S}ynthesis),
+a system for \emph{amortized} analog circuit generation
 that produces complete, SPICE-simulatable designs---topology and component
 values---in milliseconds rather than the minutes required by search-based
 methods. A hybrid pipeline combining two learned generators (a graph VAE
 and a flow-matching model) with SPICE-based ranking achieves
 \textbf{99.9\% simulation validity} (reward 6.43/8.0) across 32
 topologies using only 8 SPICE evaluations---40$\times$ fewer than
-genetic algorithms. For single-model inference, a topology-aware Graph
+genetic algorithms~(GA). For single-model inference, a topology-aware Graph
 Transformer with Best-of-3 candidate selection reaches \textbf{85\%
 simulation validity in 97\,ms}---over 600$\times$ faster than random
 search. The key technical contribution is adapting \emph{Group Relative
-Policy Optimization} (GRPO)~\cite{shao2024grpo} to multi-topology
-circuit RL: I identify a critical failure mode of
-REINFORCE (cross-topology reward distribution mismatch) and resolve it
-with per-topology advantage normalization, improving simulation validity
-by +9.6\,pp over REINFORCE in only 500 RL steps ($10\times$ fewer).
+Policy Optimization} (GRPO) to multi-topology circuit reinforcement
+learning: a critical failure mode of REINFORCE---cross-topology reward
+distribution mismatch---is identified and resolved with per-topology
+advantage normalization, improving simulation validity by
++9.6 percentage~points over REINFORCE in only 500 RL steps ($10\times$ fewer).
 \emph{Grammar-constrained decoding} additionally guarantees 100\%
 structural validity by construction via topology-aware token masking.
 ARCS does not yet match the per-design quality of search-based
