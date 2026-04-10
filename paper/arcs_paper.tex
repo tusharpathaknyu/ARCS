@@ -30,25 +30,27 @@ Topology-Aware Graph Attention and Spec Conditioning}
 
 % ==========================================================================
 \begin{abstract}
-This paper presents ARCS (\textbf{A}uto\textbf{r}egressive \textbf{C}ircuit \textbf{S}ynthesis),
-a system for \emph{amortized} analog circuit generation
-that produces complete, SPICE-simulatable designs (topology and component
-values) in milliseconds rather than the minutes required by search-based
-methods. A hybrid pipeline combining two learned generators (a graph VAE
-and a flow-matching model) with SPICE-based ranking achieves
-\textbf{99.9\% simulation validity} (reward 6.43/8.0) across 32
-topologies using only 8 SPICE evaluations, 40$\times$ fewer than
-genetic algorithms. For single-model inference, a topology-aware Graph
-Transformer with Best-of-3 candidate selection reaches \textbf{85\%
-simulation validity in 97\,ms}, over 600$\times$ faster than random
-search. The key technical contribution adapts \emph{Group Relative
-Policy Optimization} (GRPO) to multi-topology circuit reinforcement
-learning, resolving a critical failure mode of REINFORCE (cross-topology
-reward distribution mismatch) through per-topology advantage
-normalization. This improves simulation validity by
-+9.6 percentage~points over REINFORCE in only 500 RL steps ($10\times$ fewer).
-\emph{Grammar-constrained decoding} additionally guarantees 100\%
-structural validity by construction via topology-aware token masking.
+This paper presents ARCS (\textbf{A}uto\textbf{r}egressive
+\textbf{C}ircuit \textbf{S}ynthesis), a system for \emph{amortized}
+analog circuit generation. ARCS produces complete, SPICE-simulatable
+designs (topology and component values) in milliseconds rather than
+the minutes required by search-based methods. A hybrid pipeline
+combines two learned generators, a graph VAE and a flow-matching
+model, with SPICE-based ranking. It achieves \textbf{99.9\%
+simulation validity} (reward 6.43/8.0) across 32 topologies using
+only 8 SPICE evaluations, 40$\times$ fewer than genetic algorithms.
+For single-model inference, a topology-aware Graph Transformer with
+Best-of-3 candidate selection reaches \textbf{85\% simulation
+validity in 97\,ms}, over 600$\times$ faster than random search. The
+key technical contribution adapts \emph{Group Relative Policy
+Optimization} (GRPO) to multi-topology circuit reinforcement
+learning. GRPO resolves a critical failure mode of REINFORCE,
+cross-topology reward distribution mismatch, through per-topology
+advantage normalization. This improves simulation validity by
++9.6~percentage points over REINFORCE in only 500 RL steps ($10\times$
+fewer). \emph{Grammar-constrained decoding} additionally guarantees
+100\% structural validity by construction via topology-aware token
+masking.
 \end{abstract}
 
 % ==========================================================================
@@ -62,10 +64,10 @@ automate parts of this workflow, but each leaves critical gaps.
 
 \textbf{Topology-only generation.} AnalogGenie~\cite{analoggenie}
 generates circuit topologies using an autoregressive transformer over
-pin-level Eulerian sequences, achieving 93.2\% validity after PPO
-fine-tuning. However, it produces no component values; a separate
-genetic algorithm must size every generated circuit, adding minutes
-of computation. It also lacks specification conditioning: circuits are
+pin-level Eulerian sequences, achieving 93.2\% validity after
+proximal policy optimization (PPO) fine-tuning. However, it produces
+no component values; a separate genetic algorithm (GA) must size
+every generated circuit, adding minutes of computation. It also lacks specification conditioning: circuits are
 generated randomly, then filtered post-hoc.
 
 \textbf{Text-based generation.} CircuitSynth~\cite{circuitsynth} and
@@ -80,7 +82,8 @@ target specification, ARCS generates complete component-value assignments
 in a single forward pass. The three core contributions are:
 \begin{enumerate}
     \item \textbf{Group Relative Policy Optimization (GRPO) for
-    multi-topology RL}: REINFORCE suffers from cross-topology reward
+    multi-topology reinforcement learning (RL)}: REINFORCE suffers
+    from cross-topology reward
     distribution mismatch: easy topologies dominate gradient
     updates while hard topologies are abandoned. GRPO resolves this
     via per-topology advantage
@@ -188,12 +191,13 @@ level with no circuit-specific inductive bias.
 
 LaMAGIC~\cite{lamagic} generates analog IC topologies using language
 models with graph-based representations. While it introduces
-circuit-aware tokenization, it targets transistor-level IC design
-rather than board-level circuits with discrete component values.
+circuit-aware tokenization, it targets transistor-level integrated
+circuit (IC) design rather than board-level circuits with discrete
+component values.
 AnalogXpert~\cite{analogxpert} incorporates circuit design expertise
 into large language models for topology synthesis, demonstrating that
 domain knowledge can guide LLM-based generation.
-AstRL~\cite{astrl} applies deep reinforcement learning to analog and
+AstRL~\cite{astrl} applies deep RL to analog and
 mixed-signal circuit synthesis, training an RL agent to select
 topologies and size components end-to-end.
 INSIGHT~\cite{insight} uses an autoregressive transformer as a
@@ -204,24 +208,21 @@ of new designs.
 
 \subsection{Circuit Sizing and Optimization}
 
-AutoCkt~\cite{autockt} uses deep reinforcement learning for analog
-circuit sizing, treating component values as a continuous action space.
-Wang~\emph{et~al.}~\cite{wang2020gcnrl} combine graph neural networks
-with RL for transferable transistor sizing across circuit topologies.
-Lyu~\emph{et~al.}~\cite{lyu2018weibo} apply Bayesian optimization
-to analog sizing, achieving efficient exploration with Gaussian process
-surrogate models.
-CktGNN~\cite{cktgnn} uses graph neural networks for topology generation
-but is limited to operational amplifiers.
-Fan~\emph{et~al.}~\cite{fan2024graph} propose a graph-transformer
-surrogate model for power converter topologies, achieving strong
-prediction accuracy but focusing on evaluation rather than generation.
-FALCON~\cite{falcon} combines GNN-based prediction with layout
-co-optimization but is not generative for new topologies.
-DiffCkt~\cite{diffckt} applies diffusion models to transistor-level
-analog circuit generation via a hybrid neural network framework,
-demonstrating that generative models beyond VAEs and autoregressive
-approaches can produce valid circuit topologies.
+Several prior works size or score analog circuits without generating
+full topologies. AutoCkt~\cite{autockt} and
+GCN-RL~\cite{wang2020gcnrl} apply deep RL to transistor sizing; the
+latter uses graph neural networks (GNNs) for cross-topology transfer.
+Lyu~\emph{et~al.}~\cite{lyu2018weibo} size circuits via Bayesian
+optimization with Gaussian process surrogates. Other methods are
+topology-limited or non-generative: CktGNN~\cite{cktgnn} handles only
+operational amplifiers, Fan~\emph{et~al.}~\cite{fan2024graph} predict
+power converter performance but do not generate new designs, and
+FALCON~\cite{falcon} combines GNN prediction with layout
+co-optimization but cannot synthesize new topologies. Closest to
+ARCS, DiffCkt~\cite{diffckt} applies diffusion models to
+transistor-level generation, showing that generative approaches
+beyond variational autoencoders (VAEs) and autoregressive transformers
+can produce valid topologies.
 
 \subsection{Flow-Based Generative Models}
 
@@ -229,8 +230,9 @@ Conditional flow matching (CFM)~\cite{lipman2023flow} learns
 continuous-time transport maps between a prior and data distribution
 via optimal-transport velocity fields, offering straighter sampling
 trajectories than diffusion models and avoiding the KL-constrained
-latent space of VAEs. CFM has been applied to molecular generation~\cite{song2024equivariant}
-and protein design but not, to date, to circuit synthesis.
+latent space of VAEs. CFM has been applied to molecular
+generation~\cite{song2024equivariant} and protein design~\cite{jing2023eigenfold},
+but not, to date, to circuit synthesis.
 For discrete graph generation, DiGress~\cite{vignac2023digress} applies
 discrete denoising diffusion to molecule and planar graphs; however, it
 does not handle mixed discrete-continuous outputs (topology + values)
@@ -359,37 +361,39 @@ grammar constraints ensure structural validity at each step.}
 \label{sec:arch}
 
 ARCS explores three progressively more expressive architectures, all
-sharing a common GPT-style backbone:
-$d_\text{model}\!=\!256$, $n_\text{layers}\!=\!6$,
-$n_\text{heads}\!=\!4$, $d_\text{ff}\!=\!1024$, SwiGLU
-activations~\cite{shazeer2020glu}, RMSNorm~\cite{zhang2019root}, and
-learned token-type embeddings (7 categories). All models use
-weight-tied language model heads.
+sharing a common GPT-style backbone: hidden dimension
+$d_\text{model}\!=\!256$, $n_\text{layers}\!=\!6$ transformer layers,
+$n_\text{heads}\!=\!4$ attention heads, feed-forward dimension
+$d_\text{ff}\!=\!1024$, SwiGLU activations~\cite{shazeer2020glu},
+RMSNorm~\cite{zhang2019root}, and learned token-type embeddings
+(7 categories). All models use weight-tied language model heads.
 
 \textbf{(A) Baseline GPT} ($\sim$6.5M parameters). A standard
 decoder-only transformer with a single weight-tied output head
 over the full vocabulary. This model treats all tokens (structural
 and value) identically.
 
-\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; +4.7\%). Predicting \emph{which component to place} and
+\textbf{(B) Two-Head Model} ($\sim$6.8M parameters; $+$4.7\% over
+Baseline GPT). Predicting \emph{which component to place} and
 predicting \emph{what value it should have} are fundamentally
 different tasks. The two-head model separates these:
 \begin{itemize}
     \item A \emph{structure head} (weight-tied with the token
     embedding) predicts component type, topology, spec, and special
     tokens.
-    \item A \emph{value head} (dedicated 2-layer SiLU MLP,
-    $256 \!\to\! 256 \!\to\! 256$ with residual connection,
-    followed by a linear projection to $|V|$) specializes in
-    predicting numerical value tokens.
+    \item A \emph{value head}, a dedicated 2-layer multi-layer
+    perceptron (MLP) with SiLU activations
+    ($256 \!\to\! 256 \!\to\! 256$, residual connection, linear
+    projection to $|V|$), specializes in predicting numerical value
+    tokens.
 \end{itemize}
 At each timestep, the model selects which head to use based on
 whether the next token is expected to be a value token
 (determined by the preceding component token).
 
-\textbf{(C) Graph Transformer} ($\sim$6.8M parameters; +5.0\%).
-Circuit components form a graph defined by their electrical
-connectivity. The Graph Transformer injects this structure via
+\textbf{(C) Graph Transformer (GT)} ($\sim$6.8M parameters; $+$5.0\%
+over Baseline GPT). Circuit components form a graph defined by their
+electrical connectivity. The GT injects this structure via
 two mechanisms:
 \begin{enumerate}
     \item \textbf{Topology-aware attention bias.} For each of the
@@ -400,7 +404,7 @@ two mechanisms:
     positions $(i,j)$ where $A_{\tau,ij}=1$:
     \begin{equation}
     \text{Attn}(Q,K)_{ij} = \frac{Q_i K_j^\top}{\sqrt{d_k}} +
-    b_\tau^{(l)} \cdot A_{\tau,ij}
+    b_\tau^{(l)} \cdot A_{\tau,ij},
     \label{eq:graph_attn}
     \end{equation}
     This gives the model a soft prior that electrically connected
@@ -413,12 +417,13 @@ two mechanisms:
     return probabilities after $k=1,\ldots,K$ steps:
     \begin{equation}
     \text{RWPE}_i = \bigl[\mathbf{T}^1_{ii},\;
-    \mathbf{T}^2_{ii},\; \ldots,\; \mathbf{T}^K_{ii}\bigr]
+    \mathbf{T}^2_{ii},\; \ldots,\; \mathbf{T}^K_{ii}\bigr],
     \label{eq:rwpe}
     \end{equation}
     with $K\!=\!8$ walk lengths. These features are precomputed
     per topology and projected to $d_\text{model}$ via a learned
-    two-layer MLP ($8 \!\to\! 64 \!\to\! 256$, GELU activation).
+    two-layer MLP ($8 \!\to\! 64 \!\to\! 256$, Gaussian error linear
+    unit (GELU) activation).
     The following value token shares the same RWPE as its parent
     component. Unlike ordinal position indices, RWPE encodes each
     component's \emph{structural role} in the circuit graph; for example,
@@ -426,7 +431,7 @@ two mechanisms:
     have higher return probabilities than peripheral nodes (like the
     load resistor).
 \end{enumerate}
-The Graph Transformer retains the two-head output structure from
+The GT retains the two-head output structure from
 model~(B), adding 17,648 parameters total: 17,216 for the RWPE
 projection MLP and 432 for graph attention biases (per-head
 adjacency scalars and edge-type embeddings).
@@ -434,8 +439,9 @@ adjacency scalars and edge-type embeddings).
 \subsection{Automated Data Generation}
 \label{sec:datagen}
 
-Unlike AnalogGenie's manually curated dataset (3,502 circuits from IEEE
-papers), ARCS uses a fully automated pipeline:
+Unlike AnalogGenie's~\cite{analoggenie} manually curated dataset
+(3,502 circuits hand-collected from IEEE publications), ARCS uses a
+fully automated pipeline:
 \begin{enumerate}
     \item \textbf{Template definition}: Parameterized SPICE netlist
     templates with physical component bounds (E-series snapped) for
@@ -455,11 +461,11 @@ shuffling, the training set contains $\sim$205,000 sequences.
 
 \subsection{Training}
 
-\textbf{Stage 1: Supervised pre-training.}
+\textbf{Stage 1: Supervised learning (SL) pre-training.}
 Next-token prediction with cross-entropy loss, applying $5\times$
 weight to value tokens to compensate for their larger vocabulary:
 \begin{equation}
-\mathcal{L}_\text{SL} = -\sum_t w_t \log p_\theta(x_t \mid x_{<t})
+\mathcal{L}_\text{SL} = -\sum_t w_t \log p_\theta(x_t \mid x_{<t}),
 \label{eq:sl_loss}
 \end{equation}
 where $w_t = 5$ for value tokens and $w_t = 1$ otherwise.
@@ -473,7 +479,7 @@ optimization, using SPICE simulation as an oracle reward signal:
 \begin{equation}
 \nabla_\theta J = \mathbb{E}\!\left[ (R - b) \sum_t \nabla_\theta \log
 p_\theta(x_t \mid x_{<t}) \right] - \beta \,
-\text{KL}(p_\theta \| p_\text{ref})
+\text{KL}(p_\theta \| p_\text{ref}),
 \label{eq:rl_loss}
 \end{equation}
 where $b$ is an exponential moving average baseline and $\beta$ is an
@@ -485,7 +491,7 @@ R = \underbrace{r_\text{struct}}_{\leq 1.0} +
 \underbrace{r_\text{sim}}_{\leq 1.0} +
 \underbrace{r_\text{accuracy}}_{\leq 3.0} +
 \underbrace{r_\text{efficiency}}_{\leq 2.0} +
-\underbrace{r_\text{quality}}_{\leq 1.0}
+\underbrace{r_\text{quality}}_{\leq 1.0}.
 \label{eq:reward}
 \end{equation}
 The sub-rewards are domain-specific and \emph{spec-aware}: power
@@ -497,9 +503,9 @@ and passband gain; oscillators use frequency accuracy
 ($|f_\text{osc} - f_\text{target}| / f_\text{target}$) and amplitude.
 This ensures the reward measures how well generated circuits meet
 their target specifications, not just functional correctness.
-RL training runs for 5,000 steps (batch size 8, lr $10^{-5}$,
-temperature 0.8, top-$k$ 50), requiring $\sim$15 hours on an Apple
-M3 with MPS acceleration.
+RL training runs for 5,000 steps with batch size 8, learning rate
+$10^{-5}$, temperature 0.8, and top-$k$ 50, requiring $\sim$15 hours
+on an Apple M3 with Metal Performance Shaders (MPS) acceleration.
 
 \textbf{Stage 3: Group Relative Policy Optimization (GRPO).}
 \label{sec:grpo}
@@ -520,7 +526,7 @@ Each RL step samples $K$ topologies and generates
 $G$ circuits per topology (a ``group''). Advantages are z-scored
 per group:
 \begin{equation}
-\hat{A}_i^{(\tau)} = \frac{R_i - \mu_\tau}{\sigma_\tau + \epsilon}
+\hat{A}_i^{(\tau)} = \frac{R_i - \mu_\tau}{\sigma_\tau + \epsilon},
 \label{eq:grpo}
 \end{equation}
 where $\mu_\tau, \sigma_\tau$ are the mean and standard deviation
@@ -530,7 +536,7 @@ absolute reward scale. The policy gradient becomes:
 \begin{equation}
 \nabla_\theta J = \sum_\tau \sum_{i \in \text{group}_\tau}
 \hat{A}_i^{(\tau)} \sum_t \nabla_\theta \log p_\theta(x_t^{(i)})
-- \beta\,\text{KL}(p_\theta \| p_\text{ref})
+- \beta\,\text{KL}(p_\theta \| p_\text{ref}).
 \end{equation}
 The training uses $K\!=\!3$ topologies and $G\!=\!4$ circuits per step.
 With only 500 GRPO steps ($\sim$1 hour, 6,000 SPICE simulations),
@@ -558,7 +564,7 @@ conditioned on both time embedding $t$ and specification embedding
 $\mathbf{s}$:
 \begin{equation}
 \mathbf{h}^{(l)} = \text{DiT-Block}^{(l)}\!\left(\mathbf{h}^{(l-1)},\;
-\gamma(t) + \phi(\mathbf{s})\right)
+\gamma(t) + \phi(\mathbf{s})\right),
 \end{equation}
 where $\gamma(t)$ is a sinusoidal time embedding and $\phi(\mathbf{s})$
 is a learned spec projection. Each DiT block applies adaptive LayerNorm
@@ -574,25 +580,26 @@ VCG latent space, the interpolant is $\mathbf{x}_t = (1-t)\mathbf{x}_0
 \begin{equation}
 \mathcal{L}_{\text{CFM}} = \mathbb{E}_{t,\mathbf{x}_0,\mathbf{x}_1}
 \!\left[\|\mathbf{v}_\theta(\mathbf{x}_t, t, \mathbf{s}) -
-\mathbf{v}^*\|^2\right]
+\mathbf{v}^*\|^2\right].
 \end{equation}
 The VCG encoder is frozen during flow matching training. After
-100 epochs (25\,s/epoch on MPS), CCFM achieves validation loss
-0.14 (from 0.68 initial).
+100 epochs of training (25\,s per epoch on MPS), CCFM reduces
+validation loss from an initial 0.68 to 0.14.
 
-\textbf{Constraint-guided sampling.} During ODE integration
+\textbf{Constraint-guided sampling.} During ordinary differential
+equation (ODE) integration
 (Euler method, 50 steps), CCFM projects the velocity toward the feasible
 circuit set using learned per-constraint guidance weights
 $\{w_c\}_{c=1}^5$, initialized to zero and trained end-to-end:
 \begin{equation}
 \mathbf{v}'_t = \mathbf{v}_\theta(\mathbf{x}_t, t, \mathbf{s}) +
-\alpha(t) \sum_c w_c \nabla_{\mathbf{x}_t} C_c(\mathbf{x}_t)
+\alpha(t) \sum_c w_c \nabla_{\mathbf{x}_t} C_c(\mathbf{x}_t),
 \end{equation}
 where $\alpha(t) = 1 - t$ applies stronger guidance early (when
 samples are noisy) and relaxes as the trajectory approaches the
-data distribution. The five constraints $C_c$ match VCG's:
-type coherence, adjacency symmetry, connectivity, degree bounds,
-and value range.
+data distribution. The five constraint functions $C_c$ are the same
+five used by VCG: type coherence, adjacency symmetry, graph
+connectivity, degree bounds, and value range.
 
 \subsection{Grammar-Constrained Decoding}
 \label{sec:constrained}
@@ -670,7 +677,7 @@ $\mathbf{m}_t \in \{0, 1\}^{|V|}$ over the vocabulary
 before the softmax:
 \begin{equation}
 p_\theta(x_t \mid x_{<t}) = \text{softmax}\!\left(
-\frac{\mathbf{z}_t + \log \mathbf{m}_t}{\tau}\right)
+\frac{\mathbf{z}_t + \log \mathbf{m}_t}{\tau}\right),
 \label{eq:masked}
 \end{equation}
 where $\mathbf{z}_t$ are the raw logits and $\log 0 = -\infty$
@@ -685,7 +692,7 @@ wasted tokens from invalid continuations.
 \textbf{Lagrangian constraint loss.} For training with constraint
 awareness, the model additionally optimizes a differentiable Lagrangian loss:
 \begin{equation}
-\mathcal{L}_\text{constr} = \sum_{i} \lambda_i \cdot g_i(\theta)
+\mathcal{L}_\text{constr} = \sum_{i} \lambda_i \cdot g_i(\theta),
 \label{eq:lagrangian}
 \end{equation}
 where $g_i(\theta)$ are constraint violation penalties (structural
@@ -702,11 +709,13 @@ ARCS also trains a \emph{learned reward model}, a bidirectional transformer
 encoder that predicts SPICE simulation reward from token sequences,
 following the verifier approach of Cobbe~\emph{et~al.}~\cite{cobbe2021verifiers}.
 The architecture uses 2 encoder layers with 128-dim hidden states,
-4 attention heads, and SwiGLU FFN, followed by mean-pooling and
-a 2-layer MLP producing a scalar reward prediction. Token embeddings
-are warm-started from the generator via SVD-based projection when
-the embedding dimensions differ. The 666K-parameter model is trained
-on 41K circuits from the automated data pipeline using Huber loss.
+4 attention heads, and a SwiGLU feed-forward network (FFN), followed
+by mean-pooling and a 2-layer MLP producing a scalar reward prediction.
+Token embeddings are warm-started from the generator via
+singular value decomposition (SVD) based projection when the
+embedding dimensions differ. The 666K-parameter model is trained on
+41K circuits from the automated data pipeline using Huber
+loss~\cite{huber1964}.
 
 % ==========================================================================
 \section{Experimental Setup}
@@ -720,7 +729,7 @@ evaluated in the main experiments:
     \item \textbf{Tier 1} (7 power converters; 5 evaluated): Buck, Boost,
     Buck-Boost, Cuk, SEPIC.
     \item \textbf{Tier 2} (9 signal circuits): Inverting/non-inverting/
-    instrumentation/differential amplifiers, Sallen-Key LP/HP/BP filters,
+    instrumentation/differential amplifiers, Sallen-Key low-pass, high-pass, and band-pass filters,
     Wien bridge and Colpitts oscillators.
     \item \textbf{Tier 2b} (18 extended circuits): BJT amplifiers
     (common emitter/collector/base, cascode), current sources, regulators,
@@ -736,7 +745,7 @@ evaluated in the main experiments:
 return the highest-reward design. Total: 200 SPICE simulations per
 spec.
 
-\textbf{Genetic Algorithm (GA)}: BLX-$\alpha$ crossover in log-space,
+\textbf{Genetic Algorithm}: BLX-$\alpha$ crossover in log-space,
 Gaussian mutation, tournament selection. Table~\ref{tab:main} uses population 30 over 20 generations ($\sim$630 evals).
 The statistical evaluation (Table~\ref{tab:pub_eval}) uses 20 repeats
 with population 16 ($\sim$320 evals per spec) to match the compute
@@ -805,13 +814,13 @@ Table~\ref{tab:main} shows the unified comparison averaged over 5
 random seeds.
 \textbf{Architecture matters.} The two-head architecture improves
 simulation validity by $+10.3$\,pp over the baseline by decoupling
-structural and numerical prediction. The Graph Transformer achieves
+structural and numerical prediction. The GT achieves
 $+5.3$\,pp over baseline via topology-aware attention biases
 (Eq.~\ref{eq:graph_attn}). Notably, the two-head model (50.4\%) outperforms
-the Graph Transformer under supervised learning alone (45.4\%): the GT's
+the GT under supervised learning alone (45.4\%): the GT's
 relational inductive bias is not fully exploited by cross-entropy training
 on fixed data, but becomes decisive when combined with GRPO
-reinforcement learning, where GT+GRPO (53.1\%) surpasses both.
+RL, where GT+GRPO (53.1\%) surpasses both.
 
 \begin{figure}[t]
 \centering
@@ -1070,10 +1079,10 @@ Level & Struct\,\% & Comp\,\% & Avg Comp & Time \\
 All three constraint levels achieve 100\% structural validity,
 compared to 0\% unconstrained, a \emph{formal guarantee} across all
 32 topologies. \textsc{Topology} constraints additionally ensure 100\%
-component type correctness. Counter-intuitively, constrained decoding
-is faster (25\,ms vs.\ 269\,ms unconstrained) because topology constraints
-terminate sequences promptly instead of generating meandering token
-streams. Since constraints are orthogonal to model quality (working
+component type correctness. Surprisingly, constrained decoding
+runs faster than unconstrained (25\,ms vs.\ 269\,ms): topology
+constraints terminate sequences promptly instead of letting the model
+generate meandering token streams. Since constraints are orthogonal to model quality (working
 even with random initialization), they compose freely with RL fine-tuning.
 
 \subsection{Inference-Time Compute Scaling}
@@ -1093,7 +1102,7 @@ yields substantial quality gains at low marginal cost.
 \centering
 \caption{Best-of-$N$ scaling with a trained model (80 specs, \textsc{Topology}
 constraints). Model confidence (mean log-prob) improves monotonically;
-SPICE reward peaks at $N\!=\!3$. Even $N\!=\!50$ costs only 1.6\,s—still
+SPICE reward peaks at $N\!=\!3$. Even $N\!=\!50$ costs only 1.6\,s, still
 37$\times$ faster than random search.}
 \label{tab:bestofn}
 \begin{tabular}{@{}rccccc@{}}
@@ -1230,7 +1239,7 @@ training-free quality boost at negligible cost.
 \label{sec:discussion}
 
 \textbf{Architecture vs.\ RL vs.\ GRPO.} Architectural changes
-(Baseline$\to$Graph Transformer) yield $+0.49$ reward from inductive
+(Baseline$\to$GT) yield $+0.49$ reward from inductive
 bias alone. REINFORCE degrades validity ($-1.9$\,pp) due to
 cross-topology reward mismatch, while GRPO improves it ($+7.7$\,pp
 over SL) with 10$\times$ fewer steps. Per-topology advantage
@@ -1496,6 +1505,17 @@ R.~J.~Williams,
 ``Simple statistical gradient-following algorithms for connectionist
 reinforcement learning,'' \emph{Machine Learning}, vol.~8,
 no.~3--4, pp.~229--256, 1992.
+
+\bibitem{huber1964}
+P.~J.~Huber,
+``Robust estimation of a location parameter,''
+\emph{The Annals of Mathematical Statistics}, vol.~35, no.~1,
+pp.~73--101, 1964.
+
+\bibitem{jing2023eigenfold}
+B.~Jing, E.~Erives, P.~Pao-Huang, G.~Corso, B.~Berger, and T.~Jaakkola,
+``EigenFold: Generative protein structure prediction with diffusion models,''
+2023. arXiv:2304.02198.
 
 \end{thebibliography}
 
